@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FocusNature — Pomodoro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@400;600&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+
+<!-- Supabase JS (CDN) — inyectado por el servidor -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Variables de entorno inyectadas por server.js -->
+<script>
+  window.__SUPABASE_URL__  = '__SUPABASE_URL__';
+  window.__SUPABASE_ANON__ = '__SUPABASE_ANON__';
+</script>
+</head>
+<body>
+
+<!-- ─── LOADING ───────────────────────────────── -->
+<div id="loading-screen">
+  <div class="loader-ring"></div>
+  <div class="loader-txt">Cargando FocusNature…</div>
+</div>
+
+<!-- ─── FONDOS ────────────────────────────────── -->
+<div class="bg-layer bg-ocean"    id="bg-ocean"></div>
+<div class="bg-layer bg-meadow"   id="bg-meadow"   style="opacity:0"></div>
+<div class="bg-layer bg-mountain" id="bg-mountain" style="opacity:0"></div>
+<div class="bg-layer bg-forest"   id="bg-forest"   style="opacity:0"></div>
+
+<canvas class="stars-layer" id="stars-canvas"></canvas>
+
+<!-- Olas (mar) -->
+<svg class="wave-el" id="wave1"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160"
+  preserveAspectRatio="none" style="animation-duration:12s">
+  <path d="M0,70 C360,130 720,10 1080,70 C1260,100 1350,40 1440,70 L1440,160 L0,160 Z"
+    fill="rgba(14,48,80,.65)"/>
+</svg>
+<svg class="wave-el w2" id="wave2"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160"
+  preserveAspectRatio="none">
+  <path d="M0,90 C240,30 480,150 720,90 C960,30 1200,130 1440,90 L1440,160 L0,160 Z"
+    fill="rgba(16,60,90,.45)"/>
+</svg>
+
+<!-- Hierba (prado) -->
+<svg class="grass-wave" id="grass-svg"
+  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120"
+  preserveAspectRatio="none" style="height:120px;opacity:0">
+  <path d="M0,60 C100,30 200,80 300,50 C400,20 500,70 600,45 C700,20 800,65 900,40
+    C1000,15 1100,60 1200,35 C1300,10 1380,50 1440,30 L1440,120 L0,120 Z"
+    fill="#2d5e0e" opacity=".9"/>
+  <path d="M0,80 C120,55 240,90 360,65 C480,40 600,85 720,60 C840,35 960,75 1080,55
+    C1200,35 1340,70 1440,50 L1440,120 L0,120 Z"
+    fill="#3a7a12" opacity=".7"/>
+</svg>
+
+<!-- Criaturas animadas -->
+<div class="creatures-layer" id="creatures-layer"></div>
+
+<!-- ─── PANTALLA DE LOGIN ──────────────────────── -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>FocusNature</h1>
+      <p>Concentración en estado puro</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="at-login"    onclick="showAuthTab('login')">Iniciar sesión</button>
+      <button class="auth-tab"        id="at-register" onclick="showAuthTab('register')">Registrarse</button>
+    </div>
+
+    <div id="auth-err" class="auth-err"></div>
+    <div id="auth-ok"  class="auth-ok"></div>
+
+    <!-- Login -->
+    <div id="auth-login-form">
+      <div class="auth-field">
+        <label>Correo electrónico</label>
+        <input class="auth-inp" id="li-email" type="email"
+          placeholder="tu@correo.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Contraseña</label>
+        <input class="auth-inp" id="li-pass" type="password"
+          placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <button class="auth-btn" id="li-btn" onclick="doLogin()">Entrar</button>
+    </div>
+
+    <!-- Registro -->
+    <div id="auth-register-form" style="display:none">
+      <div class="auth-field">
+        <label>Correo electrónico</label>
+        <input class="auth-inp" id="reg-email" type="email"
+          placeholder="tu@correo.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Contraseña (mín. 6 caracteres)</label>
+        <input class="auth-inp" id="reg-pass" type="password"
+          placeholder="••••••••" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter') doRegister()">
+      </div>
+      <button class="auth-btn" id="reg-btn" onclick="doRegister()">Crear cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── BARRA SUPERIOR ────────────────────────── -->
+<div class="top-bar" id="top-bar" style="display:none">
+  <div class="user-info">
+    <div class="user-avatar"  id="user-avatar">?</div>
+    <div class="user-email"   id="user-email-lbl"></div>
+    <div class="sync-dot"     id="sync-dot" title="Sincronizado"></div>
+  </div>
+
+  <div class="theme-switcher">
+    <button class="theme-btn active" id="tbtn-ocean"    onclick="setTheme('ocean')"    title="Mar">🌊</button>
+    <button class="theme-btn"        id="tbtn-meadow"   onclick="setTheme('meadow')"   title="Prado">🌿</button>
+    <button class="theme-btn"        id="tbtn-mountain" onclick="setTheme('mountain')" title="Montaña">🏔️</button>
+    <button class="theme-btn"        id="tbtn-forest"   onclick="setTheme('forest')"   title="Bosque">🌲</button>
+  </div>
+
+  <button class="btn-logout" onclick="doLogout()">Salir</button>
+</div>
+
+<!-- ─── APP PRINCIPAL ─────────────────────────── -->
+<!-- ─── GOAL ACHIEVED ──────────────────────── -->
+<div id="goal-achieved">
+  <div class="goal-achieved-inner">
+    <div class="goal-achieved-emoji">🎉</div>
+    <div class="goal-achieved-title">¡Objetivo conseguido!</div>
+    <div class="goal-achieved-sub">Has completado tu meta de hoy. Descansa bien.</div>
+  </div>
+</div>
+
+<div class="app" id="app-main" style="display:none">
+
+  <div class="header">
+    <h1 id="app-title">FocusSea</h1>
+    <p  id="app-subtitle">Sumérgete en la concentración</p>
+  </div>
+
+  <!-- Tabs de navegación -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="timer"    onclick="switchTab('timer',event)">Temporizador</button>
+    <button class="tab-btn"        data-tab="tasks"    onclick="switchTab('tasks',event)">Tareas</button>
+    <button class="tab-btn"        data-tab="stats"    onclick="switchTab('stats',event)">Estadísticas</button>
+    <button class="tab-btn"        data-tab="settings" onclick="switchTab('settings',event)">Ajustes</button>
+  </div>
+
+  <!-- ── TEMPORIZADOR ── -->
+  <div id="tab-timer" class="tab-panel active">
+    <div class="card">
+      <!-- Tarea activa -->
+      <div class="cur-task-badge">
+        <div class="dot-pulse"></div>
+        <span id="cur-task-txt">Sin tarea seleccionada</span>
+      </div>
+
+      <!-- Banner de cambio de modo (aparece al transicionar) -->
+      <div class="break-banner" id="break-banner"></div>
+
+      <!-- Objetivo diario (anillo SVG) -->
+      <div class="goal-ring-wrap">
+        <div id="goal-ring"></div>
+        <div class="goal-ring-label">Objetivo diario</div>
+      </div>
+
+      <!-- Modo actual -->
+      <div class="mode-lbl" id="mode-lbl">Sesión de enfoque</div>
+
+      <!-- Tiempo -->
+      <div class="timer-display" id="timer-disp">25:00</div>
+
+      <!-- Barra de progreso -->
+      <div class="pbar-wrap">
+        <div class="pbar" id="pbar" style="width:100%"></div>
+      </div>
+
+      <!-- Controles -->
+      <div class="timer-controls">
+        <button class="btn-icon" onclick="resetTimer()"  title="Reiniciar">↺</button>
+        <button class="btn-primary" id="start-btn" onclick="toggleTimer()">Iniciar</button>
+        <button class="btn-icon" onclick="skipSession()" title="Saltar modo">→</button>
+      </div>
+
+      <!-- Puntos de sesión -->
+      <div class="session-dots" id="sdots"></div>
+    </div>
+  </div>
+
+  <!-- ── TAREAS ── -->
+  <div id="tab-tasks" class="tab-panel">
+    <div class="card">
+      <div style="margin-bottom:11px;font-size:13px;color:var(--muted)">
+        Haz clic en <b style="color:var(--accent);font-weight:500">Enfocar</b>
+        para activar una tarea en el temporizador.
+      </div>
+      <div class="task-input-row">
+        <input class="task-inp" id="task-inp" type="text"
+          placeholder="¿Qué vas a hacer hoy?" maxlength="60"
+          onkeydown="if(event.key==='Enter') addTask()">
+        <button class="btn-add" onclick="addTask()">+ Añadir</button>
+      </div>
+      <div class="tasks-list" id="tasks-list">
+        <div class="empty-msg">Cargando…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ESTADÍSTICAS ── -->
+  <div id="tab-stats" class="tab-panel">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="sv" id="stat-total">0</div><div class="sl">Pomodoros totales</div></div>
+      <div class="stat-card"><div class="sv" id="stat-today">0</div><div class="sl">Hoy</div></div>
+      <div class="stat-card"><div class="sv" id="stat-streak">0</div><div class="sl">Racha (días)</div></div>
+      <div class="stat-card"><div class="sv" id="stat-hours">0h</div><div class="sl">Tiempo enfocado</div></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="section-title">Últimos 7 días</div>
+      <div class="chart-bars" id="week-chart"></div>
+    </div>
+
+    <div class="heatmap-wrap">
+      <div class="section-title">Actividad — últimas 12 semanas</div>
+      <div class="heatmap" id="heatmap"></div>
+    </div>
+
+    <div class="card" style="padding:16px">
+      <div class="section-title">Historial reciente</div>
+      <div class="history-list" id="history-list">
+        <div class="empty-msg">Sin sesiones aún</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AJUSTES ── -->
+  <div id="tab-settings" class="tab-panel">
+    <div class="card">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:15px;font-style:italic">
+        Los cambios se guardan automáticamente en tu cuenta.
+      </div>
+
+      <div class="settings-grid">
+        <div class="sblock">
+          <div class="slabel">Sesión de enfoque</div>
+          <div class="sctrl">
+            <button class="badj" onclick="adjSetting('focus',-5)">−</button>
+            <div class="sval" id="sv-focus">25</div>
+            <button class="badj" onclick="adjSetting('focus',5)">+</button>
+            <span style="font-size:12px;color:var(--muted)">min</span>
+          </div>
+        </div>
+        <div class="sblock">
+          <div class="slabel">Pausa corta</div>
+          <div class="sctrl">
+            <button class="badj" onclick="adjSetting('short',-1)">−</button>
+            <div class="sval" id="sv-short">5</div>
+            <button class="badj" onclick="adjSetting('short',1)">+</button>
+            <span style="font-size:12px;color:var(--muted)">min</span>
+          </div>
+        </div>
+        <div class="sblock">
+          <div class="slabel">Pausa larga</div>
+          <div class="sctrl">
+            <button class="badj" onclick="adjSetting('long',-5)">−</button>
+            <div class="sval" id="sv-long">15</div>
+            <button class="badj" onclick="adjSetting('long',5)">+</button>
+            <span style="font-size:12px;color:var(--muted)">min</span>
+          </div>
+        </div>
+        <div class="sblock">
+          <div class="slabel">Sesiones por ciclo</div>
+          <div class="sctrl">
+            <button class="badj" onclick="adjSetting('sessions',-1)">−</button>
+            <div class="sval" id="sv-sessions">4</div>
+            <button class="badj" onclick="adjSetting('sessions',1)">+</button>
+            <span style="font-size:12px;color:var(--muted)">rondas</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stoggle-row" onclick="toggleSound()">
+        <div>
+          <div style="font-size:14px">Notificación al terminar</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Tono suave al cambiar de modo</div>
+        </div>
+        <div class="sw on" id="sw-sound"></div>
+      </div>
+
+
+      <!-- ── OBJETIVO DIARIO ── -->
+      <div class="settings-section-title">Objetivo diario</div>
+      <div class="sblock" style="margin-bottom:13px">
+        <div class="slabel">Pomodoros por día</div>
+        <div class="sctrl">
+          <button class="badj" onclick="adjSetting('dailyGoal',-1)">−</button>
+          <div class="sval" id="sv-daily-goal">8</div>
+          <button class="badj" onclick="adjSetting('dailyGoal',1)">+</button>
+          <span style="font-size:12px;color:var(--muted)">🍅</span>
+        </div>
+      </div>
+
+      <!-- ── MÚSICA AMBIENTAL ── -->
+      <div class="settings-section-title">Música ambiental</div>
+      <div class="stoggle-row" onclick="toggleAmbient()">
+        <div>
+          <div style="font-size:14px">Sonidos de naturaleza</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Generados según el tema activo</div>
+        </div>
+        <div class="sw" id="sw-ambient"></div>
+      </div>
+      <div id="ambient-vol-wrap" class="ambient-controls" style="display:none">
+        <span class="ambient-icon">🔈</span>
+        <input class="ambient-vol-slider" id="ambient-vol-slider"
+          type="range" min="0" max="1" step="0.05" value="0.4"
+          oninput="setAmbientVolume(this.value)">
+        <span class="ambient-icon">🔊</span>
+      </div>
+
+      <!-- ── MODO FOCO PROFUNDO ── -->
+      <div class="settings-section-title">Concentración</div>
+      <div class="stoggle-row" onclick="toggleDeepFocus()" style="margin-bottom:14px">
+        <div>
+          <div style="font-size:14px">Modo foco profundo</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Atenúa todo salvo el temporizador al iniciar</div>
+        </div>
+        <div class="sw" id="sw-deepfocus"></div>
+      </div>
+
+      <div class="scene-info" id="scene-info">
+        <b>🌊 Mar</b> — Peces de colores, medusas flotantes, algas y burbujas.
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- Módulo principal (ES modules) -->
+<script type="module" src="/src/js/app.js"></script>
+
+</body>
+</html>
