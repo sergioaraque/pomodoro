@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FocusNature — Modo invitado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@400;600&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<style>
+/* ── GUEST BANNER ── */
+.guest-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 18px;
+  background: rgba(0,0,0,0.28); backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  gap: 12px;
+}
+.guest-bar-left {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.guest-logo {
+  font-family: var(--font-display); font-size: 15px; font-weight: 600;
+  color: var(--accent2); text-decoration: none; white-space: nowrap;
+}
+.guest-badge {
+  font-size: 10px; color: var(--muted); background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 50px;
+  padding: 3px 9px; white-space: nowrap;
+}
+.guest-bar-center {
+  display: flex; gap: 3px; flex-shrink: 0;
+}
+.guest-bar-right {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.btn-signup {
+  background: var(--accent); color: #071020;
+  text-decoration: none; font-size: 12px; font-weight: 600;
+  padding: 7px 16px; border-radius: 50px; white-space: nowrap;
+  transition: all 0.2s;
+}
+.btn-signup:hover { filter: brightness(1.1); }
+.btn-login {
+  color: var(--muted); text-decoration: none; font-size: 12px;
+  padding: 7px 12px; border-radius: 8px; transition: color 0.2s;
+  white-space: nowrap;
+}
+.btn-login:hover { color: var(--text); }
+
+/* ── UPSELL NUDGE (aparece al completar 2 pomodoros) ── */
+.upsell-nudge {
+  display: none;
+  background: rgba(78,205,196,0.08); border: 1px solid rgba(78,205,196,0.25);
+  border-radius: 12px; padding: 14px 18px; margin-bottom: 14px;
+  font-size: 13px; animation: slideIn 0.3s ease;
+}
+.upsell-nudge.visible { display: flex; align-items: center; gap: 12px; }
+.upsell-nudge-text { flex: 1; color: var(--text); line-height: 1.5; }
+.upsell-nudge-text b { color: var(--accent); }
+.upsell-nudge a {
+  background: var(--accent); color: #071020;
+  text-decoration: none; font-size: 12px; font-weight: 600;
+  padding: 7px 16px; border-radius: 50px; white-space: nowrap;
+  flex-shrink: 0;
+}
+.upsell-nudge-close {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 14px; padding: 2px 4px; flex-shrink: 0;
+}
+
+@media(max-width:520px) {
+  .guest-badge { display: none; }
+  .btn-login { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- BG layers -->
+<div class="bg-layer bg-ocean"    id="bg-ocean"></div>
+<div class="bg-layer bg-meadow"   id="bg-meadow"   style="opacity:0"></div>
+<div class="bg-layer bg-mountain" id="bg-mountain" style="opacity:0"></div>
+<div class="bg-layer bg-forest"   id="bg-forest"   style="opacity:0"></div>
+<canvas class="stars-layer" id="stars-canvas"></canvas>
+<svg class="wave-el" id="wave1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none" style="animation-duration:12s"><path d="M0,70 C360,130 720,10 1080,70 C1260,100 1350,40 1440,70 L1440,160 L0,160 Z" fill="rgba(14,48,80,.65)"/></svg>
+<svg class="wave-el w2" id="wave2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none"><path d="M0,90 C240,30 480,150 720,90 C960,30 1200,130 1440,90 L1440,160 L0,160 Z" fill="rgba(16,60,90,.45)"/></svg>
+<svg class="grass-wave" id="grass-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" preserveAspectRatio="none" style="height:120px;opacity:0"><path d="M0,60 C100,30 200,80 300,50 C400,20 500,70 600,45 C700,20 800,65 900,40 C1000,15 1100,60 1200,35 C1300,10 1380,50 1440,30 L1440,120 L0,120 Z" fill="#2d5e0e" opacity=".9"/><path d="M0,80 C120,55 240,90 360,65 C480,40 600,85 720,60 C840,35 960,75 1080,55 C1200,35 1340,70 1440,50 L1440,120 L0,120 Z" fill="#3a7a12" opacity=".7"/></svg>
+<div class="creatures-layer" id="creatures-layer"></div>
+
+<!-- GUEST TOP BAR -->
+<div class="guest-bar">
+  <div class="guest-bar-left">
+    <a class="guest-logo" href="/">FocusNature</a>
+    <span class="guest-badge">Modo invitado</span>
+  </div>
+  <div class="guest-bar-center">
+    <button class="theme-btn active" id="tbtn-ocean"    onclick="setTheme('ocean')"    title="Mar">🌊</button>
+    <button class="theme-btn"        id="tbtn-meadow"   onclick="setTheme('meadow')"   title="Prado">🌿</button>
+    <button class="theme-btn"        id="tbtn-mountain" onclick="setTheme('mountain')" title="Montaña">🏔️</button>
+    <button class="theme-btn"        id="tbtn-forest"   onclick="setTheme('forest')"   title="Bosque">🌲</button>
+  </div>
+  <div class="guest-bar-right">
+    <a class="btn-login"  href="/app">Iniciar sesión</a>
+    <a class="btn-signup" href="/app#register">Crear cuenta</a>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app-main">
+  <div class="header">
+    <h1 id="app-title">FocusSea</h1>
+    <p  id="app-subtitle">Sumérgete en la concentración</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="timer"    onclick="switchTab('timer',event)">Temporizador</button>
+    <button class="tab-btn"        data-tab="tasks"    onclick="switchTab('tasks',event)">Tareas</button>
+    <button class="tab-btn"        data-tab="settings" onclick="switchTab('settings',event)">Ajustes</button>
+  </div>
+
+  <!-- TIMER -->
+  <div id="tab-timer" class="tab-panel active">
+    <div class="card">
+      <!-- Upsell nudge — aparece tras 2 pomodoros completados -->
+      <div class="upsell-nudge" id="upsell-nudge">
+        <div class="upsell-nudge-text">
+          ¡Llevas <b id="upsell-count">2</b> pomodoros completados hoy!
+          Crea una cuenta gratis para guardar tu historial y estadísticas.
+        </div>
+        <a href="/app#register">Guardar progreso</a>
+        <button class="upsell-nudge-close" onclick="dismissUpsell()">✕</button>
+      </div>
+
+      <div class="cur-task-badge">
+        <div class="dot-pulse"></div>
+        <span id="cur-task-txt">Sin tarea seleccionada</span>
+      </div>
+      <div class="break-banner" id="break-banner"></div>
+      <div class="mode-lbl" id="mode-lbl">Sesión de enfoque</div>
+      <div class="timer-display" id="timer-disp">25:00</div>
+      <div class="pbar-wrap"><div class="pbar" id="pbar" style="width:100%"></div></div>
+      <div style="text-align:center;margin-bottom:8px;font-size:11px;color:var(--muted);opacity:0.6">
+        Espacio = iniciar/pausar &nbsp;·&nbsp; R = reiniciar &nbsp;·&nbsp; S = saltar
+      </div>
+      <div class="timer-controls">
+        <button class="btn-icon" onclick="doReset()"  title="Reiniciar">↺</button>
+        <button class="btn-primary" id="start-btn" onclick="doToggle()">Iniciar</button>
+        <button class="btn-icon" onclick="doSkip()"   title="Saltar">→</button>
+      </div>
+      <div class="session-dots" id="sdots"></div>
+    </div>
+  </div>
+
+  <!-- TASKS -->
+  <div id="tab-tasks" class="tab-panel">
+    <div class="card">
+      <div style="margin-bottom:11px;font-size:13px;color:var(--muted)">
+        Las tareas se guardan solo en esta sesión.
+        <a href="/app#register" style="color:var(--accent);text-decoration:none">Crea una cuenta</a> para sincronizarlas.
+      </div>
+      <div class="task-input-row">
+        <input class="task-inp" id="task-inp" type="text"
+          placeholder="¿Qué vas a hacer hoy?" maxlength="60"
+          onkeydown="if(event.key==='Enter') addGuestTask()">
+        <button class="btn-add" onclick="addGuestTask()">+ Añadir</button>
+      </div>
+      <div class="tasks-list" id="tasks-list">
+        <div class="empty-msg">Sin tareas aún — ¡añade una arriba!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-settings" class="tab-panel">
+    <div class="card">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:15px;font-style:italic">
+        Los ajustes se guardan en el navegador. <a href="/app#register" style="color:var(--accent);text-decoration:none">Crea una cuenta</a> para tenerlos en todos tus dispositivos.
+      </div>
+      <div class="settings-grid">
+        <div class="sblock"><div class="slabel">Sesión de enfoque</div><div class="sctrl"><button class="badj" onclick="adjG('focus',-5)">−</button><div class="sval" id="sv-focus">25</div><button class="badj" onclick="adjG('focus',5)">+</button><span style="font-size:12px;color:var(--muted)">min</span></div></div>
+        <div class="sblock"><div class="slabel">Pausa corta</div><div class="sctrl"><button class="badj" onclick="adjG('short',-1)">−</button><div class="sval" id="sv-short">5</div><button class="badj" onclick="adjG('short',1)">+</button><span style="font-size:12px;color:var(--muted)">min</span></div></div>
+        <div class="sblock"><div class="slabel">Pausa larga</div><div class="sctrl"><button class="badj" onclick="adjG('long',-5)">−</button><div class="sval" id="sv-long">15</div><button class="badj" onclick="adjG('long',5)">+</button><span style="font-size:12px;color:var(--muted)">min</span></div></div>
+        <div class="sblock"><div class="slabel">Sesiones por ciclo</div><div class="sctrl"><button class="badj" onclick="adjG('sessions',-1)">−</button><div class="sval" id="sv-sessions">4</div><button class="badj" onclick="adjG('sessions',1)">+</button><span style="font-size:12px;color:var(--muted)">rondas</span></div></div>
+      </div>
+      <div class="stoggle-row" onclick="toggleGSound()">
+        <div><div style="font-size:14px">Notificación al terminar</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Tono suave al cambiar de modo</div></div>
+        <div class="sw on" id="sw-sound"></div>
+      </div>
+      <div class="stoggle-row" onclick="toggleGAmbient()" style="margin-top:10px">
+        <div><div style="font-size:14px">Música ambiental</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Sonidos de naturaleza generativos</div></div>
+        <div class="sw" id="sw-ambient"></div>
+      </div>
+      <div id="ambient-vol-wrap" class="ambient-controls" style="display:none">
+        <span class="ambient-icon">🔈</span>
+        <input class="ambient-vol-slider" id="ambient-vol-slider" type="range" min="0" max="1" step="0.05" value="0.4" oninput="setGVol(this.value)">
+        <span class="ambient-icon">🔊</span>
+      </div>
+      <div class="scene-info" id="scene-info" style="margin-top:12px">
+        <b>🌊 Mar</b> — Peces de colores, medusas flotantes, algas y burbujas.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { spawnCreatures, drawStars } from '/src/js/creatures.js';
+import { startAmbient, stopAmbient, setVolume } from '/src/js/ambient.js';
+
+// ── CONFIG (persisted in localStorage) ──────────────────────────────
+const DEFAULTS = { focus:25, short:5, long:15, sessions:4, sound:true, ambient:false, ambientVol:0.4, theme:'ocean' };
+
+function loadCfg() {
+  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem('fn_guest_cfg') || '{}') }; }
+  catch { return { ...DEFAULTS }; }
+}
+function saveCfg() {
+  try { localStorage.setItem('fn_guest_cfg', JSON.stringify(cfg)); } catch {}
+}
+
+const cfg = loadCfg();
+
+// ── TIMER STATE ──────────────────────────────────────────────────────
+const st = {
+  mode:         'focus',
+  secondsLeft:  cfg.focus * 60,
+  totalSeconds: cfg.focus * 60,
+  running:      false,
+  sessionsDone: 0,
+  pomodorosDone: 0,   // total this session (for upsell)
+  currentTaskId: null,
+};
+
+let tickInterval  = null;
+let currentTheme  = cfg.theme || 'ocean';
+let tasks         = [];
+let upsellDismissed = false;
+
+// ── THEME ────────────────────────────────────────────────────────────
+const THEMES = {
+  ocean:    { title:'FocusSea',    subtitle:'Sumérgete en la concentración',  cls:'',               info:'<b>🌊 Mar</b> — Peces, medusas, algas y burbujas.' },
+  meadow:   { title:'FocusMeadow', subtitle:'Calma entre flores y brisa',     cls:'theme-meadow',   info:'<b>🌿 Prado</b> — Mariposas, abejas y flores.' },
+  mountain: { title:'FocusPeak',   subtitle:'La claridad de las alturas',     cls:'theme-mountain', info:'<b>🏔️ Montaña</b> — Águilas, nieve y pinos.' },
+  forest:   { title:'FocusForest', subtitle:'Quietud del bosque en la noche', cls:'theme-forest',   info:'<b>🌲 Bosque</b> — Luciérnagas, búho y árboles.' },
+};
+
+window.setTheme = (name) => {
+  currentTheme = name;
+  cfg.theme = name;
+  saveCfg();
+  const t = THEMES[name];
+  document.body.className = t.cls;
+  ['ocean','meadow','mountain','forest'].forEach(k => {
+    document.getElementById('bg-'+k).style.opacity = k === name ? '1' : '0';
+  });
+  document.getElementById('wave1').style.opacity     = name==='ocean' ? '1'  : '0';
+  document.getElementById('wave2').style.opacity     = name==='ocean' ? '.5' : '0';
+  document.getElementById('grass-svg').style.opacity = name==='meadow'? '1'  : '0';
+  document.getElementById('stars-canvas').style.opacity = (name==='mountain'||name==='forest') ? '1' : '0';
+  document.getElementById('app-title').textContent    = t.title;
+  document.getElementById('app-subtitle').textContent = t.subtitle;
+  document.getElementById('scene-info').innerHTML     = t.info;
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tbtn-'+name).classList.add('active');
+  spawnCreatures(name);
+  if (cfg.ambient) { stopAmbient(); setTimeout(() => startAmbient(name), 600); }
+};
+
+// ── TIMER CORE ───────────────────────────────────────────────────────
+function durFor(mode) {
+  return (mode==='focus' ? cfg.focus : mode==='short' ? cfg.short : cfg.long) * 60;
+}
+
+function applyMode(mode) {
+  st.mode = mode;
+  st.secondsLeft = st.totalSeconds = durFor(mode);
+  renderTimer();
+  renderDots();
+}
+
+function tick() {
+  if (st.secondsLeft <= 0) {
+    clearInterval(tickInterval); tickInterval = null; st.running = false;
+    onSessionEnd();
+    return;
+  }
+  st.secondsLeft--;
+  renderTimer();
+}
+
+function onSessionEnd() {
+  if (cfg.sound) playBeep();
+
+  const banner = document.getElementById('break-banner');
+  if (st.mode === 'focus') {
+    st.sessionsDone++;
+    st.pomodorosDone++;
+    // Increment task pomodoro count
+    if (st.currentTaskId !== null) {
+      const t = tasks.find(t => t.id === st.currentTaskId);
+      if (t) { t.pomodoros++; renderTasks(); }
+    }
+    // Show upsell after 2 focus sessions
+    if (st.pomodorosDone >= 2 && !upsellDismissed) showUpsell();
+    // Next mode
+    const nextMode = st.sessionsDone % cfg.sessions === 0 ? 'long' : 'short';
+    applyMode(nextMode);
+    if (nextMode === 'short') {
+      banner.textContent = '🌿 ¡Buen trabajo! Tómate una pausa corta.';
+      banner.className = 'break-banner visible';
+    } else {
+      banner.textContent = '🌊 ¡Ciclo completado! Disfruta tu descanso largo.';
+      banner.className = 'break-banner lbreak visible';
+    }
+    setTimeout(() => banner.classList.remove('visible'), 6000);
+  } else {
+    applyMode('focus');
+    banner.classList.remove('visible');
+  }
+  document.getElementById('start-btn').textContent = 'Iniciar';
+}
+
+window.doToggle = () => {
+  if (st.running) {
+    clearInterval(tickInterval); tickInterval = null; st.running = false;
+    document.getElementById('start-btn').textContent = 'Reanudar';
+  } else {
+    st.running = true;
+    document.getElementById('start-btn').textContent = 'Pausar';
+    tickInterval = setInterval(tick, 1000);
+  }
+};
+
+window.doReset = () => {
+  clearInterval(tickInterval); tickInterval = null; st.running = false;
+  applyMode(st.mode);
+  document.getElementById('start-btn').textContent = 'Iniciar';
+};
+
+window.doSkip = () => {
+  clearInterval(tickInterval); tickInterval = null; st.running = false;
+  onSessionEnd();
+};
+
+// ── TIMER UI ─────────────────────────────────────────────────────────
+function renderTimer() {
+  const m = Math.floor(st.secondsLeft/60), s = st.secondsLeft%60;
+  document.getElementById('timer-disp').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const pct = st.totalSeconds > 0 ? (st.secondsLeft/st.totalSeconds*100) : 0;
+  document.getElementById('pbar').style.width = pct + '%';
+  const disp = document.getElementById('timer-disp');
+  const pbar = document.getElementById('pbar');
+  const lbl  = document.getElementById('mode-lbl');
+  disp.className = 'timer-display'; pbar.className = 'pbar';
+  if (st.mode==='short')  { lbl.textContent='Pausa corta';               disp.classList.add('break');  pbar.classList.add('break');  }
+  else if (st.mode==='long') { lbl.textContent='Pausa larga — descansa bien'; disp.classList.add('lbreak'); pbar.classList.add('lbreak'); }
+  else  { lbl.textContent='Sesión de enfoque'; }
+}
+
+function renderDots() {
+  const c = document.getElementById('sdots'); c.innerHTML = '';
+  const doneInCycle = st.sessionsDone % cfg.sessions;
+  for (let i=0; i<cfg.sessions; i++) {
+    const d = document.createElement('div');
+    d.className = 'sdot' + (i<doneInCycle?' done': i===doneInCycle&&st.mode==='focus'?' cur':'');
+    c.appendChild(d);
+  }
+}
+
+// ── TASKS ────────────────────────────────────────────────────────────
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+window.addGuestTask = () => {
+  const inp = document.getElementById('task-inp');
+  const name = inp.value.trim();
+  if (!name) return;
+  inp.value = '';
+  tasks.unshift({ id: Date.now(), name, done: false, pomodoros: 0 });
+  renderTasks();
+};
+
+function renderTasks() {
+  const list = document.getElementById('tasks-list');
+  if (!tasks.length) {
+    list.innerHTML = '<div class="empty-msg">Sin tareas aún — ¡añade una arriba!</div>';
+    return;
+  }
+  list.innerHTML = tasks.map(t => `
+    <div class="task-item ${t.id===st.currentTaskId?'active-t':''} ${t.done?'done-t':''}">
+      <div class="task-item-row">
+        <div class="tchk ${t.done?'checked':t.id===st.currentTaskId?'active-c':''}" data-action="toggle" data-id="${t.id}">${t.done?'✓':''}</div>
+        <div class="tname ${t.done?'done':''}">${esc(t.name)}</div>
+        ${t.pomodoros>0?`<div class="tpoms">🍅 ×${t.pomodoros}</div>`:''}
+        ${!t.done?`<button class="tfocus" data-action="focus" data-id="${t.id}">${t.id===st.currentTaskId?'✓ Activa':'Enfocar'}</button>`:''}
+        <button class="tdel" data-action="delete" data-id="${t.id}">✕</button>
+      </div>
+    </div>`).join('');
+
+  list.onclick = e => {
+    const el = e.target.closest('[data-action]'); if (!el) return;
+    const { action, id } = el.dataset;
+    const idN = parseInt(id);
+    if (action==='focus') {
+      st.currentTaskId = idN;
+      const t = tasks.find(t=>t.id===idN);
+      document.getElementById('cur-task-txt').textContent = t?.name || 'Sin tarea';
+      renderTasks();
+    }
+    if (action==='toggle') {
+      const t = tasks.find(t=>t.id===idN); if (!t) return;
+      t.done = !t.done;
+      if (t.done && st.currentTaskId===idN) {
+        st.currentTaskId=null;
+        document.getElementById('cur-task-txt').textContent='Sin tarea seleccionada';
+      }
+      renderTasks();
+    }
+    if (action==='delete') {
+      tasks = tasks.filter(t=>t.id!==idN);
+      if (st.currentTaskId===idN) {
+        st.currentTaskId=null;
+        document.getElementById('cur-task-txt').textContent='Sin tarea seleccionada';
+      }
+      renderTasks();
+    }
+  };
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────────
+const LIMITS = { focus:[5,90], short:[1,30], long:[5,60], sessions:[2,8] };
+
+window.adjG = (key, delta) => {
+  const [mn,mx] = LIMITS[key];
+  cfg[key] = Math.max(mn, Math.min(mx, cfg[key]+delta));
+  document.getElementById('sv-'+key).textContent = cfg[key];
+  if (!st.running) applyMode(st.mode);
+  renderDots(); saveCfg();
+};
+
+window.toggleGSound = () => {
+  cfg.sound = !cfg.sound;
+  document.getElementById('sw-sound').className = 'sw'+(cfg.sound?' on':'');
+  saveCfg();
+};
+
+window.toggleGAmbient = () => {
+  cfg.ambient = !cfg.ambient;
+  document.getElementById('sw-ambient').className = 'sw'+(cfg.ambient?' on':'');
+  document.getElementById('ambient-vol-wrap').style.display = cfg.ambient ? 'flex' : 'none';
+  if (cfg.ambient) startAmbient(currentTheme);
+  else             stopAmbient();
+  saveCfg();
+};
+
+window.setGVol = (v) => {
+  cfg.ambientVol = parseFloat(v);
+  setVolume(cfg.ambientVol);
+  saveCfg();
+};
+
+// ── UPSELL ───────────────────────────────────────────────────────────
+function showUpsell() {
+  document.getElementById('upsell-count').textContent = st.pomodorosDone;
+  document.getElementById('upsell-nudge').classList.add('visible');
+}
+window.dismissUpsell = () => {
+  upsellDismissed = true;
+  document.getElementById('upsell-nudge').classList.remove('visible');
+};
+
+// ── TABS ─────────────────────────────────────────────────────────────
+window.switchTab = (name, event) => {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if (event?.currentTarget) event.currentTarget.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+};
+
+// ── SOUND ────────────────────────────────────────────────────────────
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    [528,660,792].forEach((freq,i) => {
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value=freq; o.type='sine';
+      const t=ctx.currentTime+i*.4;
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(.2,t+.05);
+      g.gain.exponentialRampToValueAtTime(.001,t+.8);
+      o.start(t); o.stop(t+.8);
+    });
+  } catch {}
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────
+drawStars();
+window.addEventListener('resize', drawStars);
+
+// Apply saved settings UI
+document.getElementById('sv-focus').textContent    = cfg.focus;
+document.getElementById('sv-short').textContent    = cfg.short;
+document.getElementById('sv-long').textContent     = cfg.long;
+document.getElementById('sv-sessions').textContent = cfg.sessions;
+document.getElementById('sw-sound').className      = 'sw'+(cfg.sound?' on':'');
+document.getElementById('sw-ambient').className    = 'sw'+(cfg.ambient?' on':'');
+document.getElementById('ambient-vol-wrap').style.display = cfg.ambient ? 'flex' : 'none';
+if (cfg.ambientVol) document.getElementById('ambient-vol-slider').value = cfg.ambientVol;
+setVolume(cfg.ambientVol);
+
+// Apply theme and spawn creatures
+setTheme(currentTheme);
+applyMode('focus');
+
+// ── Keyboard shortcuts ────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA','BUTTON'].includes(e.target.tagName)) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === ' ') { e.preventDefault(); doToggle(); }
+  if (e.key.toLowerCase() === 'r') { e.preventDefault(); doReset(); }
+  if (e.key.toLowerCase() === 's') { e.preventDefault(); doSkip(); }
+});
+
+// ── Live tab title ────────────────────────────────────────────────
+const _origRender = renderTimer;
+function renderTimerWithTitle() {
+  _origRender();
+  if (st.running) {
+    const m = String(Math.floor(st.secondsLeft/60)).padStart(2,'0');
+    const s = String(st.secondsLeft%60).padStart(2,'0');
+    const e = st.mode==='focus'?'🍅':st.mode==='short'?'🌿':'🌊';
+    document.title = `${e} ${m}:${s} — FocusNature`;
+  } else {
+    document.title = 'FocusNature — Invitado';
+  }
+}
+// Patch tick to use our extended render
+const _tick = tick;
+</script>
+</body>
+</html>

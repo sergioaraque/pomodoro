@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="/styles.css">
 
 <!-- Supabase JS (CDN) — inyectado por el servidor -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
 <!-- Variables de entorno inyectadas por server.js -->
 <script>
@@ -127,7 +127,10 @@
     <button class="theme-btn"        id="tbtn-forest"   onclick="setTheme('forest')"   title="Bosque">🌲</button>
   </div>
 
-  <button class="btn-logout" onclick="doLogout()">Salir</button>
+  <div style="display:flex;align-items:center;gap:6px">
+    <a href="/" style="color:var(--muted);text-decoration:none;font-size:12px;padding:5px 10px;border-radius:8px;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">← Inicio</a>
+    <button class="btn-logout" onclick="doLogout()">Salir</button>
+  </div>
 </div>
 
 <!-- ─── APP PRINCIPAL ─────────────────────────── -->
@@ -185,6 +188,11 @@
       </div>
 
       <!-- Controles -->
+      <div style="text-align:center;margin-bottom:8px;font-size:11px;color:var(--muted);opacity:0.6">
+        <kbd style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:1px 6px;font-size:10px">Espacio</kbd> iniciar
+        &nbsp;·&nbsp; <kbd style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:1px 6px;font-size:10px">R</kbd> reiniciar
+        &nbsp;·&nbsp; <kbd style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:1px 6px;font-size:10px">S</kbd> saltar
+      </div>
       <div class="timer-controls">
         <button class="btn-icon" onclick="resetTimer()"  title="Reiniciar">↺</button>
         <button class="btn-primary" id="start-btn" onclick="toggleTimer()">Iniciar</button>

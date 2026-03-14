@@ -1,18 +1,16 @@
 /**
  * FocusNature — server.js
  *
- * Sirve el frontend e inyecta las credenciales de Supabase en tiempo
- * de arranque, para que nunca queden expuestas en el repositorio.
+ * Rutas:
+ *   /          → Landing page (landing.html)
+ *   /guest     → Pomodoro sin registro (guest.html)
+ *   /app       → App completa con login (index.html, con inyección de Supabase)
+ *   /assets    → CSS, JS, etc. (express.static)
  *
- * ── Configuración ──────────────────────────────────────────────────
- * Crea un archivo .env en la raíz del proyecto (cópialo de .env.example):
- *
+ * Configuración — crea un .env en la raíz (copia de .env.example):
  *   SUPABASE_URL=https://TU-PROYECTO.supabase.co
  *   SUPABASE_ANON=TU-ANON-KEY
  *   PORT=3000
- *
- * O pásalas como variables de entorno al arrancar:
- *   SUPABASE_URL=... SUPABASE_ANON=... npm start
  */
 
 'use strict';
@@ -20,7 +18,7 @@
 const fs   = require('fs');
 const path = require('path');
 
-// ── 1. Cargar .env manualmente (sin dotenv como dependencia) ──────────
+// ── 1. Cargar .env ────────────────────────────────────────────────────
 const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
   fs.readFileSync(envPath, 'utf8')
@@ -32,91 +30,97 @@ if (fs.existsSync(envPath)) {
       if (eqIdx === -1) return;
       const key = trimmed.slice(0, eqIdx).trim();
       const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
-      if (key && !(key in process.env)) {   // no sobreescribe vars de entorno reales
-        process.env[key] = val;
-      }
+      if (key && !(key in process.env)) process.env[key] = val;
     });
 }
 
-// ── 2. Leer y validar credenciales ───────────────────────────────────
+// ── 2. Credenciales ───────────────────────────────────────────────────
 const SUPABASE_URL  = (process.env.SUPABASE_URL  || '').trim();
 const SUPABASE_ANON = (process.env.SUPABASE_ANON || '').trim();
 const PORT          = parseInt(process.env.PORT || '3000', 10);
 
 if (!SUPABASE_URL || !SUPABASE_ANON) {
-  console.error('\n❌  Faltan las credenciales de Supabase.\n');
+  console.error('\n❌  Faltan las credenciales de Supabase.');
   console.error('   Crea el archivo .env en la raíz del proyecto:');
-  console.error('   ──────────────────────────────────────────────');
   console.error('   SUPABASE_URL=https://TU-PROYECTO.supabase.co');
-  console.error('   SUPABASE_ANON=TU-ANON-KEY\n');
-  console.error('   Puedes copiar .env.example como punto de partida.\n');
-  process.exit(1);   // No arrancar con config vacía — evita el error del navegador
+  console.error('   SUPABASE_ANON=TU-ANON-KEY');
+  console.error('   (cópialo de .env.example)\n');
+  process.exit(1);
 }
-
 if (!SUPABASE_URL.startsWith('https://')) {
-  console.error('\n❌  SUPABASE_URL no parece válida:', SUPABASE_URL);
+  console.error('\n❌  SUPABASE_URL no válida:', SUPABASE_URL);
   console.error('   Debe empezar por https://\n');
   process.exit(1);
 }
 
-// ── 3. Preparar el HTML con las variables inyectadas ─────────────────
-const PUBLIC_DIR = path.join(__dirname, 'public');
-const INDEX_PATH = path.join(PUBLIC_DIR, 'index.html');
+// ── 3. Helpers ────────────────────────────────────────────────────────
+const PUBLIC = path.join(__dirname, 'public');
 
-if (!fs.existsSync(INDEX_PATH)) {
-  console.error('\n❌  No se encuentra public/index.html\n');
-  process.exit(1);
+function readHtml(filename) {
+  return fs.readFileSync(path.join(PUBLIC, filename), 'utf8');
 }
 
 /**
- * Lee index.html, sustituye los dos placeholders y devuelve el HTML listo.
- * Se hace en cada petición para que cambios en el HTML durante desarrollo
- * no requieran reiniciar el servidor.
+ * Inyecta las credenciales de Supabase en index.html.
+ * Usa delimitadores %%PLACEHOLDER%% para no colisionar con
+ * los nombres de las propiedades JS (window.__SUPABASE_URL__).
  */
-function buildIndexHtml() {
-  const raw = fs.readFileSync(INDEX_PATH, 'utf8');
-
-  // Doble comprobación: avisar si los placeholders no están en el fichero
-  if (!raw.includes('%%SUPABASE_URL%%') || !raw.includes('%%SUPABASE_ANON%%')) {
-    console.warn('⚠️  Los placeholders __SUPABASE_URL__ / __SUPABASE_ANON__ no se encontraron en index.html');
-  }
-
+function buildAppHtml() {
+  const raw = readHtml('index.html');
   return raw
     .replace(/%%SUPABASE_URL%%/g,  SUPABASE_URL)
     .replace(/%%SUPABASE_ANON%%/g, SUPABASE_ANON);
 }
 
-// ── 4. Servidor Express ───────────────────────────────────────────────
+function send(res, html) {
+  res
+    .setHeader('Content-Type', 'text/html; charset=utf-8')
+    .setHeader('Cache-Control', 'no-store')
+    .send(html);
+}
+
+// ── 4. Express ────────────────────────────────────────────────────────
 const express = require('express');
-const app = express();
+const app     = express();
 
-/**
- * IMPORTANTE — orden de los middlewares:
- *
- * express.static con { index: false } sirve todo EXCEPTO index.html.
- * Así, las peticiones a '/' y '/*.html' caen en nuestra ruta
- * personalizada que inyecta las variables antes de enviar el HTML.
- */
-app.use(express.static(PUBLIC_DIR, { index: false }));
+// Sirve CSS/JS/assets — { index: false } para que index.html
+// nunca se sirva en crudo (siempre pasa por buildAppHtml).
+app.use(express.static(PUBLIC, { index: false }));
 
-// Cualquier ruta que no sea un fichero estático → sirve index.html con vars inyectadas
-// (esto también cubre F5 en subrutas futuras tipo /stats, /tasks, etc.)
-app.get('*', (req, res) => {
-  try {
-    const html = buildIndexHtml();
-    res
-      .setHeader('Content-Type', 'text/html; charset=utf-8')
-      .setHeader('Cache-Control', 'no-store')  // evita que el browser cachee la versión sin vars
-      .send(html);
-  } catch (err) {
-    console.error('Error sirviendo index.html:', err);
+// ── RUTAS ──────────────────────────────────────────────────────────────
+// Landing
+app.get('/', (_req, res) => {
+  try   { send(res, readHtml('landing.html')); }
+  catch { res.status(500).send('Error cargando la landing'); }
+});
+
+// Pomodoro invitado — sin inyección de Supabase
+app.get('/guest', (_req, res) => {
+  try   { send(res, readHtml('guest.html')); }
+  catch { res.status(500).send('Error cargando el modo invitado'); }
+});
+
+// App completa — con credenciales inyectadas
+app.get('/app', (_req, res) => {
+  try   { send(res, buildAppHtml()); }
+  catch (err) {
+    console.error('Error sirviendo la app:', err.message);
     res.status(500).send('Error interno del servidor');
   }
 });
 
+// Fallback: cualquier ruta desconocida → landing
+app.get('*', (_req, res) => {
+  try   { send(res, readHtml('landing.html')); }
+  catch { res.status(404).send('Página no encontrada'); }
+});
+
+// ── ARRANQUE ───────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log('\n🌿 FocusNature arrancado');
-  console.log(`   URL:      http://localhost:${PORT}`);
+  console.log(`   Landing:  http://localhost:${PORT}/`);
+  console.log(`   Invitado: http://localhost:${PORT}/guest`);
+  console.log(`   App:      http://localhost:${PORT}/app`);
   console.log(`   Supabase: ${SUPABASE_URL}`);
-  console.log(`   Entorno:  ${fs.existsSync(envPath) ? '.env cargado' : 'variables de entorno del sistema'}\n`);
+  console.log(`   Config:   ${fs.existsSync(envPath) ? '.env' : 'variables de entorno'}\n`);
 });

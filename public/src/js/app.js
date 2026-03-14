@@ -19,7 +19,9 @@ import { initAmbient, startAmbient, stopAmbient,
          setVolume, getVolume, isPlaying }                   from './ambient.js';
 
 // ─── SUPABASE ─────────────────────────────────────────────────────────
-const { createClient } = supabase;
+// window.supabase is set by the UMD CDN build loaded in index.html
+if (!window.supabase) throw new Error("Supabase CDN no cargado — comprueba la conexión a internet");
+const { createClient } = window.supabase;
 const sb = createClient(window.__SUPABASE_URL__, window.__SUPABASE_ANON__);
 db.initDb(sb);
 initAmbient();
@@ -43,6 +45,13 @@ initTimer({
         ? 'Pausar'
         : (state.secondsLeft < state.totalSeconds ? 'Reanudar' : 'Iniciar')
     );
+    // Live tab title
+    const m = String(Math.floor(state.secondsLeft/60)).padStart(2,'0');
+    const s = String(state.secondsLeft%60).padStart(2,'0');
+    const modeEmoji = state.mode === 'focus' ? '🍅' : state.mode === 'short' ? '🌿' : '🌊';
+    document.title = state.running
+      ? `${modeEmoji} ${m}:${s} — FocusNature`
+      : 'FocusNature — Pomodoro';
   },
 
   onEnd: async (finishedMode, durationMin, taskId, taskName) => {
@@ -450,20 +459,71 @@ window.skipSession = () => {
 // ══════════════════════════════════════════════════════════════════════
 //  BOOT
 // ══════════════════════════════════════════════════════════════════════
+// ── Global error safety net ─────────────────────────────────────────
+window.addEventListener('unhandledrejection', e => {
+  console.error('FocusNature error:', e.reason);
+});
+
 (async () => {
-  drawStars();
-  window.addEventListener('resize', drawStars);
+  try {
+    drawStars();
+    window.addEventListener('resize', drawStars);
 
-  ui.applyTheme('ocean');
-  ui.renderTimer(getState());
-  ui.renderDailyGoalRing(0, cfg.dailyGoal);
+    // ── Keyboard shortcuts ───────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      // Don't trigger when typing in inputs/textareas
+      if (['INPUT','TEXTAREA','BUTTON'].includes(e.target.tagName)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === ' ') {
+        e.preventDefault();
+        if (currentUser) window.toggleTimer();
+      }
+      if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        if (currentUser) window.resetTimer();
+      }
+      if (e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (currentUser) window.skipSession();
+      }
+    });
 
-  db.auth.onStateChange(async (event, session) => {
-    if (session?.user) await handleLogin(session.user);
-    else handleLogout();
-  });
+    ui.applyTheme('ocean');
+    ui.renderTimer(getState());
+    ui.renderDailyGoalRing(0, cfg.dailyGoal);
 
-  const { data: { session } } = await db.auth.getSession();
-  if (!session) ui.hideLoading();
-  else setTimeout(ui.hideLoading, 1200);
+    // Handle #register hash — open the register tab directly (linked from guest page)
+    if (window.location.hash === '#register') {
+      ui.switchAuthTab('register');
+    }
+
+    db.auth.onStateChange(async (event, session) => {
+      try {
+        if (session?.user) await handleLogin(session.user);
+        else handleLogout();
+      } catch (err) {
+        console.error('Auth state change error:', err);
+        ui.hideLoading();
+      }
+    });
+
+    const { data: { session }, error } = await db.auth.getSession();
+    if (error) console.error('getSession error:', error.message);
+    if (!session) ui.hideLoading();
+    else setTimeout(ui.hideLoading, 1200);
+  } catch (err) {
+    console.error('Boot error:', err);
+    // Show error to user instead of hanging on the loading screen
+    const ls = document.getElementById('loading-screen');
+    if (ls) {
+      ls.innerHTML = \`
+        <div style="text-align:center;padding:32px;max-width:360px">
+          <div style="font-size:32px;margin-bottom:16px">⚠️</div>
+          <div style="font-size:15px;color:#e8f4f8;margin-bottom:8px">Error al cargar la app</div>
+          <div style="font-size:13px;color:#8ab4cc;margin-bottom:20px">\${err.message}</div>
+          <a href="/" style="color:#4ecdc4;font-size:13px">← Volver al inicio</a>
+        </div>\`;
+      ls.style.opacity = '1';
+    }
+  }
 })();
