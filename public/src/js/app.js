@@ -16,15 +16,12 @@ import * as ui                                               from './ui.js';
 import { playSessionEnd }                                    from './sound.js';
 import { spawnCreatures, drawStars }                         from './creatures.js';
 import { initAmbient, startAmbient, stopAmbient,
-         setVolume, getVolume, isPlaying }                   from './ambient.js';
+         setVolume }                                         from './ambient.js';
 
 // ─── SUPABASE ─────────────────────────────────────────────────────────
-// window.supabase is set by the UMD CDN build loaded in index.html
-if (!window.supabase) throw new Error("Supabase CDN no cargado — comprueba la conexión a internet");
-const { createClient } = window.supabase;
-const sb = createClient(window.__SUPABASE_URL__, window.__SUPABASE_ANON__);
-db.initDb(sb);
-initAmbient();
+// sb is initialized inside the boot IIFE so any failure is caught gracefully.
+// Top-level throws in ES modules crash the entire module silently in browsers.
+let sb = null;
 
 // ─── APP STATE ────────────────────────────────────────────────────────
 let currentUser  = null;
@@ -466,6 +463,16 @@ window.addEventListener('unhandledrejection', e => {
 
 (async () => {
   try {
+    // ── Initialize Supabase (inside try so failures show a nice error) ──
+    if (!window.supabase) throw new Error('Supabase CDN no cargó. Comprueba tu conexión a internet.');
+    if (!window.__SUPABASE_URL__ || window.__SUPABASE_URL__.includes('TU-PROYECTO')) {
+      throw new Error('Falta configurar SUPABASE_URL en el archivo .env del servidor.');
+    }
+    const { createClient } = window.supabase;
+    sb = createClient(window.__SUPABASE_URL__, window.__SUPABASE_ANON__);
+    db.initDb(sb);
+    initAmbient();
+
     drawStars();
     window.addEventListener('resize', drawStars);
 
@@ -516,13 +523,14 @@ window.addEventListener('unhandledrejection', e => {
     // Show error to user instead of hanging on the loading screen
     const ls = document.getElementById('loading-screen');
     if (ls) {
-      ls.innerHTML = \`
-        <div style="text-align:center;padding:32px;max-width:360px">
-          <div style="font-size:32px;margin-bottom:16px">⚠️</div>
-          <div style="font-size:15px;color:#e8f4f8;margin-bottom:8px">Error al cargar la app</div>
-          <div style="font-size:13px;color:#8ab4cc;margin-bottom:20px">\${err.message}</div>
-          <a href="/" style="color:#4ecdc4;font-size:13px">← Volver al inicio</a>
-        </div>\`;
+      ls.innerHTML = [
+        '<div style="text-align:center;padding:32px;max-width:360px">',
+          '<div style="font-size:32px;margin-bottom:16px">⚠️</div>',
+          '<div style="font-size:15px;color:#e8f4f8;margin-bottom:8px">Error al cargar la app</div>',
+          '<div style="font-size:13px;color:#8ab4cc;margin-bottom:20px">' + err.message + '</div>',
+          '<a href="/" style="color:#4ecdc4;font-size:13px">← Volver al inicio</a>',
+        '</div>'
+      ].join('');
       ls.style.opacity = '1';
     }
   }
