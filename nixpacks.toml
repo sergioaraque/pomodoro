@@ -1,3 +1,12 @@
+# Coolify / Railway nixpacks configuration
+# Este proyecto no tiene paso de build — solo npm install y node server.js
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm install --production"]
+
 [phases.build]
 cmds = []
 
