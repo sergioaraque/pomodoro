@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FocusNature — Pomodoro</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@400;600&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ===== THEME VARIABLES ===== */
+body {
+  --bg1: #071020; --bg2: #0a1e35; --bg3: #0d2844;
+  --accent: #4ecdc4; --accent2: #7eddd6;
+  --text: #e8f4f8; --muted: #8ab4cc;
+  --glass: rgba(255,255,255,0.06); --glass-b: rgba(255,255,255,0.12);
+  --font-display: 'Lora', serif; --font-body: 'DM Sans', sans-serif;
+  --timer-color: #e8f4f8;
+  font-family: var(--font-body);
+  background: var(--bg1);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 0.8s, color 0.8s;
+}
+
+body.theme-meadow {
+  --bg1: #1a2e0a; --bg2: #243d10; --bg3: #2e5015;
+  --accent: #7ecf3e; --accent2: #a8e063;
+  --text: #f0f8e8; --muted: #96b870;
+  --glass: rgba(255,255,255,0.07); --glass-b: rgba(255,255,255,0.15);
+  --font-display: 'Nunito', sans-serif; --font-body: 'Nunito', sans-serif;
+  --timer-color: #f0f8e8;
+}
+body.theme-mountain {
+  --bg1: #0d1520; --bg2: #14213a; --bg3: #1c3050;
+  --accent: #a8c8f0; --accent2: #cce0ff;
+  --text: #e8f0fc; --muted: #7090b8;
+  --glass: rgba(255,255,255,0.06); --glass-b: rgba(255,255,255,0.12);
+  --font-display: 'Playfair Display', serif; --font-body: 'DM Sans', sans-serif;
+  --timer-color: #e8f0fc;
+}
+body.theme-forest {
+  --bg1: #050d08; --bg2: #0a1a0e; --bg3: #112516;
+  --accent: #6bff9e; --accent2: #a0ffcc;
+  --text: #e0f5e8; --muted: #6a9978;
+  --glass: rgba(255,255,255,0.05); --glass-b: rgba(255,255,255,0.10);
+  --font-display: 'Playfair Display', serif; --font-body: 'DM Sans', sans-serif;
+  --timer-color: #e0f5e8;
+}
+
+/* ===== BACKGROUND ===== */
+.bg-layer {
+  position: fixed; inset: 0; z-index: 0;
+  transition: opacity 0.8s;
+}
+.bg-ocean   { background: linear-gradient(180deg,#040e1c 0%,#071828 35%,#0a2338 65%,#0d2e48 100%); }
+.bg-meadow  { background: linear-gradient(180deg,#87CEEB 0%,#b0e0ff 30%,#c8f080 65%,#5a9e20 100%); }
+.bg-mountain{ background: linear-gradient(180deg,#0a0e1a 0%,#1a2840 30%,#2a3a5a 55%,#3a4a6a 75%,#4a5a7a 100%); }
+.bg-forest  { background: linear-gradient(180deg,#020806 0%,#061010 30%,#091a0d 55%,#112516 80%,#193520 100%); }
+
+/* Stars for mountain/forest */
+.stars-layer {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  opacity: 0; transition: opacity 1s;
+}
+body.theme-mountain .stars-layer,
+body.theme-forest .stars-layer { opacity: 1; }
+
+/* Ground layers */
+.ground-layer {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 2;
+  pointer-events: none;
+}
+
+/* ===== CREATURES ===== */
+.creatures-layer {
+  position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden;
+}
+
+/* Fish swimming */
+.fish-el {
+  position: absolute;
+  animation: swimR linear infinite;
+}
+.fish-el.rev { animation-name: swimL; }
+@keyframes swimR { 0%{left:-120px} 100%{left:calc(100vw + 120px)} }
+@keyframes swimL { 0%{left:calc(100vw + 120px)} 100%{left:-120px} }
+
+/* Jellyfish */
+.jelly-el {
+  position: absolute;
+  animation: floatJ ease-in-out infinite;
+}
+@keyframes floatJ {
+  0%,100%{transform:translateY(0) scaleY(1)}
+  25%{transform:translateY(-16px) scaleY(0.93)}
+  50%{transform:translateY(-6px) scaleY(1.03)}
+  75%{transform:translateY(-20px) scaleY(0.96)}
+}
+
+/* Seaweed */
+.seaweed-el {
+  position: absolute; bottom: 0; transform-origin: bottom center;
+  animation: swayA ease-in-out infinite;
+}
+@keyframes swayA { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
+
+/* Bubbles */
+.bubble-el {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(78,205,196,0.4), rgba(30,80,128,0.1));
+  border: 1px solid rgba(78,205,196,0.25);
+  animation: bubbleUp linear infinite;
+}
+@keyframes bubbleUp {
+  0%{transform:translateY(100vh) scale(0);opacity:0}
+  10%{opacity:1} 90%{opacity:0.6}
+  100%{transform:translateY(-80px) scale(1);opacity:0}
+}
+
+/* Butterfly */
+.butterfly-el {
+  position: absolute;
+  animation: flyPath ease-in-out infinite;
+}
+@keyframes flyPath {
+  0%{transform:translateX(0) translateY(0) rotate(-5deg)}
+  25%{transform:translateX(40px) translateY(-30px) rotate(3deg)}
+  50%{transform:translateX(80px) translateY(10px) rotate(-3deg)}
+  75%{transform:translateX(40px) translateY(-15px) rotate(5deg)}
+  100%{transform:translateX(0) translateY(0) rotate(-5deg)}
+}
+.bfly-wing {
+  animation: flapWings 0.35s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes flapWings {
+  0%{transform:scaleX(1)} 100%{transform:scaleX(0.35)}
+}
+
+/* Bee drift */
+.bee-el {
+  position: absolute;
+  animation: beeDrift ease-in-out infinite;
+}
+@keyframes beeDrift {
+  0%,100%{transform:translate(0,0) rotate(-3deg)}
+  33%{transform:translate(25px,-20px) rotate(5deg)}
+  66%{transform:translate(-15px,-10px) rotate(-5deg)}
+}
+
+/* Flower sway */
+.flower-el {
+  position: absolute; bottom: 0; transform-origin: bottom center;
+  animation: flowerSway ease-in-out infinite;
+}
+@keyframes flowerSway {
+  0%,100%{transform:rotate(-4deg)} 50%{transform:rotate(4deg)}
+}
+
+/* Eagle soar */
+.eagle-el {
+  position: absolute;
+  animation: eagleSoar linear infinite;
+}
+@keyframes eagleSoar {
+  0%{left:-150px; top:12%}
+  50%{top:8%}
+  100%{left:calc(100vw + 150px); top:14%}
+}
+
+/* Snowflake fall */
+.snow-el {
+  position: absolute;
+  animation: snowFall linear infinite;
+}
+@keyframes snowFall {
+  0%{transform:translateY(-20px) rotate(0deg);opacity:0}
+  10%{opacity:0.8}
+  90%{opacity:0.4}
+  100%{transform:translateY(100vh) rotate(360deg);opacity:0}
+}
+
+/* Mountain pine sway */
+.pine-el {
+  position: absolute; bottom: 0;
+  animation: pineSway ease-in-out infinite;
+  transform-origin: bottom center;
+}
+@keyframes pineSway {
+  0%,100%{transform:rotate(-2deg)} 50%{transform:rotate(2deg)}
+}
+
+/* Firefly */
+.firefly-el {
+  position: absolute; border-radius: 50%;
+  animation: fireflyFloat ease-in-out infinite;
+}
+@keyframes fireflyFloat {
+  0%,100%{transform:translate(0,0);opacity:0.1}
+  20%{opacity:1}
+  40%{transform:translate(30px,-25px);opacity:0.3}
+  60%{opacity:0.9}
+  80%{transform:translate(-20px,-40px);opacity:0.2}
+}
+
+/* Owl */
+.owl-el {
+  position: absolute;
+  animation: owlBob ease-in-out infinite;
+}
+@keyframes owlBob {
+  0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)}
+}
+
+/* Forest tree sway */
+.ftree-el {
+  position: absolute; bottom: 0; transform-origin: bottom center;
+  animation: treeSway ease-in-out infinite;
+}
+@keyframes treeSway {
+  0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)}
+}
+
+/* Meadow waves */
+.grass-wave {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 2;
+  pointer-events: none;
+}
+body:not(.theme-meadow) .grass-wave { display: none; }
+
+/* Ocean waves */
+.wave-el {
+  position: fixed; bottom: 0; width: 200%; height: 160px; z-index: 2;
+  animation: waveMov linear infinite;
+  pointer-events: none;
+}
+.wave-el.w2{animation-delay:-4s;animation-duration:16s;opacity:.5}
+.wave-el.w3{animation-delay:-8s;animation-duration:20s;opacity:.3}
+@keyframes waveMov{0%,100%{transform:translateX(0)}50%{transform:translateX(-25%)}}
+
+body:not(:not(.theme-meadow):not(.theme-mountain):not(.theme-forest)) .wave-el { opacity: 0; }
+
+/* ===== THEME SWITCHER ===== */
+.theme-switcher {
+  position: fixed; top: 16px; right: 16px; z-index: 100;
+  display: flex; gap: 6px;
+  background: rgba(0,0,0,0.3); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50px; padding: 6px 8px;
+}
+.theme-btn {
+  background: none; border: none; cursor: pointer;
+  border-radius: 50%; width: 34px; height: 34px;
+  font-size: 18px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.25s; opacity: 0.55;
+  title: '';
+}
+.theme-btn:hover { opacity: 0.9; transform: scale(1.1); background: rgba(255,255,255,0.1); }
+.theme-btn.active { opacity: 1; background: rgba(255,255,255,0.18); transform: scale(1.08); }
+.theme-name {
+  position: fixed; top: 60px; right: 16px; z-index: 100;
+  font-size: 11px; color: rgba(255,255,255,0.5);
+  text-align: right; letter-spacing: 0.5px;
+  transition: opacity 0.5s;
+}
+
+/* ===== APP LAYOUT ===== */
+.app {
+  position: relative; z-index: 10;
+  max-width: 960px; margin: 0 auto;
+  padding: 24px 20px 80px;
+  min-height: 100vh;
+}
+.header {
+  text-align: center; margin-bottom: 28px; padding-top: 10px;
+}
+.header h1 {
+  font-family: var(--font-display);
+  font-size: 28px; font-weight: 600;
+  color: var(--accent2);
+  letter-spacing: 0.5px;
+  transition: color 0.8s;
+}
+.header p {
+  font-size: 13px; color: var(--muted); margin-top: 4px;
+  font-style: italic; transition: color 0.8s;
+}
+
+/* TABS */
+.tabs {
+  display: flex; gap: 4px;
+  background: var(--glass); border: 1px solid var(--glass-b);
+  border-radius: 12px; padding: 4px;
+  margin-bottom: 24px; width: fit-content;
+  margin-left: auto; margin-right: auto;
+  transition: background 0.8s, border-color 0.8s;
+}
+.tab-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-family: var(--font-body);
+  font-size: 13px; padding: 8px 20px; border-radius: 8px;
+  transition: all 0.25s;
+}
+.tab-btn.active {
+  background: var(--accent); color: #071020; font-weight: 600;
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* CARD */
+.card {
+  background: var(--glass); border: 1px solid var(--glass-b);
+  border-radius: 16px; padding: 28px 24px;
+  backdrop-filter: blur(14px);
+  margin-bottom: 16px;
+  transition: background 0.8s, border-color 0.8s;
+}
+
+/* TIMER */
+.current-task-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; padding: 8px 14px; margin-bottom: 20px;
+  font-size: 13px; color: var(--accent);
+  transition: color 0.8s;
+}
+.dot-pulse {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  animation: dotP 2s ease-in-out infinite;
+}
+@keyframes dotP{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+.mode-lbl {
+  text-align: center; font-size: 11px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px;
+}
+.timer-display {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 86px; font-weight: 600;
+  color: var(--timer-color); line-height: 1;
+  margin: 6px 0 22px;
+  letter-spacing: -2px;
+  transition: color 0.8s;
+}
+.timer-display.break { color: #6bcf8a; }
+.timer-display.lbreak { color: #ffa552; }
+
+.pbar-wrap {
+  background: rgba(255,255,255,0.08); border-radius: 4px; height: 4px;
+  margin-bottom: 24px; overflow: hidden;
+}
+.pbar {
+  height: 100%; border-radius: 4px;
+  background: var(--accent);
+  transition: width 1s linear, background 0.8s;
+}
+.pbar.break { background: #6bcf8a; }
+.pbar.lbreak { background: #ffa552; }
+
+.timer-controls {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.btn-primary {
+  background: var(--accent); color: #071020;
+  border: none; border-radius: 10px;
+  padding: 14px 44px; font-size: 15px; font-weight: 600;
+  font-family: var(--font-body); cursor: pointer;
+  transition: all 0.2s; min-width: 130px;
+}
+.btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-icon {
+  background: var(--glass); border: 1px solid var(--glass-b);
+  color: var(--muted); border-radius: 10px;
+  width: 46px; height: 46px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; transition: all 0.2s;
+}
+.btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+.session-dots {
+  display: flex; gap: 8px; justify-content: center; margin-top: 18px;
+}
+.sdot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: rgba(255,255,255,0.12); transition: background 0.3s;
+}
+.sdot.done { background: var(--accent); }
+.sdot.cur { background: rgba(255,255,255,0.4); }
+
+/* TASKS */
+.task-input-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.task-inp {
+  flex: 1; background: var(--glass); border: 1px solid var(--glass-b);
+  border-radius: 10px; padding: 11px 15px;
+  color: var(--text); font-family: var(--font-body); font-size: 14px;
+  outline: none; transition: border-color 0.2s;
+}
+.task-inp:focus { border-color: var(--accent); }
+.task-inp::placeholder { color: var(--muted); }
+.btn-add {
+  background: var(--accent); color: #071020;
+  border: none; border-radius: 10px;
+  padding: 11px 18px; font-size: 14px; font-weight: 600;
+  font-family: var(--font-body); cursor: pointer; transition: all 0.2s;
+}
+.btn-add:hover { filter: brightness(1.1); }
+.tasks-list { display: flex; flex-direction: column; gap: 8px; }
+.task-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--glass); border: 1px solid var(--glass-b);
+  border-radius: 10px; padding: 11px 14px;
+  transition: all 0.2s; animation: slideIn 0.25s ease;
+}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.task-item.active-t { border-color: var(--accent); background: rgba(255,255,255,0.08); }
+.task-item.done-t { opacity: 0.4; }
+.tchk {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--muted); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; cursor: pointer; font-size: 11px;
+}
+.tchk.checked { background: #6bcf8a; border-color: #6bcf8a; color: white; }
+.tchk.active-c { border-color: var(--accent); }
+.tname { flex: 1; font-size: 14px; }
+.tname.done { text-decoration: line-through; color: var(--muted); }
+.tpoms { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.tfocus {
+  background: none; border: 1px solid rgba(255,255,255,0.2);
+  color: var(--accent); border-radius: 6px;
+  font-size: 11px; padding: 4px 10px; cursor: pointer;
+  font-family: var(--font-body); transition: all 0.2s;
+}
+.tfocus:hover { background: rgba(255,255,255,0.08); }
+.tdel { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; border-radius: 4px; padding: 3px 5px; transition: color 0.2s; }
+.tdel:hover { color: #ff6b6b; }
+.empty-msg { text-align: center; padding: 28px; color: var(--muted); font-size: 14px; font-style: italic; }
+
+/* SETTINGS */
+.settings-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;
+}
+.sblock {
+  background: var(--glass); border: 1px solid var(--glass-b);
+  border-radius: 10px; padding: 14px;
+}
+.slabel {
+  font-size: 11px; color: var(--muted); margin-bottom: 8px;
+  text-transform: uppercase; letter-spacing: 0.8px;
+}
+.sctrl { display: flex; align-items: center; gap: 8px; }
+.sval {
+  font-family: var(--font-display); font-size: 24px; color: var(--accent);
+  font-weight: 600; min-width: 44px; text-align: center;
+}
+.badj {
+  background: rgba(255,255,255,0.08); border: 1px solid var(--glass-b);
+  color: var(--text); border-radius: 8px;
+  width: 34px; height: 34px; font-size: 18px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.badj:hover { background: rgba(255,255,255,0.15); border-color: var(--accent); color: var(--accent); }
+.stoggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--glass); border: 1px solid var(--glass-b);
+  border-radius: 10px; padding: 14px 16px; cursor: pointer;
+}
+.sw {
+  width: 42px; height: 23px; background: rgba(255,255,255,0.1);
+  border-radius: 12px; position: relative; transition: background 0.3s;
+}
+.sw.on { background: var(--accent); }
+.sw::after {
+  content:''; position: absolute;
+  width: 17px; height: 17px; background: white;
+  border-radius: 50%; top: 3px; left: 3px; transition: transform 0.3s;
+}
+.sw.on::after { transform: translateX(19px); }
+.scene-info {
+  background: var(--glass); border: 1px solid var(--glass-b);
+  border-radius: 10px; padding: 12px 16px; margin-top: 12px;
+  font-size: 13px; color: var(--muted);
+}
+.scene-info b { color: var(--accent); font-weight: 500; }
+
+@media(max-width:520px){
+  .settings-grid{grid-template-columns:1fr}
+  .timer-display{font-size:68px}
+  .theme-switcher{top:10px;right:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- BACKGROUNDS (one per theme, toggled via opacity/display) -->
+<div class="bg-layer bg-ocean" id="bg-ocean"></div>
+<div class="bg-layer bg-meadow" id="bg-meadow" style="opacity:0;transition:opacity 0.8s"></div>
+<div class="bg-layer bg-mountain" id="bg-mountain" style="opacity:0;transition:opacity 0.8s"></div>
+<div class="bg-layer bg-forest" id="bg-forest" style="opacity:0;transition:opacity 0.8s"></div>
+
+<!-- STARS (mountain + forest) -->
+<canvas class="stars-layer" id="stars-canvas"></canvas>
+
+<!-- WAVES (ocean only) -->
+<svg class="wave-el" id="wave1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none" style="animation-duration:12s">
+  <path d="M0,70 C360,130 720,10 1080,70 C1260,100 1350,40 1440,70 L1440,160 L0,160 Z" fill="rgba(14,48,80,0.65)"/>
+</svg>
+<svg class="wave-el w2" id="wave2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none">
+  <path d="M0,90 C240,30 480,150 720,90 C960,30 1200,130 1440,90 L1440,160 L0,160 Z" fill="rgba(16,60,90,0.45)"/>
+</svg>
+
+<!-- GRASS (meadow only) -->
+<svg class="grass-wave" id="grass-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" preserveAspectRatio="none" style="height:120px">
+  <path d="M0,60 C100,30 200,80 300,50 C400,20 500,70 600,45 C700,20 800,65 900,40 C1000,15 1100,60 1200,35 C1300,10 1380,50 1440,30 L1440,120 L0,120 Z" fill="#2d5e0e" opacity="0.9"/>
+  <path d="M0,80 C120,55 240,90 360,65 C480,40 600,85 720,60 C840,35 960,75 1080,55 C1200,35 1340,70 1440,50 L1440,120 L0,120 Z" fill="#3a7a12" opacity="0.7"/>
+</svg>
+
+<!-- CREATURES -->
+<div class="creatures-layer" id="creatures-layer"></div>
+
+<!-- THEME SWITCHER -->
+<div class="theme-switcher">
+  <button class="theme-btn active" id="tbtn-ocean" onclick="setTheme('ocean')" title="Mar">🌊</button>
+  <button class="theme-btn" id="tbtn-meadow" onclick="setTheme('meadow')" title="Prado">🌿</button>
+  <button class="theme-btn" id="tbtn-mountain" onclick="setTheme('mountain')" title="Montaña">🏔️</button>
+  <button class="theme-btn" id="tbtn-forest" onclick="setTheme('forest')" title="Bosque nocturno">🌲</button>
+</div>
+<div class="theme-name" id="theme-name">Mar</div>
+
+<!-- APP -->
+<div class="app">
+  <div class="header">
+    <h1 id="app-title">FocusSea</h1>
+    <p id="app-subtitle">Sumérgete en la concentración</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('timer',event)">Temporizador</button>
+    <button class="tab-btn" onclick="switchTab('tasks',event)">Tareas</button>
+    <button class="tab-btn" onclick="switchTab('settings',event)">Ajustes</button>
+  </div>
+
+  <!-- TIMER -->
+  <div id="tab-timer" class="tab-panel active">
+    <div class="card">
+      <div class="current-task-badge">
+        <div class="dot-pulse"></div>
+        <span id="cur-task-txt">Sin tarea seleccionada</span>
+      </div>
+      <div class="mode-lbl" id="mode-lbl">Sesión de enfoque</div>
+      <div class="timer-display" id="timer-disp">25:00</div>
+      <div class="pbar-wrap"><div class="pbar" id="pbar" style="width:100%"></div></div>
+      <div class="timer-controls">
+        <button class="btn-icon" onclick="resetTimer()" title="Reiniciar">↺</button>
+        <button class="btn-primary" id="start-btn" onclick="toggleTimer()">Iniciar</button>
+        <button class="btn-icon" onclick="skipMode()" title="Saltar">→</button>
+      </div>
+      <div class="session-dots" id="sdots"></div>
+    </div>
+  </div>
+
+  <!-- TASKS -->
+  <div id="tab-tasks" class="tab-panel">
+    <div class="card">
+      <div style="margin-bottom:14px;font-size:13px;color:var(--muted)">Añade tus tareas y haz clic en <b style="color:var(--accent);font-weight:500">Enfocar</b> para activar una.</div>
+      <div class="task-input-row">
+        <input class="task-inp" id="task-inp" type="text" placeholder="¿Qué vas a hacer hoy?" maxlength="60" onkeydown="if(event.key==='Enter')addTask()">
+        <button class="btn-add" onclick="addTask()">+ Añadir</button>
+      </div>
+      <div class="tasks-list" id="tasks-list">
+        <div class="empty-msg">Sin tareas aún — ¡empieza añadiendo una!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-settings" class="tab-panel">
+    <div class="card">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;font-style:italic">Los cambios se aplican al reiniciar el temporizador.</div>
+      <div class="settings-grid">
+        <div class="sblock">
+          <div class="slabel">Sesión de enfoque</div>
+          <div class="sctrl">
+            <button class="badj" onclick="adjSetting('focus',-5)">−</button>
+            <div class="sval" id="sv-focus">25</div>
+            <button class="badj" onclick="adjSetting('focus',5)">+</button>
+            <span style="font-size:12px;color:var(--muted)">min</span>
+          </div>
+        </div>
+        <div class="sblock">
+          <div class="slabel">Pausa corta</div>
+          <div class="sctrl">
+            <button class="badj" onclick="adjSetting('short',-1)">−</button>
+            <div class="sval" id="sv-short">5</div>
+            <button class="badj" onclick="adjSetting('short',1)">+</button>
+            <span style="font-size:12px;color:var(--muted)">min</span>
+          </div>
+        </div>
+        <div class="sblock">
+          <div class="slabel">Pausa larga</div>
+          <div class="sctrl">
+            <button class="badj" onclick="adjSetting('long',-5)">−</button>
+            <div class="sval" id="sv-long">15</div>
+            <button class="badj" onclick="adjSetting('long',5)">+</button>
+            <span style="font-size:12px;color:var(--muted)">min</span>
+          </div>
+        </div>
+        <div class="sblock">
+          <div class="slabel">Sesiones por ciclo</div>
+          <div class="sctrl">
+            <button class="badj" onclick="adjSetting('sessions',-1)">−</button>
+            <div class="sval" id="sv-sessions">4</div>
+            <button class="badj" onclick="adjSetting('sessions',1)">+</button>
+            <span style="font-size:12px;color:var(--muted)">rondas</span>
+          </div>
+        </div>
+      </div>
+      <div class="stoggle-row" onclick="toggleSound()">
+        <div>
+          <div style="font-size:14px">Notificación al terminar</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Tono suave al cambiar de modo</div>
+        </div>
+        <div class="sw on" id="sw-sound"></div>
+      </div>
+      <div class="scene-info" id="scene-info">
+        <b>🌊 Mar</b> — Peces de colores, medusas flotantes, algas y burbujas acompañan tu concentración.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== STATE ====================
+const cfg = { focus:25, short:5, long:15, sessions:4, sound:true };
+const st = {
+  mode:'focus', secondsLeft:25*60, totalSeconds:25*60,
+  running:false, sessionsDone:0, currentTask:null, tasks:[]
+};
+let tickInterval = null;
+let currentTheme = 'ocean';
+
+// ==================== THEMES ====================
+const THEMES = {
+  ocean: {
+    name: 'Mar',
+    title: 'FocusSea',
+    subtitle: 'Sumérgete en la concentración',
+    class: '',
+    sceneInfo: '<b>🌊 Mar</b> — Peces de colores, medusas flotantes, algas y burbujas acompañan tu concentración.'
+  },
+  meadow: {
+    name: 'Prado',
+    title: 'FocusMeadow',
+    subtitle: 'Encuentra calma entre flores y brisa',
+    class: 'theme-meadow',
+    sceneInfo: '<b>🌿 Prado</b> — Mariposas bailando, abejas zumbando y flores meciéndose al viento.'
+  },
+  mountain: {
+    name: 'Montaña',
+    title: 'FocusPeak',
+    subtitle: 'La claridad de las alturas',
+    class: 'theme-mountain',
+    sceneInfo: '<b>🏔️ Montaña</b> — Águilas sobrevolando, copos de nieve cayendo y pinos nevados.'
+  },
+  forest: {
+    name: 'Bosque Nocturno',
+    title: 'FocusForest',
+    subtitle: 'La quietud del bosque en la noche',
+    class: 'theme-forest',
+    sceneInfo: '<b>🌲 Bosque nocturno</b> — Luciérnagas parpadeantes, un búho vigilante y árboles meciéndose en la oscuridad.'
+  }
+};
+
+function setTheme(name) {
+  currentTheme = name;
+  const t = THEMES[name];
+
+  // body classes
+  document.body.className = t.class;
+
+  // backgrounds
+  ['ocean','meadow','mountain','forest'].forEach(k => {
+    document.getElementById('bg-' + k).style.opacity = k === name ? '1' : '0';
+  });
+
+  // waves / grass
+  const isOcean = name === 'ocean';
+  document.getElementById('wave1').style.opacity = isOcean ? '1' : '0';
+  document.getElementById('wave2').style.opacity = isOcean ? '1' : '0';
+  document.getElementById('grass-svg').style.opacity = name === 'meadow' ? '1' : '0';
+
+  // stars canvas
+  const hasSky = name === 'mountain' || name === 'forest';
+  document.getElementById('stars-canvas').style.opacity = hasSky ? '1' : '0';
+
+  // header / info
+  document.getElementById('app-title').textContent = t.title;
+  document.getElementById('app-subtitle').textContent = t.subtitle;
+  document.getElementById('theme-name').textContent = t.name;
+  document.getElementById('scene-info').innerHTML = t.sceneInfo;
+
+  // tab buttons
+  document.querySelectorAll('.tab-btn.active').forEach(b => {
+    b.style.background = '';
+    b.style.color = '';
+  });
+
+  // theme buttons
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tbtn-' + name).classList.add('active');
+
+  // recreate creatures
+  spawnCreatures(name);
+}
+
+// ==================== STARS ====================
+function drawStars() {
+  const canvas = document.getElementById('stars-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < 180; i++) {
+    const x = Math.random() * canvas.width;
+    const y = Math.random() * canvas.height * 0.65;
+    const r = Math.random() * 1.4 + 0.3;
+    const alpha = Math.random() * 0.7 + 0.3;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(220,235,255,${alpha})`;
+    ctx.fill();
+  }
+}
+drawStars();
+window.addEventListener('resize', drawStars);
+
+// ==================== CREATURES ====================
+function clearCreatures() {
+  document.getElementById('creatures-layer').innerHTML = '';
+}
+
+function spawnCreatures(theme) {
+  clearCreatures();
+  const layer = document.getElementById('creatures-layer');
+
+  if (theme === 'ocean') spawnOcean(layer);
+  else if (theme === 'meadow') spawnMeadow(layer);
+  else if (theme === 'mountain') spawnMountain(layer);
+  else if (theme === 'forest') spawnForest(layer);
+}
+
+// --- OCEAN ---
+function fishSVG(color, w, variant) {
+  if (variant === 0) return `<svg width="${w}" height="${w*0.5}" viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M50 15 C40 5,15 8,8 15 C15 22,40 25,50 15Z" fill="${color}" opacity="0.9"/><path d="M50 15 L60 8 L60 22 Z" fill="${color}" opacity="0.65"/><circle cx="12" cy="13" r="2" fill="rgba(0,0,0,0.4)"/><circle cx="11.5" cy="12.5" r="0.7" fill="rgba(255,255,255,0.7)"/><path d="M20 12 Q30 10 38 12" stroke="rgba(255,255,255,0.25)" stroke-width="1" fill="none"/></svg>`;
+  if (variant === 1) return `<svg width="${w}" height="${w*0.45}" viewBox="0 0 75 30" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M60 15 C50 4,20 8,10 15 C20 22,50 26,60 15Z" fill="${color}" opacity="0.85"/><path d="M60 15 L75 7 L72 15 L75 23Z" fill="${color}" opacity="0.6"/><path d="M25 9 C30 5,40 5,45 9" fill="${color}" opacity="0.65"/><circle cx="15" cy="13" r="2.5" fill="rgba(0,0,0,0.5)"/><circle cx="14.5" cy="12.5" r="0.8" fill="rgba(255,255,255,0.8)"/></svg>`;
+  return `<svg width="${w}" height="${w*0.5}" viewBox="0 0 45 28" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="14" rx="18" ry="9" fill="${color}" opacity="0.88"/><path d="M38 14 L45 8 L45 20Z" fill="${color}" opacity="0.6"/><circle cx="8" cy="12" r="1.8" fill="rgba(0,0,0,0.4)"/></svg>`;
+}
+
+function jellyfish(color) {
+  return `<svg width="34" height="52" viewBox="0 0 34 52" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="17" cy="15" rx="15" ry="13" fill="${color}" opacity="0.5"/><ellipse cx="17" cy="13" rx="11" ry="8" fill="${color}" opacity="0.25"/><path d="M9 24 Q7 36 5 46" stroke="${color}" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/><path d="M13 25 Q12 38 10 50" stroke="${color}" stroke-width="1" stroke-linecap="round" opacity="0.4"/><path d="M17 26 Q17 40 17 52" stroke="${color}" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/><path d="M21 25 Q22 38 24 50" stroke="${color}" stroke-width="1" stroke-linecap="round" opacity="0.4"/><path d="M25 24 Q27 36 29 46" stroke="${color}" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/></svg>`;
+}
+
+function seaweed(h, color) {
+  return `<svg width="16" height="${h}" viewBox="0 0 16 ${h}" fill="none"><path d="M8 ${h} C8 ${h*0.8},3 ${h*0.7},5 ${h*0.55} C7 ${h*0.4},12 ${h*0.35},10 ${h*0.2} C8 ${h*0.1},4 ${h*0.05},8 0" stroke="${color}" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>`;
+}
+
+const fishColors = ['#4ecdc4','#45b7d1','#96ceb4','#ffeaa7','#dda0dd','#ff9a9e','#a8edea','#f093fb','#4facfe','#43e97b','#fa709a','#fee140'];
+const jellyColors = ['rgba(155,89,182,0.7)','rgba(52,152,219,0.6)','rgba(230,176,170,0.65)','rgba(93,173,226,0.6)'];
+
+function spawnOcean(layer) {
+  const fishData = [
+    {y:14,spd:22,sz:36,v:0,rev:false,c:fishColors[0]},
+    {y:28,spd:34,sz:28,v:2,rev:true,c:fishColors[2],d:-8},
+    {y:48,spd:28,sz:44,v:1,rev:false,c:fishColors[4],d:-15},
+    {y:62,spd:40,sz:24,v:0,rev:true,c:fishColors[5],d:-5},
+    {y:40,spd:52,sz:20,v:2,rev:false,c:fishColors[7],d:-22},
+    {y:72,spd:38,sz:32,v:1,rev:true,c:fishColors[1],d:-11},
+    {y:20,spd:60,sz:16,v:0,rev:false,c:fishColors[9],d:-30},
+    {y:55,spd:45,sz:26,v:2,rev:true,c:fishColors[10],d:-18},
+  ];
+  fishData.forEach(f => {
+    const el = document.createElement('div');
+    el.className = 'fish-el' + (f.rev?' rev':'');
+    el.style.cssText = `top:${f.y}%;animation-duration:${f.spd}s;animation-delay:${f.d||0}s`;
+    el.innerHTML = fishSVG(f.c, f.sz, f.v);
+    layer.appendChild(el);
+  });
+  [{x:5,y:8,c:jellyColors[0],dur:5,d:0},{x:80,y:14,c:jellyColors[1],dur:7,d:-2},{x:65,y:4,c:jellyColors[2],dur:6,d:-3},{x:18,y:20,c:jellyColors[3],dur:8,d:-5}].forEach(j => {
+    const el = document.createElement('div');
+    el.className = 'jelly-el';
+    el.style.cssText = `left:${j.x}%;top:${j.y}%;animation-duration:${j.dur}s;animation-delay:${j.d}s`;
+    el.innerHTML = jellyfish(j.c);
+    layer.appendChild(el);
+  });
+  [{x:3,h:80,c:'#1a7a4a',dur:4},{x:8,h:60,c:'#1d8a52',dur:5,d:-1},{x:88,h:90,c:'#156b3f',dur:3.5},{x:93,h:70,c:'#0f5c35',dur:4.5,d:-2},{x:50,h:65,c:'#248c52',dur:6,d:-3},{x:75,h:55,c:'#1a7a4a',dur:4,d:-1.5}].forEach(sw => {
+    const el = document.createElement('div');
+    el.className = 'seaweed-el';
+    el.style.cssText = `left:${sw.x}%;animation-duration:${sw.dur}s;animation-delay:${sw.d||0}s`;
+    el.innerHTML = seaweed(sw.h, sw.c);
+    layer.appendChild(el);
+  });
+  // bubbles
+  for (let i = 0; i < 18; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble-el';
+    const sz = 4 + Math.random()*12;
+    b.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;animation-duration:${6+Math.random()*14}s;animation-delay:-${Math.random()*20}s`;
+    layer.appendChild(b);
+  }
+}
+
+// --- MEADOW ---
+function butterflySVG(color1, color2) {
+  return `<svg width="44" height="36" viewBox="0 0 44 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g class="bfly-wing">
+      <ellipse cx="10" cy="14" rx="10" ry="13" fill="${color1}" opacity="0.85"/>
+      <ellipse cx="10" cy="26" rx="7" ry="8" fill="${color2}" opacity="0.75"/>
+      <ellipse cx="34" cy="14" rx="10" ry="13" fill="${color1}" opacity="0.85" transform="scale(-1,1) translate(-44,0)"/>
+      <ellipse cx="34" cy="26" rx="7" ry="8" fill="${color2}" opacity="0.75" transform="scale(-1,1) translate(-44,0)"/>
+    </g>
+    <rect x="21" y="6" width="2" height="24" rx="1" fill="#3a2010" opacity="0.7"/>
+    <path d="M21 6 L18 2 M23 6 L26 2" stroke="#3a2010" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+  </svg>`;
+}
+
+function beeSVG() {
+  return `<svg width="28" height="18" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="14" cy="11" rx="9" ry="6" fill="#f5c842"/>
+    <rect x="7" y="8" width="3" height="6" rx="1" fill="#2a1a00" opacity="0.7"/>
+    <rect x="12" y="8" width="3" height="6" rx="1" fill="#2a1a00" opacity="0.7"/>
+    <rect x="17" y="8" width="3" height="6" rx="1" fill="#2a1a00" opacity="0.7"/>
+    <ellipse cx="20" cy="11" rx="5" ry="4" fill="#ff9800" opacity="0.8"/>
+    <circle cx="22" cy="10" r="1.5" fill="#111" opacity="0.6"/>
+    <path d="M10 8 Q8 3 6 5 M18 8 Q20 3 22 5" stroke="rgba(200,230,255,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  </svg>`;
+}
+
+function flowerSVG(color, size) {
+  const s = size;
+  return `<svg width="${s}" height="${s*1.6}" viewBox="0 0 30 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 48 Q13 38 15 28" stroke="#4a9e1a" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M15 38 Q8 33 5 36" stroke="#4a9e1a" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    <circle cx="15" cy="22" r="5" fill="#ffd700"/>
+    <ellipse cx="8" cy="20" rx="5" ry="3" fill="${color}" opacity="0.9" transform="rotate(-30 8 20)"/>
+    <ellipse cx="22" cy="20" rx="5" ry="3" fill="${color}" opacity="0.9" transform="rotate(30 22 20)"/>
+    <ellipse cx="12" cy="14" rx="5" ry="3" fill="${color}" opacity="0.9" transform="rotate(-60 12 14)"/>
+    <ellipse cx="18" cy="14" rx="5" ry="3" fill="${color}" opacity="0.9" transform="rotate(60 18 14)"/>
+    <ellipse cx="15" cy="12" rx="3" ry="5" fill="${color}" opacity="0.9"/>
+    <ellipse cx="15" cy="32" rx="3" ry="5" fill="${color}" opacity="0.9"/>
+  </svg>`;
+}
+
+const bflyColors = [['#ff89a8','#c048a0'],['#ffd54f','#ff8c00'],['#80d8ff','#0288d1'],['#ccff90','#4caf50'],['#ea80fc','#7b1fa2'],['#ff6e40','#bf360c']];
+
+function spawnMeadow(layer) {
+  // Butterflies
+  bflyColors.concat(bflyColors.slice(0,3)).forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'butterfly-el';
+    el.style.cssText = `left:${5+i*12}%;top:${15+Math.sin(i)*20}%;animation-duration:${6+i*1.3}s;animation-delay:${-i*1.5}s`;
+    el.innerHTML = butterflySVG(c[0], c[1]);
+    layer.appendChild(el);
+  });
+  // Bees
+  for (let i = 0; i < 5; i++) {
+    const el = document.createElement('div');
+    el.className = 'bee-el';
+    el.style.cssText = `left:${10+i*18}%;top:${30+Math.cos(i)*15}%;animation-duration:${4+i}s;animation-delay:${-i*2}s`;
+    el.innerHTML = beeSVG();
+    layer.appendChild(el);
+  }
+  // Flowers
+  const flColors = ['#ff6b9d','#ff9e40','#a78bfa','#f472b6','#34d399','#60a5fa','#fbbf24','#f87171'];
+  const flSizes = [22, 18, 26, 20, 24, 16, 22, 18];
+  [2,8,14,22,30,40,52,62,72,80,88,95].forEach((x, i) => {
+    const el = document.createElement('div');
+    el.className = 'flower-el';
+    el.style.cssText = `left:${x}%;animation-duration:${3+Math.random()*3}s;animation-delay:${-Math.random()*3}s`;
+    el.innerHTML = flowerSVG(flColors[i%flColors.length], flSizes[i%flSizes.length]);
+    layer.appendChild(el);
+  });
+}
+
+// --- MOUNTAIN ---
+function eagleSVG() {
+  return `<svg width="80" height="40" viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M5 20 Q20 5 40 18 Q60 5 75 20" stroke="#c8d8e8" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M5 20 Q12 28 20 22" stroke="#c8d8e8" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+    <path d="M75 20 Q68 28 60 22" stroke="#c8d8e8" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+    <ellipse cx="40" cy="18" rx="8" ry="5" fill="#a8b8c8" opacity="0.9"/>
+    <path d="M40 18 L44 16 L46 19 L40 20Z" fill="#e8d080" opacity="0.9"/>
+    <circle cx="37" cy="16" r="1.5" fill="#111" opacity="0.7"/>
+  </svg>`;
+}
+
+function snowflakeSVG(sz, opacity) {
+  const s = sz;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <line x1="10" y1="1" x2="10" y2="19" stroke="rgba(200,220,255,${opacity})" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="1" y1="10" x2="19" y2="10" stroke="rgba(200,220,255,${opacity})" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="3" y1="3" x2="17" y2="17" stroke="rgba(200,220,255,${opacity})" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="17" y1="3" x2="3" y2="17" stroke="rgba(200,220,255,${opacity})" stroke-width="1.2" stroke-linecap="round"/>
+    <circle cx="10" cy="10" r="1.5" fill="rgba(220,235,255,${opacity})"/>
+  </svg>`;
+}
+
+function pineSVG(h, snowAmount) {
+  const w = h * 0.55;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 55 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="24" y="82" width="7" height="18" rx="2" fill="#4a3020" opacity="0.85"/>
+    <polygon points="27.5,2 6,42 49,42" fill="#1a4a2a" opacity="0.9"/>
+    <polygon points="27.5,18 5,58 50,58" fill="#1d5530" opacity="0.85"/>
+    <polygon points="27.5,34 4,76 51,76" fill="#20603a" opacity="0.8"/>
+    <polygon points="27.5,2 6,42 49,42" fill="rgba(220,235,255,${snowAmount*0.7})" opacity="0.6" clip-path="inset(0 0 60% 0)"/>
+    <polygon points="27.5,18 5,58 50,58" fill="rgba(220,235,255,${snowAmount*0.5})" opacity="0.5" clip-path="inset(0 0 60% 0)"/>
+  </svg>`;
+}
+
+function spawnMountain(layer) {
+  // Eagles
+  for (let i = 0; i < 3; i++) {
+    const el = document.createElement('div');
+    el.className = 'eagle-el';
+    el.style.cssText = `animation-duration:${28+i*12}s;animation-delay:${-i*9}s;top:${8+i*5}%`;
+    el.innerHTML = eagleSVG();
+    layer.appendChild(el);
+  }
+  // Snowflakes
+  for (let i = 0; i < 35; i++) {
+    const el = document.createElement('div');
+    el.className = 'snow-el';
+    const sz = 8 + Math.random() * 14;
+    el.style.cssText = `left:${Math.random()*100}%;animation-duration:${8+Math.random()*12}s;animation-delay:${-Math.random()*20}s`;
+    el.innerHTML = snowflakeSVG(sz, 0.6 + Math.random() * 0.4);
+    layer.appendChild(el);
+  }
+  // Pines
+  [2,10,18,26,70,78,86,93].forEach((x, i) => {
+    const el = document.createElement('div');
+    el.className = 'pine-el';
+    const h = 70 + Math.random() * 50;
+    el.style.cssText = `left:${x}%;animation-duration:${5+Math.random()*4}s;animation-delay:${-Math.random()*4}s`;
+    el.innerHTML = pineSVG(h, 0.4 + Math.random() * 0.5);
+    layer.appendChild(el);
+  });
+}
+
+// --- FOREST ---
+function fireflyEl(x, y, color, dur, delay) {
+  const el = document.createElement('div');
+  el.className = 'firefly-el';
+  const sz = 4 + Math.random() * 5;
+  el.style.cssText = `left:${x}%;top:${y}%;width:${sz}px;height:${sz}px;background:${color};box-shadow:0 0 ${sz*3}px ${color};animation-duration:${dur}s;animation-delay:${delay}s`;
+  return el;
+}
+
+function owlSVG() {
+  return `<svg width="38" height="48" viewBox="0 0 38 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="19" cy="30" rx="13" ry="16" fill="#3a2a10" opacity="0.9"/>
+    <ellipse cx="19" cy="18" rx="11" ry="12" fill="#4a3518" opacity="0.9"/>
+    <polygon points="14,8 19,2 24,8" fill="#3a2a10" opacity="0.85"/>
+    <circle cx="14" cy="18" r="5" fill="#f0e8d0" opacity="0.9"/>
+    <circle cx="24" cy="18" r="5" fill="#f0e8d0" opacity="0.9"/>
+    <circle cx="14" cy="18" r="3" fill="#1a1a0a"/>
+    <circle cx="24" cy="18" r="3" fill="#1a1a0a"/>
+    <circle cx="15" cy="17" r="1" fill="rgba(255,255,255,0.8)"/>
+    <circle cx="25" cy="17" r="1" fill="rgba(255,255,255,0.8)"/>
+    <path d="M17 24 Q19 26 21 24" stroke="#a08050" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    <path d="M8 30 Q4 26 6 22" stroke="#3a2a10" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+    <path d="M30 30 Q34 26 32 22" stroke="#3a2a10" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+    <path d="M6 44 Q10 40 14 42 Q19 40 24 42 Q28 40 32 44" stroke="#2a1a08" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7"/>
+  </svg>`;
+}
+
+function forestTreeSVG(h, leafColor) {
+  const w = h * 0.7;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 70 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="30" y="70" width="10" height="30" rx="3" fill="#1a0e06" opacity="0.9"/>
+    <ellipse cx="35" cy="45" rx="28" ry="38" fill="${leafColor}" opacity="0.85"/>
+    <ellipse cx="35" cy="38" rx="22" ry="30" fill="${leafColor}" opacity="0.5"/>
+  </svg>`;
+}
+
+const ffColors = ['#aaff55','#88ff33','#ccff44','#ffff44','#aaffaa'];
+const treeColors = ['#0a2a10','#081e0c','#0d3015','#0a2412','#061808'];
+
+function spawnForest(layer) {
+  // Background trees
+  [1,7,13,20,27,68,75,82,89,95].forEach((x, i) => {
+    const el = document.createElement('div');
+    el.className = 'ftree-el';
+    const h = 80 + Math.random() * 70;
+    el.style.cssText = `left:${x}%;animation-duration:${6+Math.random()*5}s;animation-delay:${-Math.random()*5}s`;
+    el.innerHTML = forestTreeSVG(h, treeColors[i%treeColors.length]);
+    layer.appendChild(el);
+  });
+  // Fireflies
+  for (let i = 0; i < 28; i++) {
+    const x = Math.random() * 90 + 5;
+    const y = Math.random() * 70 + 10;
+    const c = ffColors[Math.floor(Math.random() * ffColors.length)];
+    const dur = 3 + Math.random() * 5;
+    const delay = -Math.random() * 8;
+    layer.appendChild(fireflyEl(x, y, c, dur, delay));
+  }
+  // Owl
+  const owlEl = document.createElement('div');
+  owlEl.className = 'owl-el';
+  owlEl.style.cssText = 'right:12%;top:18%;animation-duration:4s;animation-delay:0s';
+  owlEl.innerHTML = owlSVG();
+  layer.appendChild(owlEl);
+}
+
+// ==================== TIMER ====================
+function toggleTimer() {
+  if (st.running) {
+    clearInterval(tickInterval);
+    st.running = false;
+    document.getElementById('start-btn').textContent = 'Reanudar';
+  } else {
+    st.running = true;
+    document.getElementById('start-btn').textContent = 'Pausar';
+    tickInterval = setInterval(tick, 1000);
+  }
+}
+
+function tick() {
+  if (st.secondsLeft <= 0) {
+    clearInterval(tickInterval);
+    st.running = false;
+    onEnd(); return;
+  }
+  st.secondsLeft--;
+  updateTimerUI();
+}
+
+function onEnd() {
+  if (cfg.sound) playBeep();
+  if (st.mode === 'focus') {
+    st.sessionsDone++;
+    if (st.currentTask) {
+      const t = st.tasks.find(t => t.id === st.currentTask);
+      if (t) { t.pomodoros++; renderTasks(); }
+    }
+    setMode(st.sessionsDone % cfg.sessions === 0 ? 'long' : 'short');
+  } else {
+    setMode('focus');
+  }
+}
+
+function setMode(mode) {
+  st.mode = mode;
+  st.totalSeconds = st.secondsLeft = (mode === 'focus' ? cfg.focus : mode === 'short' ? cfg.short : cfg.long) * 60;
+  document.getElementById('start-btn').textContent = 'Iniciar';
+  updateTimerUI(); updateDots();
+}
+
+function resetTimer() {
+  clearInterval(tickInterval); st.running = false;
+  setMode(st.mode);
+  document.getElementById('start-btn').textContent = 'Iniciar';
+}
+
+function skipMode() {
+  clearInterval(tickInterval); st.running = false; onEnd();
+}
+
+function updateTimerUI() {
+  const m = Math.floor(st.secondsLeft / 60);
+  const s = st.secondsLeft % 60;
+  document.getElementById('timer-disp').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const pct = st.totalSeconds > 0 ? (st.secondsLeft / st.totalSeconds * 100) : 0;
+  const pbar = document.getElementById('pbar');
+  const disp = document.getElementById('timer-disp');
+  const lbl = document.getElementById('mode-lbl');
+  pbar.style.width = pct + '%';
+  disp.className = 'timer-display';
+  pbar.className = 'pbar';
+  if (st.mode === 'short') {
+    lbl.textContent = 'Pausa corta';
+    disp.classList.add('break'); pbar.classList.add('break');
+  } else if (st.mode === 'long') {
+    lbl.textContent = 'Pausa larga — descansa bien';
+    disp.classList.add('lbreak'); pbar.classList.add('lbreak');
+  } else {
+    lbl.textContent = 'Sesión de enfoque';
+  }
+}
+
+function updateDots() {
+  const c = document.getElementById('sdots');
+  c.innerHTML = '';
+  const doneInCycle = st.sessionsDone % cfg.sessions;
+  for (let i = 0; i < cfg.sessions; i++) {
+    const d = document.createElement('div');
+    d.className = 'sdot' + (i < doneInCycle ? ' done' : i === doneInCycle && st.mode === 'focus' ? ' cur' : '');
+    c.appendChild(d);
+  }
+}
+
+// ==================== TASKS ====================
+function addTask() {
+  const inp = document.getElementById('task-inp');
+  const name = inp.value.trim();
+  if (!name) return;
+  st.tasks.unshift({ id: Date.now(), name, done: false, pomodoros: 0 });
+  inp.value = '';
+  renderTasks();
+}
+
+function renderTasks() {
+  const list = document.getElementById('tasks-list');
+  if (!st.tasks.length) {
+    list.innerHTML = '<div class="empty-msg">Sin tareas aún — ¡empieza añadiendo una!</div>';
+    return;
+  }
+  list.innerHTML = st.tasks.map(t => `
+    <div class="task-item ${t.id===st.currentTask?'active-t':''} ${t.done?'done-t':''}">
+      <div class="tchk ${t.done?'checked':t.id===st.currentTask?'active-c':''}" onclick="toggleDone(${t.id})">${t.done?'✓':''}</div>
+      <div class="tname ${t.done?'done':''}">${esc(t.name)}</div>
+      ${t.pomodoros>0?`<div class="tpoms">🍅 ×${t.pomodoros}</div>`:''}
+      ${!t.done?`<button class="tfocus" onclick="selectTask(${t.id})">${t.id===st.currentTask?'✓ Activa':'Enfocar'}</button>`:''}
+      <button class="tdel" onclick="delTask(${t.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function selectTask(id) {
+  st.currentTask = id;
+  const t = st.tasks.find(t => t.id === id);
+  if (t) document.getElementById('cur-task-txt').textContent = t.name;
+  renderTasks();
+}
+
+function toggleDone(id) {
+  const t = st.tasks.find(t => t.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  if (t.done && st.currentTask === id) {
+    st.currentTask = null;
+    document.getElementById('cur-task-txt').textContent = 'Sin tarea seleccionada';
+  }
+  renderTasks();
+}
+
+function delTask(id) {
+  st.tasks = st.tasks.filter(t => t.id !== id);
+  if (st.currentTask === id) {
+    st.currentTask = null;
+    document.getElementById('cur-task-txt').textContent = 'Sin tarea seleccionada';
+  }
+  renderTasks();
+}
+
+// ==================== SETTINGS ====================
+const settingLimits = { focus:[5,90], short:[1,30], long:[5,60], sessions:[2,8] };
+function adjSetting(key, delta) {
+  const [mn, mx] = settingLimits[key];
+  cfg[key] = Math.max(mn, Math.min(mx, cfg[key] + delta));
+  document.getElementById('sv-' + key).textContent = cfg[key];
+  if (!st.running) setMode(st.mode);
+  updateDots();
+}
+
+function toggleSound() {
+  cfg.sound = !cfg.sound;
+  document.getElementById('sw-sound').className = 'sw' + (cfg.sound ? ' on' : '');
+}
+
+// ==================== SOUND ====================
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [528, 660, 792].forEach((freq, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq; o.type = 'sine';
+      const t = ctx.currentTime + i * 0.4;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.2, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+      o.start(t); o.stop(t + 0.8);
+    });
+  } catch(e) {}
+}
+
+// ==================== TABS ====================
+function switchTab(name, event) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (event && event.target) event.target.classList.add('active');
+}
+
+// ==================== INIT ====================
+spawnCreatures('ocean');
+updateTimerUI();
+updateDots();
+</script>
+</body>
+</html>
