@@ -85,7 +85,16 @@ const app     = express();
 
 // Sirve CSS/JS/assets — { index: false } para que index.html
 // nunca se sirva en crudo (siempre pasa por buildAppHtml).
-app.use(express.static(PUBLIC, { index: false }));
+// Explicitly set JS MIME type — browsers reject ES modules without application/javascript
+const serveStatic = require('serve-static');
+app.use(express.static(PUBLIC, {
+  index: false,
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    }
+  }
+}));
 
 // ── RUTAS ──────────────────────────────────────────────────────────────
 // Landing

@@ -4,7 +4,11 @@
   "description": "Pomodoro app with nature themes and Supabase backend",
   "scripts": {
     "start": "node server.js",
+    "build": "echo 'No build step needed — pure static frontend'",
     "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "express": "^4.18.2"
