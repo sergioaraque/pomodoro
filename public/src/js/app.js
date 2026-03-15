@@ -12,7 +12,7 @@ import * as ui                                         from './ui.js';
 import { playSessionEnd }                              from './sound.js';
 import { spawnCreatures, drawStars }                   from './creatures.js';
 import { initAmbient, startAmbient, stopAmbient,
-         setVolume }                                   from './ambient.js';
+         switchAmbient, setVolume }                     from './ambient.js';
 
 // ─── Supabase client — initialized inside boot ────────────────────────
 let sb = null;
@@ -148,7 +148,18 @@ window.doRegister = async () => {
 };
 
 window.doLogout = async () => {
-  await db.auth.signOut();
+  try {
+    // Intentar cerrar sesión en Supabase
+    await db.auth.signOut();
+  } catch (e) {
+    console.warn('signOut error (ignorado):', e);
+  }
+  // Limpiar tokens de Supabase del localStorage manualmente por si acaso
+  Object.keys(localStorage)
+    .filter(k => k.startsWith('sb-') || k.includes('supabase'))
+    .forEach(k => localStorage.removeItem(k));
+  // Redirigir al landing
+  window.location.replace('/');
 };
 
 window.doResetPassword = async () => {
@@ -465,7 +476,7 @@ function applyTheme(name, persist = true) {
   currentTheme = name;
   ui.applyTheme(name);
   if (currentUser) spawnCreatures(name);
-  if (cfg.ambient && currentUser) { stopAmbient(); setTimeout(() => startAmbient(name), 800); }
+  if (cfg.ambient && currentUser) { switchAmbient(name); }
   if (persist && currentUser) debounceSave();
 }
 window.setTheme = applyTheme;

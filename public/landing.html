@@ -214,7 +214,7 @@ section { padding: 100px 0; }
 /* ── THEMES SHOWCASE ── */
 .themes-section { border-top: 1px solid rgba(255,255,255,0.06); }
 .themes-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;
   margin-top: 52px;
 }
 .theme-card {
@@ -505,6 +505,42 @@ footer a:hover { text-decoration: underline; }
           <span class="creature-tag">Búho</span>
           <span class="creature-tag">Árboles</span>
           <span class="creature-tag">Estrellas</span>
+        </div>
+      </div>
+
+      <div class="theme-card reveal" style="background:linear-gradient(145deg,#1a0e04 0%,#3d1f08 100%);border-color:rgba(245,166,35,.15)">
+        <span class="theme-card-emoji">🏜️</span>
+        <div class="theme-card-name" style="color:#f5a623">Desierto</div>
+        <div class="theme-card-desc">Chicharras bajo el sol abrasador, un escorpión en la arena, remolinos de polvo y cactus centenarios.</div>
+        <div class="theme-card-creatures">
+          <span class="creature-tag">Cactus</span>
+          <span class="creature-tag">Escorpión</span>
+          <span class="creature-tag">Serpiente</span>
+          <span class="creature-tag">Remolinos</span>
+        </div>
+      </div>
+
+      <div class="theme-card reveal reveal-delay-1" style="background:linear-gradient(145deg,#050810 0%,#141e38 100%);border-color:rgba(96,168,240,.15)">
+        <span class="theme-card-emoji">🌃</span>
+        <div class="theme-card-name" style="color:#60a8f0">Ciudad</div>
+        <div class="theme-card-desc">Lluvia sobre el asfalto, coches con faros, edificios con ventanas encendidas y una sirena en la distancia.</div>
+        <div class="theme-card-creatures">
+          <span class="creature-tag">Lluvia</span>
+          <span class="creature-tag">Coches</span>
+          <span class="creature-tag">Edificios</span>
+          <span class="creature-tag">Farolas</span>
+        </div>
+      </div>
+
+      <div class="theme-card reveal reveal-delay-2" style="background:linear-gradient(145deg,#020c14 0%,#0e2e48 100%);border-color:rgba(102,255,204,.15)">
+        <span class="theme-card-emoji">❄️</span>
+        <div class="theme-card-name" style="color:#66ffcc">Ártico</div>
+        <div class="theme-card-desc">Auroras boreales que ondean lentamente, un oso polar solitario, icebergs a la deriva y copos de nieve perfectos.</div>
+        <div class="theme-card-creatures">
+          <span class="creature-tag">Aurora boreal</span>
+          <span class="creature-tag">Oso polar</span>
+          <span class="creature-tag">Icebergs</span>
+          <span class="creature-tag">Copos grandes</span>
         </div>
       </div>
 

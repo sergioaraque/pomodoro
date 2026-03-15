@@ -129,23 +129,27 @@ export function switchTab(name) {
 //  THEMES
 // ══════════════════════════════════════════════
 const THEMES = {
-  ocean:    { title:'FocusSea',      subtitle:'Sumérgete en la concentración',  cls:'',               info:'<b>🌊 Mar</b> — Peces, medusas, algas y burbujas.' },
-  meadow:   { title:'FocusMeadow',   subtitle:'Calma entre flores y brisa',     cls:'theme-meadow',   info:'<b>🌿 Prado</b> — Mariposas, abejas y flores.' },
-  mountain: { title:'FocusPeak',     subtitle:'La claridad de las alturas',     cls:'theme-mountain', info:'<b>🏔️ Montaña</b> — Águilas, nieve y pinos.' },
-  forest:   { title:'FocusForest',   subtitle:'Quietud del bosque en la noche', cls:'theme-forest',   info:'<b>🌲 Bosque</b> — Luciérnagas, búho y árboles.' },
+  ocean:    { title:'FocusSea',      subtitle:'Sumérgete en la concentración',  cls:'',                info:'<b>🌊 Mar</b> — Peces, medusas, algas y burbujas.' },
+  meadow:   { title:'FocusMeadow',   subtitle:'Calma entre flores y brisa',     cls:'theme-meadow',    info:'<b>🌿 Prado</b> — Mariposas, abejas y flores.' },
+  mountain: { title:'FocusPeak',     subtitle:'La claridad de las alturas',     cls:'theme-mountain',  info:'<b>🏔️ Montaña</b> — Águilas, nieve y pinos.' },
+  forest:   { title:'FocusForest',   subtitle:'Quietud del bosque en la noche', cls:'theme-forest',    info:'<b>🌲 Bosque</b> — Luciérnagas, búho y árboles.' },
+  desert:   { title:'FocusDesert',   subtitle:'Silencio ardiente del desierto', cls:'theme-desert',    info:'<b>🏜️ Desierto</b> — Cactus, escorpiones y remolinos.' },
+  city:     { title:'FocusCity',     subtitle:'La ciudad que nunca duerme',     cls:'theme-city',      info:'<b>🌃 Ciudad</b> — Lluvia, coches y luces de neón.' },
+  arctic:   { title:'FocusArctic',   subtitle:'Paz infinita bajo la aurora',    cls:'theme-arctic',    info:'<b>❄️ Ártico</b> — Auroras boreales, oso polar e icebergs.' },
 };
 
 export function applyTheme(name) {
   const t = THEMES[name];
   document.body.className = t.cls;
 
-  ['ocean','meadow','mountain','forest'].forEach(k => {
-    $('bg-' + k).style.opacity = (k === name) ? '1' : '0';
+  ['ocean','meadow','mountain','forest','desert','city','arctic'].forEach(k => {
+    const el = $('bg-' + k);
+    if (el) el.style.opacity = (k === name) ? '1' : '0';
   });
-  $('wave1').style.opacity     = name === 'ocean'   ? '1'  : '0';
-  $('wave2').style.opacity     = name === 'ocean'   ? '.5' : '0';
-  $('grass-svg').style.opacity = name === 'meadow'  ? '1'  : '0';
-  $('stars-canvas').style.opacity = (name === 'mountain' || name === 'forest') ? '1' : '0';
+  $('wave1').style.opacity     = name === 'ocean'  ? '1'  : '0';
+  $('wave2').style.opacity     = name === 'ocean'  ? '.5' : '0';
+  $('grass-svg').style.opacity = name === 'meadow' ? '1'  : '0';
+  $('stars-canvas').style.opacity = (name === 'mountain' || name === 'forest' || name === 'arctic') ? '1' : '0';
 
   $('app-title').textContent    = t.title;
   $('app-subtitle').textContent = t.subtitle;

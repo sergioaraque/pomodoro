@@ -529,3 +529,63 @@ body.deep-focus #tab-timer .card         { box-shadow: 0 0 60px rgba(0,0,0,0.5);
 @media (max-width: 520px) {
   body.deep-focus #tab-timer { padding: 0 8px; }
 }
+
+/* ════════════════════════════════════════════════
+   NUEVOS TEMAS — Desierto, Ciudad, Ártico
+   ════════════════════════════════════════════════ */
+
+/* ── Token overrides ── */
+body.theme-desert {
+  --accent: #f5a623; --accent2: #ffcc66;
+  --text: #f5ead0; --muted: #b89060;
+  --glass: rgba(255,255,255,0.06); --glass-b: rgba(255,255,255,0.13);
+  --font-display: 'Lora', serif; --font-body: 'DM Sans', sans-serif;
+  --timer-color: #f5ead0;
+}
+body.theme-city {
+  --accent: #60a8f0; --accent2: #90c8ff;
+  --text: #ddeeff; --muted: #6080a0;
+  --glass: rgba(255,255,255,0.06); --glass-b: rgba(255,255,255,0.12);
+  --font-display: 'DM Sans', sans-serif; --font-body: 'DM Sans', sans-serif;
+  --timer-color: #ddeeff;
+}
+body.theme-arctic {
+  --accent: #66ffcc; --accent2: #aaffee;
+  --text: #e8f8ff; --muted: #80aabb;
+  --glass: rgba(255,255,255,0.07); --glass-b: rgba(255,255,255,0.14);
+  --font-display: 'Playfair Display', serif; --font-body: 'DM Sans', sans-serif;
+  --timer-color: #e8f8ff;
+}
+
+/* ── Backgrounds ── */
+.bg-desert { background: linear-gradient(180deg,#1a0e04 0%,#3d1f08 25%,#7a3d10 55%,#c87020 80%,#e8a040 100%); }
+.bg-city   { background: linear-gradient(180deg,#050810 0%,#0a1020 30%,#0f1830 55%,#141e38 80%,#1a2440 100%); }
+.bg-arctic { background: linear-gradient(180deg,#020c14 0%,#061828 30%,#0a2438 55%,#0e2e48 80%,#103450 100%); }
+
+/* ── Desert creature animations ── */
+.dust-devil-el {
+  position: absolute; bottom: 0; transform-origin: bottom center;
+  animation: dustRise ease-in-out infinite;
+}
+@keyframes dustRise {
+  0%,100% { transform: rotate(-3deg) scaleY(1); opacity: .6; }
+  50%     { transform: rotate(4deg)  scaleY(1.15); opacity: .9; }
+}
+
+/* ── City rain override — faster snowFall for rain effect ── */
+body.theme-city .snow-el { animation-name: rainFall; }
+@keyframes rainFall {
+  0%   { transform: translateY(-20px) rotate(10deg); opacity: 0; }
+  5%   { opacity: .7; }
+  100% { transform: translateY(100vh)  rotate(10deg); opacity: .3; }
+}
+
+/* ── Arctic aurora wave animation ── */
+@keyframes auroraWave {
+  0%   { transform: translateX(-3%) scaleY(1); }
+  50%  { transform: translateX(3%) scaleY(1.1); }
+  100% { transform: translateX(-1%) scaleY(0.9); }
+}
+
+/* ── Stars visible for arctic too (already handled in JS) ── */
+body.theme-arctic .stars-layer { opacity: 1; }

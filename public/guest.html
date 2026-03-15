@@ -83,6 +83,9 @@
 <div class="bg-layer bg-meadow"   id="bg-meadow"   style="opacity:0"></div>
 <div class="bg-layer bg-mountain" id="bg-mountain" style="opacity:0"></div>
 <div class="bg-layer bg-forest"   id="bg-forest"   style="opacity:0"></div>
+<div class="bg-layer bg-desert"   id="bg-desert"   style="opacity:0"></div>
+<div class="bg-layer bg-city"     id="bg-city"     style="opacity:0"></div>
+<div class="bg-layer bg-arctic"   id="bg-arctic"   style="opacity:0"></div>
 <canvas class="stars-layer" id="stars-canvas"></canvas>
 <svg class="wave-el" id="wave1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none" style="animation-duration:12s"><path d="M0,70 C360,130 720,10 1080,70 C1260,100 1350,40 1440,70 L1440,160 L0,160 Z" fill="rgba(14,48,80,.65)"/></svg>
 <svg class="wave-el w2" id="wave2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none"><path d="M0,90 C240,30 480,150 720,90 C960,30 1200,130 1440,90 L1440,160 L0,160 Z" fill="rgba(16,60,90,.45)"/></svg>
@@ -100,6 +103,9 @@
     <button class="theme-btn"        id="tbtn-meadow"   onclick="setTheme('meadow')"   title="Prado">🌿</button>
     <button class="theme-btn"        id="tbtn-mountain" onclick="setTheme('mountain')" title="Montaña">🏔️</button>
     <button class="theme-btn"        id="tbtn-forest"   onclick="setTheme('forest')"   title="Bosque">🌲</button>
+    <button class="theme-btn"        id="tbtn-desert"   onclick="setTheme('desert')"   title="Desierto">🏜️</button>
+    <button class="theme-btn"        id="tbtn-city"     onclick="setTheme('city')"     title="Ciudad">🌃</button>
+    <button class="theme-btn"        id="tbtn-arctic"   onclick="setTheme('arctic')"   title="Ártico">❄️</button>
   </div>
   <div class="guest-bar-right">
     <a class="btn-login"  href="/app">Iniciar sesión</a>
@@ -252,7 +258,7 @@ window.setTheme = (name) => {
   saveCfg();
   const t = THEMES[name];
   document.body.className = t.cls;
-  ['ocean','meadow','mountain','forest'].forEach(k => {
+  ['ocean','meadow','mountain','forest','desert','city','arctic'].forEach(k => {
     document.getElementById('bg-'+k).style.opacity = k === name ? '1' : '0';
   });
   document.getElementById('wave1').style.opacity     = name==='ocean' ? '1'  : '0';
