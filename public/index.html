@@ -42,6 +42,8 @@
 <div class="bg-layer bg-desert"   id="bg-desert"   style="opacity:0"></div>
 <div class="bg-layer bg-city"     id="bg-city"     style="opacity:0"></div>
 <div class="bg-layer bg-arctic"   id="bg-arctic"   style="opacity:0"></div>
+<div class="bg-layer bg-space"    id="bg-space"    style="opacity:0"></div>
+<div class="bg-layer bg-deep"     id="bg-deep"     style="opacity:0"></div>
 <canvas class="stars-layer" id="stars-canvas"></canvas>
 <svg class="wave-el" id="wave1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none" style="animation-duration:12s">
   <path d="M0,70 C360,130 720,10 1080,70 C1260,100 1350,40 1440,70 L1440,160 L0,160 Z" fill="rgba(14,48,80,.65)"/>
@@ -149,6 +151,8 @@
       <button class="tpick"        id="tbtn-desert"   onclick="pickTheme('desert')"   title="Desierto">🏜️<span>Desierto</span></button>
       <button class="tpick"        id="tbtn-city"     onclick="pickTheme('city')"     title="Ciudad">🌃<span>Ciudad</span></button>
       <button class="tpick"        id="tbtn-arctic"   onclick="pickTheme('arctic')"   title="Ártico">❄️<span>Ártico</span></button>
+      <button class="tpick"        id="tbtn-space"    onclick="pickTheme('space')"    title="Espacio">🚀<span>Espacio</span></button>
+      <button class="tpick"        id="tbtn-deep"     onclick="pickTheme('deep')"     title="Abisal">🌑<span>Abisal</span></button>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
@@ -221,6 +225,20 @@
           onkeydown="if(event.key==='Enter') addTask()">
         <button class="btn-add" onclick="addTask()">+ Añadir</button>
       </div>
+      <div class="task-meta-row">
+        <select class="task-meta-sel" id="task-label-sel">
+          <option value="">Sin etiqueta</option>
+          <option value="trabajo">💼 Trabajo</option>
+          <option value="personal">🏠 Personal</option>
+          <option value="estudio">📚 Estudio</option>
+          <option value="salud">💪 Salud</option>
+          <option value="otro">📌 Otro</option>
+        </select>
+        <div class="task-est-wrap">
+          <input class="task-est-inp" id="task-est-inp" type="number" min="0" max="20" placeholder="0" title="Pomodoros estimados">
+          <span class="task-est-lbl">🍅 estimados</span>
+        </div>
+      </div>
       <div class="tasks-list" id="tasks-list">
         <div class="empty-msg">Cargando…</div>
       </div>
@@ -254,6 +272,10 @@
       </div>
       <div class="heatmap" id="heatmap"></div>
     </div>
+    <div class="card" style="padding:16px" id="weekly-challenge">
+      <!-- filled by JS -->
+    </div>
+
     <div class="card" style="padding:16px">
       <div class="section-title">Historial reciente</div>
       <div class="history-list" id="history-list">
@@ -281,6 +303,17 @@
         <div><div style="font-size:14px">Notificación al terminar</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Tono suave al cambiar de modo</div></div>
         <div class="sw on" id="sw-sound"></div>
       </div>
+      <div id="sound-style-wrap" style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px">Estilo de sonido</div>
+        <div class="sound-style-grid">
+          <button class="sound-style-btn" onclick="setSoundStyle('bells')"  id="ss-bells">🔔 Campanas</button>
+          <button class="sound-style-btn" onclick="setSoundStyle('bowl')"   id="ss-bowl">🎵 Cuenco</button>
+          <button class="sound-style-btn" onclick="setSoundStyle('gong')"   id="ss-gong">🔊 Gong</button>
+          <button class="sound-style-btn" onclick="setSoundStyle('ding')"   id="ss-ding">✨ Ding</button>
+          <button class="sound-style-btn" onclick="setSoundStyle('theme')"  id="ss-theme">🎨 Por tema</button>
+        </div>
+        <select id="sound-style-sel" style="display:none"></select>
+      </div>
 
       <div class="settings-section-title">Objetivo diario</div>
       <div class="sblock" style="margin-bottom:13px">
@@ -300,6 +333,10 @@
       </div>
 
       <div class="settings-section-title">Concentración</div>
+      <div class="stoggle-row" onclick="toggleAutoBreak()" style="margin-bottom:10px">
+        <div><div style="font-size:14px">Auto-iniciar pausa</div><div style="font-size:12px;color:var(--muted);margin-top:2px">La pausa arranca sola al terminar una sesión</div></div>
+        <div class="sw" id="sw-autobreak"></div>
+      </div>
       <div class="stoggle-row" onclick="toggleDeepFocus()" style="margin-bottom:14px">
         <div><div style="font-size:14px">Modo foco profundo</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Atenúa todo salvo el temporizador al iniciar</div></div>
         <div class="sw" id="sw-deepfocus"></div>

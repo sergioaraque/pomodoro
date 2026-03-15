@@ -369,5 +369,160 @@ export function spawnCreatures(theme) {
     case 'desert':   spawnDesert(L);   break;
     case 'city':     spawnCity(L);     break;
     case 'arctic':   spawnArctic(L);   break;
+    case 'space':    spawnSpace(L);    break;
+    case 'deep':     spawnDeep(L);     break;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  SPACE — planetas, estrellas fugaces, satélites, nebulosa
+// ══════════════════════════════════════════════════════════════════════
+function planetSVG(r, color, ringColor, hasRing) {
+  const rings = hasRing ? `<ellipse cx="${r}" cy="${r}" rx="${r*1.7}" ry="${r*0.35}" fill="none" stroke="${ringColor}" stroke-width="${r*0.22}" opacity=".65" transform="rotate(-15 ${r} ${r})"/>` : '';
+  return `<svg width="${r*2}" height="${r*2}" viewBox="0 0 ${r*2} ${r*2}" fill="none">
+    ${rings}
+    <circle cx="${r}" cy="${r}" r="${r*0.92}" fill="${color}" opacity=".9"/>
+    <ellipse cx="${r*0.7}" cy="${r*0.65}" rx="${r*0.45}" ry="${r*0.28}" fill="rgba(255,255,255,.12)" transform="rotate(-20 ${r*0.7} ${r*0.65})"/>
+  </svg>`;
+}
+function satelliteSVG() {
+  return `<svg width="36" height="18" viewBox="0 0 36 18" fill="none">
+    <rect x="14" y="6" width="8" height="6" rx="1" fill="#8899bb" opacity=".9"/>
+    <rect x="0"  y="7" width="13" height="4" rx="1" fill="#4466aa" opacity=".85"/>
+    <rect x="23" y="7" width="13" height="4" rx="1" fill="#4466aa" opacity=".85"/>
+    <circle cx="18" cy="9" r="2" fill="#aabbdd" opacity=".8"/>
+  </svg>`;
+}
+function shootingStarSVG() {
+  return `<svg width="80" height="4" viewBox="0 0 80 4" fill="none">
+    <defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(200,220,255,0)"/>
+      <stop offset="100%" stop-color="rgba(220,235,255,0.9)"/>
+    </linearGradient></defs>
+    <rect width="80" height="2" y="1" rx="1" fill="url(#sg)"/>
+    <circle cx="79" cy="2" r="2" fill="rgba(240,248,255,0.95)"/>
+  </svg>`;
+}
+function nebulaSVG(w, h, c1, c2) {
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">
+    <defs>
+      <radialGradient id="nb" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="${c1}" stop-opacity="0.18"/>
+        <stop offset="60%" stop-color="${c2}" stop-opacity="0.07"/>
+        <stop offset="100%" stop-color="${c2}" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <ellipse cx="${w/2}" cy="${h/2}" rx="${w/2}" ry="${h/2}" fill="url(#nb)"/>
+  </svg>`;
+}
+
+function spawnSpace(L) {
+  // Nebulas background
+  [
+    {x:5,  y:10, w:300, h:200, c1:'#8844ff', c2:'#4488ff'},
+    {x:55, y:5,  w:250, h:180, c1:'#ff4488', c2:'#ff8844'},
+    {x:20, y:55, w:200, h:150, c1:'#44ffcc', c2:'#4488ff'},
+  ].forEach(n => {
+    const d = document.createElement('div');
+    d.style.cssText = `position:absolute;left:${n.x}%;top:${n.y}%;pointer-events:none`;
+    d.innerHTML = nebulaSVG(n.w, n.h, n.c1, n.c2);
+    L.appendChild(d);
+  });
+  // Planets
+  [
+    {x:72, y:12, r:45, color:'#3355cc', ring:'#6688ee', hasRing:true,  dur:0},
+    {x:8,  y:20, r:28, color:'#cc4422', ring:'',         hasRing:false, dur:0},
+    {x:85, y:55, r:18, color:'#44aa88', ring:'',         hasRing:false, dur:0},
+    {x:40, y:8,  r:14, color:'#886622', ring:'',         hasRing:false, dur:0},
+  ].forEach(p => {
+    L.appendChild(el('owl-el', `left:${p.x}%;top:${p.y}%;animation-duration:${6+p.dur}s`, planetSVG(p.r, p.color, p.ring, p.hasRing)));
+  });
+  // Satellites
+  for (let i = 0; i < 2; i++) {
+    L.appendChild(el('fish-el'+(i%2?' rev':''), `top:${25+i*20}%;animation-duration:${20+i*8}s;animation-delay:${-i*10}s`, satelliteSVG()));
+  }
+  // Shooting stars
+  for (let i = 0; i < 4; i++) {
+    L.appendChild(el('fish-el', `top:${8+i*12}%;animation-duration:${3+i*1.5}s;animation-delay:-${i*4}s;opacity:.8`, shootingStarSVG()));
+  }
+  // Dust particles (tiny stars)
+  for (let i = 0; i < 35; i++) {
+    const sz = 2 + Math.random() * 4;
+    const d = el('firefly-el', `left:${Math.random()*100}%;top:${Math.random()*80}%;width:${sz}px;height:${sz}px;background:rgba(200,220,255,${0.4+Math.random()*0.5});animation-duration:${4+Math.random()*8}s;animation-delay:-${Math.random()*8}s`);
+    L.appendChild(d);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  DEEP OCEAN — fondo abisal, peces bioluminiscentes, anguilas
+// ══════════════════════════════════════════════════════════════════════
+function deepFishSVG(color, glowColor, sz) {
+  return `<svg width="${sz}" height="${sz*0.5}" viewBox="0 0 60 30" fill="none">
+    <path d="M48 15 C38 5,14 7,8 15 C14 23,38 25,48 15Z" fill="${color}" opacity=".85"/>
+    <path d="M48 15 L58 9 L58 21Z" fill="${color}" opacity=".6"/>
+    <circle cx="12" cy="13" r="3" fill="${glowColor}" opacity=".9"/>
+    <circle cx="12" cy="13" r="5" fill="${glowColor}" opacity=".25"/>
+    <!-- bioluminescent spots -->
+    <circle cx="25" cy="14" r="1.5" fill="${glowColor}" opacity=".7"/>
+    <circle cx="35" cy="13" r="1.2" fill="${glowColor}" opacity=".5"/>
+    <circle cx="42" cy="15" r="1"   fill="${glowColor}" opacity=".4"/>
+  </svg>`;
+}
+function anglerSVG() {
+  return `<svg width="70" height="40" viewBox="0 0 70 40" fill="none">
+    <path d="M55 20 C42 8,18 10,10 20 C18 30,42 32,55 20Z" fill="#1a2a1a" opacity=".9"/>
+    <path d="M55 20 L68 14 L65 20 L68 26Z" fill="#1a2a1a" opacity=".7"/>
+    <!-- Lure -->
+    <path d="M30 10 Q28 2 35 0" stroke="#2a3a2a" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    <circle cx="35" cy="0" r="4" fill="#00ffaa" opacity=".8"/>
+    <circle cx="35" cy="0" r="7" fill="#00ffaa" opacity=".2"/>
+    <!-- Teeth -->
+    <path d="M12 19 L15 16 L18 19 L21 16 L24 19" stroke="#aaffcc" stroke-width="1" fill="none" opacity=".6"/>
+    <circle cx="16" cy="18" r="2.5" fill="#00dd88" opacity=".85"/>
+    <circle cx="16" cy="18" r="4.5" fill="#00dd88" opacity=".2"/>
+  </svg>`;
+}
+function coralSVG(h, c) {
+  const w = h * 0.6;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 60 100" fill="none">
+    <path d="M30 100 L30 60 M30 60 L15 35 M30 60 L45 35 M30 60 L30 25 M15 35 L8 18 M15 35 L22 15 M45 35 L38 15 M45 35 L52 18 M30 25 L24 8 M30 25 L36 8" stroke="${c}" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <circle cx="8"  cy="16" r="4" fill="${c}" opacity=".9"/>
+    <circle cx="22" cy="13" r="4" fill="${c}" opacity=".9"/>
+    <circle cx="24" cy="6"  r="3.5" fill="${c}" opacity=".9"/>
+    <circle cx="36" cy="6"  r="3.5" fill="${c}" opacity=".9"/>
+    <circle cx="38" cy="13" r="4" fill="${c}" opacity=".9"/>
+    <circle cx="52" cy="16" r="4" fill="${c}" opacity=".9"/>
+    <circle cx="30" cy="23" r="4" fill="${c}" opacity=".9"/>
+  </svg>`;
+}
+
+function spawnDeep(L) {
+  // Corals at the bottom
+  const coralColors = ['#ff4488','#ff6622','#aa44ff','#22aaff','#ff2244'];
+  [3,10,18,28,38,55,65,75,85,92].forEach((x,i) => {
+    const h = 50 + Math.random() * 60;
+    L.appendChild(el('seaweed-el', `left:${x}%;animation-duration:${5+Math.random()*4}s;animation-delay:-${Math.random()*4}s`, coralSVG(h, coralColors[i%coralColors.length])));
+  });
+  // Bioluminescent fish
+  const bioColors = [
+    ['#001122','#00ffaa'],
+    ['#000a1a','#44ddff'],
+    ['#0a0022','#cc44ff'],
+    ['#001a0a','#44ff88'],
+    ['#1a0010','#ff44aa'],
+  ];
+  bioColors.forEach(([body, glow], i) => {
+    const sz = 30 + Math.random() * 30;
+    const rev = i % 2 === 1;
+    L.appendChild(el('fish-el'+(rev?' rev':''), `top:${20+i*12}%;animation-duration:${18+i*5}s;animation-delay:-${i*6}s`, deepFishSVG(body, glow, sz)));
+  });
+  // Angler fish
+  L.appendChild(el('fish-el', `top:60%;animation-duration:30s;animation-delay:-8s`, anglerSVG()));
+  L.appendChild(el('fish-el rev', `top:45%;animation-duration:38s;animation-delay:-20s`, anglerSVG()));
+  // Bioluminescent particles
+  for (let i = 0; i < 25; i++) {
+    const sz = 3 + Math.random() * 5;
+    const c  = bioColors[Math.floor(Math.random()*bioColors.length)][1];
+    L.appendChild(el('firefly-el', `left:${Math.random()*100}%;top:${Math.random()*90+5}%;width:${sz}px;height:${sz}px;background:${c};box-shadow:0 0 ${sz*2}px ${c};animation-duration:${4+Math.random()*7}s;animation-delay:-${Math.random()*7}s`));
   }
 }

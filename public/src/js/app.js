@@ -9,7 +9,8 @@ import { initTimer, toggleTimer, resetTimer,
          skipSession, setMode, setTask,
          clearTask, getState }                         from './timer.js';
 import * as ui                                         from './ui.js';
-import { playSessionEnd }                              from './sound.js';
+import { playSessionEnd, previewSound }                from './sound.js';
+import { burstConfetti }                                from './confetti.js';
 import { spawnCreatures, drawStars }                   from './creatures.js';
 import { initAmbient, startAmbient, stopAmbient,
          switchAmbient, setVolume }                     from './ambient.js';
@@ -43,7 +44,8 @@ initTimer({
   },
 
   onEnd: async (finishedMode, durationMin, taskId, taskName) => {
-    playSessionEnd();
+    playSessionEnd(currentTheme);
+    if (finishedMode === 'focus') burstConfetti(_getAccentColor());
 
     if (currentUser) {
       ui.setSyncState('syncing');
@@ -66,6 +68,10 @@ initTimer({
       }
     }
     ui.setStartButtonText('Iniciar');
+    // Auto-start break if enabled
+    if (cfg.autoBreak && finishedMode === 'focus') {
+      setTimeout(() => window.toggleTimer(), 1200);
+    }
   },
 });
 
@@ -260,6 +266,8 @@ async function loadSettings() {
     cfg.ambient    = data.ambient     ?? false;
     cfg.ambientVol = data.ambient_vol ?? 0.4;
     cfg.deepFocus  = data.deep_focus  ?? false;
+    cfg.autoBreak  = data.auto_break  ?? false;
+    cfg.soundStyle = data.sound_style ?? 'bells';
     applyTheme(data.theme || 'ocean', false);
     if (cfg.ambient) startAmbient(currentTheme);
     setVolume(cfg.ambientVol);
@@ -283,6 +291,8 @@ async function saveSettings() {
     ambient:     cfg.ambient,
     ambient_vol: cfg.ambientVol,
     deep_focus:  cfg.deepFocus,
+    auto_break:  cfg.autoBreak,
+    sound_style: cfg.soundStyle,
   });
   ui.setSyncState(error ? 'error' : 'ok');
 }
@@ -310,6 +320,20 @@ window.toggleSound = () => {
   debounceSave();
 };
 
+window.setSoundStyle = (style) => {
+  cfg.soundStyle = style;
+  ui.renderSettings();
+  _updateSoundBtns(style);
+  debounceSave();
+  previewSound(style, currentTheme);
+};
+
+function _updateSoundBtns(style) {
+  document.querySelectorAll('.sound-style-btn').forEach(b => b.classList.remove('active'));
+  const active = document.getElementById('ss-' + style);
+  if (active) active.classList.add('active');
+}
+
 window.toggleAmbient = () => {
   cfg.ambient = !cfg.ambient;
   if (cfg.ambient) startAmbient(currentTheme);
@@ -321,6 +345,12 @@ window.toggleAmbient = () => {
 window.setAmbientVolume = (v) => {
   cfg.ambientVol = parseFloat(v);
   setVolume(cfg.ambientVol);
+  debounceSave();
+};
+
+window.toggleAutoBreak = () => {
+  cfg.autoBreak = !cfg.autoBreak;
+  ui.renderSettings();
   debounceSave();
 };
 
@@ -359,6 +389,34 @@ async function loadTasks() {
 function renderTasks() {
   ui.renderTasks(tasks, activeTaskId, taskHandlers);
 }
+
+window.onTaskDragStart = (e, id) => {
+  e.dataTransfer.setData('text/plain', id);
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+};
+window.onTaskDragOver  = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+window.onTaskDragEnter = (e) => { e.currentTarget.closest('.task-item')?.classList.add('drag-over'); };
+window.onTaskDragLeave = (e) => { e.currentTarget.closest('.task-item')?.classList.remove('drag-over'); };
+window.onTaskDrop = async (e, targetId) => {
+  e.preventDefault();
+  const srcId = e.dataTransfer.getData('text/plain');
+  if (!srcId || srcId === targetId) return;
+  document.querySelectorAll('.task-item').forEach(el => el.classList.remove('drag-over','dragging'));
+  const srcIdx = tasks.findIndex(t => t.id === srcId);
+  const tgtIdx = tasks.findIndex(t => t.id === targetId);
+  if (srcIdx === -1 || tgtIdx === -1) return;
+  const [moved] = tasks.splice(srcIdx, 1);
+  tasks.splice(tgtIdx, 0, moved);
+  renderTasks();
+  // Persist positions
+  if (currentUser) {
+    ui.setSyncState('syncing');
+    const updates = tasks.map((t, i) => db.tasks.update(t.id, { position: i }));
+    await Promise.all(updates);
+    ui.setSyncState('ok');
+  }
+};
 
 const taskHandlers = {
   onFocus: (id) => {
@@ -409,11 +467,14 @@ const taskHandlers = {
 window.addTask = async () => {
   const name = ui.getTaskInputValue();
   if (!name || !currentUser) return;
+  const est  = parseInt(document.getElementById('task-est-inp')?.value || '0') || 0;
+  const label= document.getElementById('task-label-sel')?.value || '';
   ui.clearTaskInput();
+  if (document.getElementById('task-est-inp')) document.getElementById('task-est-inp').value = '';
   ui.setSyncState('syncing');
-  const { data, error } = await db.tasks.create(currentUser.id, name);
+  const { data, error } = await db.tasks.create(currentUser.id, name, est, label);
   if (!error && data) {
-    tasks.unshift({ id: data.id, name: data.name, done: false, pomodoros: 0, notes: '' });
+    tasks.unshift({ id: data.id, name: data.name, done: false, pomodoros: 0, notes: '', estimate: est, label });
     renderTasks();
     ui.setSyncState('ok');
   } else {
@@ -479,6 +540,63 @@ async function loadStats() {
     },
   });
   ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
+
+  // Weekly challenge
+  _renderWeeklyChallenge(focusData);
+}
+
+function _renderWeeklyChallenge(focusData) {
+  const el = document.getElementById('weekly-challenge');
+  if (!el) return;
+  // Find best day last week
+  const now = new Date();
+  const startOfLastWeek = new Date(now);
+  startOfLastWeek.setDate(now.getDate() - now.getDay() - 7);
+  const endOfLastWeek = new Date(startOfLastWeek);
+  endOfLastWeek.setDate(startOfLastWeek.getDate() + 7);
+  const lastWeekSessions = focusData.filter(s => {
+    const d = new Date(s.completed_at);
+    return d >= startOfLastWeek && d < endOfLastWeek;
+  });
+  const dayCount = {};
+  lastWeekSessions.forEach(s => {
+    const day = new Date(s.completed_at).toDateString();
+    dayCount[day] = (dayCount[day] || 0) + 1;
+  });
+  const bestDay = Math.max(0, ...Object.values(dayCount));
+  const weekTotal = lastWeekSessions.length;
+  // This week
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0,0,0,0);
+  const thisWeek = focusData.filter(s => new Date(s.completed_at) >= startOfWeek);
+  // Generate challenge
+  let challenge, progress, target;
+  const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  const isMonday = now.getDay() === 1;
+  if (weekTotal === 0 || isMonday) {
+    target = Math.max(5, Math.round(weekTotal * 1.1) || 10);
+    challenge = `Completa ${target} pomodoros esta semana`;
+    progress = thisWeek.length;
+  } else if (bestDay > 0) {
+    target = bestDay + 1;
+    challenge = `Supera tu récord de ${bestDay} pomodoros en un día`;
+    const todayStr = now.toDateString();
+    progress = dayCount[todayStr] || 0;
+  } else {
+    target = 5;
+    challenge = 'Completa 5 pomodoros hoy';
+    progress = todayCount;
+  }
+  const pct = Math.min(100, Math.round(progress / target * 100));
+  const done = progress >= target;
+  el.innerHTML = '<div class="challenge-header">' +
+    '<span class="challenge-title">' + (done ? '🏆 ' : '🎯 ') + 'Reto semanal</span>' +
+    (done ? '<span class="challenge-badge">¡Completado!</span>' : '') +
+    '</div>' +
+    '<div class="challenge-text">' + challenge + '</div>' +
+    '<div class="challenge-bar-wrap"><div class="challenge-bar" style="width:' + pct + '%"></div></div>' +
+    '<div class="challenge-progress">' + progress + ' / ' + target + (done ? ' ✓' : '') + '</div>';
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -524,6 +642,8 @@ const THEME_META = {
   desert:   { emoji: '🏜️', name: 'Desierto' },
   city:     { emoji: '🌃', name: 'Ciudad'   },
   arctic:   { emoji: '❄️', name: 'Ártico'   },
+  space:    { emoji: '🚀', name: 'Espacio'  },
+  deep:     { emoji: '🌑', name: 'Abisal'   },
 };
 function _updateThemePill(name) {
   const meta = THEME_META[name];
@@ -577,6 +697,11 @@ document.addEventListener('keydown', e => {
   if (e.key.toLowerCase() === 'r') { e.preventDefault(); window.resetTimer(); }
   if (e.key.toLowerCase() === 's') { e.preventDefault(); window.skipSession(); }
 });
+
+// ── Helpers ──────────────────────────────────────────────────────────
+function _getAccentColor() {
+  return getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#4ecdc4';
+}
 
 // ══════════════════════════════════════════════════════════════════════
 //  BOOT

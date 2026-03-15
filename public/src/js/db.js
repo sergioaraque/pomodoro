@@ -51,10 +51,10 @@ export const tasks = {
     return { data, error };
   },
 
-  create: async (userId, name) => {
+  create: async (userId, name, estimate = 0, label = '') => {
     const { data, error } = await _sb
       .from('tasks')
-      .insert({ user_id: userId, name, position: 0, notes: '' })
+      .insert({ user_id: userId, name, position: 0, notes: '', estimate, label })
       .select()
       .single();
     return { data, error };

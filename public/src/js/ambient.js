@@ -119,6 +119,8 @@ function _buildScene(theme, ctx, out) {
     case 'desert':   return _sceneDesert(ctx, out);
     case 'city':     return _sceneCity(ctx, out);
     case 'arctic':   return _sceneArctic(ctx, out);
+    case 'space':    return _sceneSpace(ctx, out);
+    case 'deep':     return _sceneDeep(ctx, out);
     default:         return _sceneOcean(ctx, out);
   }
 }
@@ -421,6 +423,109 @@ function _sceneArctic(ctx, out) {
     }, 2000 + Math.random() * 8000);
   }
   scheduleCrack();
+
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  SPACE — hum cósmico + pulso estelar + silencio profundo
+// ─────────────────────────────────────────────────────────────────────
+function _sceneSpace(ctx, out) {
+  const nodes = [];
+
+  // Hum de nave estelar — osciladores graves muy suaves
+  [[55, 0.08], [110, 0.04], [165, 0.02]].forEach(([f, vol]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.value = vol;
+    o.connect(g); g.connect(out);
+    o.start(); nodes.push(o);
+  });
+
+  // Pulso lento (warp drive idle) — AM muy lenta
+  const pulse = ctx.createOscillator(); pulse.type = 'sine'; pulse.frequency.value = 55;
+  const pulseAM = ctx.createOscillator(); pulseAM.type = 'sine'; pulseAM.frequency.value = 0.08;
+  const pulseAMG = ctx.createGain(); pulseAMG.gain.value = 0.06;
+  const pulseG = ctx.createGain(); pulseG.gain.value = 0.0;
+  pulseAM.connect(pulseAMG); pulseAMG.connect(pulseG.gain);
+  pulse.connect(pulseG); pulseG.connect(out);
+  pulse.start(); pulseAM.start();
+  nodes.push(pulse, pulseAM);
+
+  // Chispa estelar ocasional — clic breve de alta freq
+  const stopped = { val: false };
+  function scheduleSpark() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const freq = 3000 + Math.random() * 5000;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      const t = ctx.currentTime;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.06, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      o.connect(g); g.connect(out);
+      o.start(t); o.stop(t + 0.31);
+      scheduleSpark();
+    }, 3000 + Math.random() * 9000);
+  }
+  scheduleSpark();
+
+  // Ruido cósmico suave — muy atenuado, highpass
+  const buf = _makeNoise(ctx, 4);
+  const nSrc = _noiseLoop(ctx, buf);
+  const nHp = ctx.createBiquadFilter(); nHp.type = 'highpass'; nHp.frequency.value = 8000;
+  const nG = ctx.createGain(); nG.gain.value = 0.008;
+  nSrc.connect(nHp); nHp.connect(nG); nG.connect(out);
+  nSrc.start(); nodes.push(nSrc);
+
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  DEEP OCEAN — presión abisal + criaturas bioluminiscentes
+// ─────────────────────────────────────────────────────────────────────
+function _sceneDeep(ctx, out) {
+  const nodes = [];
+
+  // Presión abisal — ruido muy grave y profundo
+  const buf1 = _makeNoise(ctx, 6);
+  const dSrc = _noiseLoop(ctx, buf1);
+  const dLp = ctx.createBiquadFilter(); dLp.type = 'lowpass'; dLp.frequency.value = 60;
+  const dG = ctx.createGain(); dG.gain.value = 0.35;
+  const dLfo = ctx.createOscillator(); dLfo.type = 'sine'; dLfo.frequency.value = 0.018;
+  const dLfoG = ctx.createGain(); dLfoG.gain.value = 0.2;
+  dLfo.connect(dLfoG); dLfoG.connect(dG.gain);
+  dSrc.connect(dLp); dLp.connect(dG); dG.connect(out);
+  dSrc.start(); dLfo.start(); nodes.push(dSrc, dLfo);
+
+  // Corriente submarina — mid-range muy filtrado
+  const buf2 = _makeNoise(ctx, 3);
+  const cSrc = _noiseLoop(ctx, buf2);
+  const cBp = ctx.createBiquadFilter(); cBp.type = 'bandpass'; cBp.frequency.value = 120; cBp.Q.value = 0.4;
+  const cG = ctx.createGain(); cG.gain.value = 0.08;
+  cSrc.connect(cBp); cBp.connect(cG); cG.connect(out);
+  cSrc.start(); nodes.push(cSrc);
+
+  // Pings de sonar / criatura bioluminiscente
+  const stopped = { val: false };
+  function schedulePing() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const freq = 600 + Math.random() * 800;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      o.frequency.exponentialRampToValueAtTime(freq * 0.7, ctx.currentTime + 1.5);
+      const t = ctx.currentTime;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.1, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+      o.connect(g); g.connect(out);
+      o.start(t); o.stop(t + 1.9);
+      schedulePing();
+    }, 5000 + Math.random() * 12000);
+  }
+  schedulePing();
 
   return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
 }

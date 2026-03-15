@@ -136,20 +136,22 @@ const THEMES = {
   desert:   { title:'FocusDesert',   subtitle:'Silencio ardiente del desierto', cls:'theme-desert',    info:'<b>🏜️ Desierto</b> — Cactus, escorpiones y remolinos.' },
   city:     { title:'FocusCity',     subtitle:'La ciudad que nunca duerme',     cls:'theme-city',      info:'<b>🌃 Ciudad</b> — Lluvia, coches y luces de neón.' },
   arctic:   { title:'FocusArctic',   subtitle:'Paz infinita bajo la aurora',    cls:'theme-arctic',    info:'<b>❄️ Ártico</b> — Auroras boreales, oso polar e icebergs.' },
+  space:    { title:'FocusSpace',    subtitle:'Silencio cósmico, foco infinito',cls:'theme-space',     info:'<b>🚀 Espacio</b> — Planetas, satélites y nebulosas.' },
+  deep:     { title:'FocusDeep',     subtitle:'Las profundidades del silencio', cls:'theme-deep',      info:'<b>🌊 Abisal</b> — Anglerfish, corales y bioluminiscencia.' },
 };
 
 export function applyTheme(name) {
   const t = THEMES[name];
   document.body.className = t.cls;
 
-  ['ocean','meadow','mountain','forest','desert','city','arctic'].forEach(k => {
+  ['ocean','meadow','mountain','forest','desert','city','arctic','space','deep'].forEach(k => {
     const el = $('bg-' + k);
     if (el) el.style.opacity = (k === name) ? '1' : '0';
   });
-  $('wave1').style.opacity     = name === 'ocean'  ? '1'  : '0';
-  $('wave2').style.opacity     = name === 'ocean'  ? '.5' : '0';
+  $('wave1').style.opacity     = (name === 'ocean' || name === 'deep') ? '1'  : '0';
+  $('wave2').style.opacity     = (name === 'ocean' || name === 'deep') ? '.5' : '0';
   $('grass-svg').style.opacity = name === 'meadow' ? '1'  : '0';
-  $('stars-canvas').style.opacity = (name === 'mountain' || name === 'forest' || name === 'arctic') ? '1' : '0';
+  $('stars-canvas').style.opacity = (name === 'mountain' || name === 'forest' || name === 'arctic' || name === 'space') ? '1' : '0';
 
   $('app-title').textContent    = t.title;
   $('app-subtitle').textContent = t.subtitle;
@@ -263,17 +265,33 @@ export function renderTasks(tasks, activeTaskId, handlers) {
     return;
   }
 
+  const LABEL_COLORS = { trabajo:'#60a8f0', personal:'#f093fb', estudio:'#7ecf3e', salud:'#ff6b9d', otro:'#ffa552' };
+
   list.innerHTML = tasks.map(t => {
     const hasNotes = t.notes && t.notes.trim().length > 0;
+    const est      = t.estimate || 0;
+    const poms     = t.pomodoros || 0;
+    const labelC   = t.label && LABEL_COLORS[t.label] ? LABEL_COLORS[t.label] : null;
+    const pomStr   = est > 0
+      ? `<div class="tpoms ${poms >= est ? 'done-est' : ''}" title="Progreso">🍅 ${poms}/${est}</div>`
+      : poms > 0 ? `<div class="tpoms">🍅 ×${poms}</div>` : '';
     return `
-    <div class="task-item ${t.id === activeTaskId ? 'active-t' : ''} ${t.done ? 'done-t' : ''}">
+    <div class="task-item ${t.id === activeTaskId ? 'active-t' : ''} ${t.done ? 'done-t' : ''}"
+         draggable="true"
+         ondragstart="onTaskDragStart(event,'${t.id}')"
+         ondragover="onTaskDragOver(event)"
+         ondragenter="onTaskDragEnter(event)"
+         ondragleave="onTaskDragLeave(event)"
+         ondrop="onTaskDrop(event,'${t.id}')">
       <div class="task-item-row">
+        <div class="drag-handle" title="Arrastrar">⠿</div>
         <div class="tchk ${t.done ? 'checked' : t.id === activeTaskId ? 'active-c' : ''}"
              data-action="toggle" data-id="${t.id}">
           ${t.done ? '✓' : ''}
         </div>
+        ${labelC ? `<div class="task-label-dot" style="background:${labelC}" title="${t.label}"></div>` : ''}
         <div class="tname ${t.done ? 'done' : ''}">${esc(t.name)}</div>
-        ${t.pomodoros > 0 ? `<div class="tpoms">🍅 ×${t.pomodoros}</div>` : ''}
+        ${pomStr}
         <button class="task-notes-toggle ${hasNotes ? 'has-notes' : ''}"
                 data-action="toggle-notes" data-id="${t.id}"
                 title="${hasNotes ? 'Ver/editar notas' : 'Añadir notas'}">📝</button>
@@ -505,4 +523,12 @@ export function renderSettings() {
   // Deep focus
   const dfEl = $('sw-deepfocus');
   if (dfEl) dfEl.className = 'sw' + (cfg.deepFocus ? ' on' : '');
+
+  // Auto-break
+  const abEl = $('sw-autobreak');
+  if (abEl) abEl.className = 'sw' + (cfg.autoBreak ? ' on' : '');
+
+  // Sound style
+  const ssEl = $('sound-style-sel');
+  if (ssEl) ssEl.value = cfg.soundStyle || 'bells';
 }

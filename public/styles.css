@@ -590,7 +590,6 @@ body.theme-city .snow-el { animation-name: rainFall; }
 /* ── Stars visible for arctic too (already handled in JS) ── */
 body.theme-arctic .stars-layer { opacity: 1; }
 
-
 /* ── Theme pill button ─────────────────────────── */
 .theme-picker-wrap {
   position: relative;
@@ -659,3 +658,104 @@ body.theme-arctic .stars-layer { opacity: 1; }
   .theme-pill-name { display: none; }
   .theme-pill { padding: 6px 9px; }
 }
+
+/* ════════════════════════════════════════════════
+   LAS 10 MEJORAS — CSS
+   ════════════════════════════════════════════════ */
+
+/* ── 01-02: Space + Deep backgrounds ──────────── */
+.bg-space { background: linear-gradient(180deg,#000005 0%,#020010 30%,#04001a 55%,#060028 80%,#080035 100%); }
+.bg-deep  { background: linear-gradient(180deg,#000508 0%,#001018 30%,#001525 55%,#001a30 80%,#001e38 100%); }
+
+body.theme-space {
+  --accent:#aa88ff; --accent2:#cc99ff;
+  --text:#e0d8ff; --muted:#6655aa;
+  --glass:rgba(255,255,255,0.05); --glass-b:rgba(255,255,255,0.10);
+  --font-display:'Playfair Display',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#e0d8ff;
+}
+body.theme-deep {
+  --accent:#00ffaa; --accent2:#44ffcc;
+  --text:#c8f8e8; --muted:#337755;
+  --glass:rgba(0,255,170,0.06); --glass-b:rgba(0,255,170,0.12);
+  --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#c8f8e8;
+}
+
+/* ── 03: Auto-break toggle (same as existing sw) ─ */
+
+/* ── 04: Task labels ───────────────────────────── */
+.task-meta-row {
+  display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap;
+}
+.task-meta-sel {
+  background:var(--glass); border:1px solid var(--glass-b); color:var(--text);
+  border-radius:8px; padding:6px 10px; font-size:12px; outline:none;
+  font-family:var(--font-body); cursor:pointer;
+}
+.task-est-wrap {
+  display:flex; align-items:center; gap:6px;
+}
+.task-est-inp {
+  width:44px; background:var(--glass); border:1px solid var(--glass-b);
+  border-radius:8px; padding:6px 8px; color:var(--text); font-size:12px;
+  outline:none; text-align:center;
+}
+.task-est-lbl { font-size:12px; color:var(--muted); }
+.task-label-dot {
+  width:8px; height:8px; border-radius:50%; flex-shrink:0;
+}
+.tpoms.done-est { color:var(--accent); font-weight:600; }
+
+/* ── 05: Drag & drop ───────────────────────────── */
+.drag-handle {
+  cursor:grab; color:var(--muted); font-size:14px; padding:0 2px;
+  opacity:0.4; transition:opacity 0.2s; user-select:none;
+}
+.task-item:hover .drag-handle { opacity:0.8; }
+.task-item.dragging  { opacity:0.4; }
+.task-item.drag-over { border-color:var(--accent); background:rgba(255,255,255,0.09); }
+
+/* ── 06: Sound style selector ──────────────────── */
+.sound-style-grid {
+  display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px;
+}
+.sound-style-btn {
+  background:var(--glass); border:1px solid var(--glass-b);
+  color:var(--muted); border-radius:8px; padding:7px 11px;
+  font-size:12px; cursor:pointer; transition:all 0.2s;
+  font-family:var(--font-body);
+}
+.sound-style-btn:hover  { border-color:var(--accent); color:var(--text); }
+.sound-style-btn.active { background:rgba(255,255,255,0.1); border-color:var(--accent); color:var(--accent); }
+
+/* ── 07: Timer pause state ─────────────────────── */
+.timer-display.paused {
+  opacity:0.45;
+  animation:timerPulse 2.2s ease-in-out infinite;
+}
+@keyframes timerPulse {
+  0%,100% { opacity:0.45; }
+  50%     { opacity:0.65; }
+}
+.pbar.paused {
+  animation:barPulse 2.2s ease-in-out infinite;
+}
+@keyframes barPulse {
+  0%,100% { opacity:0.5; }
+  50%     { opacity:0.85; }
+}
+
+/* ── 08: Weekly challenge ──────────────────────── */
+.challenge-header {
+  display:flex; align-items:center; gap:8px; margin-bottom:8px;
+}
+.challenge-title { font-size:13px; font-weight:600; color:var(--text); }
+.challenge-badge {
+  font-size:11px; background:rgba(78,205,196,0.15); color:var(--accent);
+  border:1px solid rgba(78,205,196,0.3); border-radius:50px; padding:2px 9px;
+}
+.challenge-text { font-size:13px; color:var(--muted); margin-bottom:10px; }
+.challenge-bar-wrap { height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-bottom:6px; overflow:hidden; }
+.challenge-bar { height:100%; background:var(--accent); border-radius:2px; transition:width 0.6s ease; }
+.challenge-progress { font-size:12px; color:var(--muted); text-align:right; }
