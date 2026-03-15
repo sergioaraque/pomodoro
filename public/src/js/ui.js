@@ -141,20 +141,28 @@ const THEMES = {
   volcano:  { title:'FocusVolcano',  subtitle:'La energía del magma en ti',     cls:'theme-volcano',   info:'<b>🌋 Volcán</b> — Lava, rocas y cenizas en el aire.' },
   rain:     { title:'FocusRain',     subtitle:'La paz de la lluvia de otoño',   cls:'theme-rain',      info:'<b>🌧️ Lluvia</b> — Hojas, charcos y truenos lejanos.' },
   japan:    { title:'FocusZen',      subtitle:'La serenidad del jardín zen',    cls:'theme-japan',     info:'<b>🏯 Japón</b> — Cerezos, grullas y tori al amanecer.' },
+  swamp:    { title:'FocusSwamp',    subtitle:'Calma misteriosa de la ciénaga', cls:'theme-swamp',     info:'<b>🌿 Ciénaga</b> — Ranas, nenúfares y fuegos fatuos.' },
+  cave:     { title:'FocusCave',     subtitle:'Profundidad y silencio mineral', cls:'theme-cave',      info:'<b>🐉 Cueva</b> — Cristales, murciélagos y estalactitas.' },
+  underarctic: { title:'FocusBelow', subtitle:'Bajo el hielo eterno',           cls:'theme-underarctic', info:'<b>🐋 Ártico sub.</b> — Belugas, focas y hielo polar.' },
+  savanna:  { title:'FocusSavanna',  subtitle:'Horizontes infinitos africanos', cls:'theme-savanna',   info:'<b>🌅 Sabana</b> — Jirafas, acacias y atardecer africano.' },
+  alps:     { title:'FocusAlps',     subtitle:'Aire limpio de las cumbres',     cls:'theme-alps',      info:'<b>🏔️ Alpes</b> — Vacas, edelweiss y cencerros.' },
+  festival: { title:'FocusFest',     subtitle:'Celebra mientras te concentras', cls:'theme-festival',  info:'<b>🎆 Festival</b> — Farolillos, fuegos y multitud.' },
+  jungle:   { title:'FocusJungle',   subtitle:'Energía salvaje de la selva',    cls:'theme-jungle',    info:'<b>🌺 Selva</b> — Tucanes, morpho azul y cascada.' },
+  mars:     { title:'FocusMars',     subtitle:'El silencio rojo de Marte',      cls:'theme-mars',      info:'<b>🔭 Marte</b> — Rover, dunas y dos lunas.' },
 };
 
 export function applyTheme(name) {
   const t = THEMES[name];
   document.body.className = t.cls;
 
-  ['ocean','meadow','mountain','forest','desert','city','arctic','space','deep','volcano','rain','japan'].forEach(k => {
+  ['ocean','meadow','mountain','forest','desert','city','arctic','space','deep','volcano','rain','japan','swamp','cave','underarctic','savanna','alps','festival','jungle','mars'].forEach(k => {
     const el = $('bg-' + k);
     if (el) el.style.opacity = (k === name) ? '1' : '0';
   });
   $('wave1').style.opacity     = (name === 'ocean' || name === 'deep') ? '1'  : '0';
   $('wave2').style.opacity     = (name === 'ocean' || name === 'deep') ? '.5' : '0';
   $('grass-svg').style.opacity = name === 'meadow' ? '1'  : '0';
-  $('stars-canvas').style.opacity = (name === 'mountain' || name === 'forest' || name === 'arctic' || name === 'space' || name === 'japan') ? '1' : '0';
+  $('stars-canvas').style.opacity = (name === 'mountain' || name === 'forest' || name === 'arctic' || name === 'space' || name === 'japan' || name === 'festival' || name === 'mars') ? '1' : '0';
 
   $('app-title').textContent    = t.title;
   $('app-subtitle').textContent = t.subtitle;

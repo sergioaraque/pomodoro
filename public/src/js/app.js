@@ -807,6 +807,14 @@ const THEME_META = {
   volcano:  { emoji: '🌋', name: 'Volcán'   },
   rain:     { emoji: '🌧️', name: 'Lluvia'   },
   japan:    { emoji: '🏯', name: 'Japón'    },
+  swamp:    { emoji: '🌿', name: 'Ciénaga'  },
+  cave:     { emoji: '🐉', name: 'Cueva'    },
+  underarctic: { emoji: '🐋', name: 'Ártico sub.' },
+  savanna:  { emoji: '🌅', name: 'Sabana'   },
+  alps:     { emoji: '🏔', name: 'Alpes'    },
+  festival: { emoji: '🎆', name: 'Festival' },
+  jungle:   { emoji: '🌺', name: 'Selva'    },
+  mars:     { emoji: '🔭', name: 'Marte'    },
 };
 function _updateThemePill(name) {
   const meta = THEME_META[name];
@@ -884,7 +892,7 @@ function _applyAutoTheme() {
   if      (h >= 6  && h < 9)  theme = 'meadow';    // amanecer
   else if (h >= 9  && h < 14) theme = 'mountain';   // mañana
   else if (h >= 14 && h < 17) theme = 'ocean';      // tarde
-  else if (h >= 17 && h < 20) theme = 'japan';      // atardecer
+  else if (h >= 17 && h < 20) theme = 'savanna';    // atardecer
   else if (h >= 20 && h < 23) theme = 'forest';     // noche
   else                         theme = 'space';      // madrugada
   applyTheme(theme, false);   // false = no guardar, solo visual

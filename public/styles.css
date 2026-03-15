@@ -827,3 +827,73 @@ body.theme-japan {
 
 /* ── Feature 10: Estimated time badge ───────── */
 .cur-task-badge { flex-wrap:wrap; min-height:38px; }
+
+/* ════════════════════════════════════════════════
+   8 TEMAS NUEVOS — CSS v5
+   ════════════════════════════════════════════════ */
+
+.bg-swamp       { background: linear-gradient(180deg,#030a04 0%,#061208 25%,#0a1c0c 55%,#102814 80%,#163018 100%); }
+.bg-cave        { background: linear-gradient(180deg,#020208 0%,#040410 25%,#060618 50%,#080820 75%,#0a0a28 100%); }
+.bg-underarctic { background: linear-gradient(180deg,#020810 0%,#041020 25%,#061830 50%,#082040 75%,#0a2850 100%); }
+.bg-savanna     { background: linear-gradient(180deg,#0a0402 0%,#1a0c04 20%,#3a1808 45%,#7a3810 70%,#c86818 90%,#e89030 100%); }
+.bg-alps        { background: linear-gradient(180deg,#060a10 0%,#0e1828 30%,#1a2e48 55%,#2a4860 75%,#3a6878 100%); }
+.bg-festival    { background: linear-gradient(180deg,#04020c 0%,#08041a 30%,#0e0828 55%,#140c38 80%,#1a1048 100%); }
+.bg-jungle      { background: linear-gradient(180deg,#010a01 0%,#021402 25%,#041e04 50%,#062806 75%,#083008 100%); }
+.bg-mars        { background: linear-gradient(180deg,#100206 0%,#200408 25%,#380810 50%,#581420 75%,#6a1a28 100%); }
+
+body.theme-swamp {
+  --accent:#66ffaa; --accent2:#88ffbb;
+  --text:#d8f0d8; --muted:#4a7a4a;
+  --glass:rgba(100,255,100,.06); --glass-b:rgba(100,255,100,.11);
+  --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#d8f0d8;
+}
+body.theme-cave {
+  --accent:#8888ff; --accent2:#aaaaff;
+  --text:#d8d8f8; --muted:#5050aa;
+  --glass:rgba(130,130,255,.06); --glass-b:rgba(130,130,255,.12);
+  --font-display:'Playfair Display',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#d8d8f8;
+}
+body.theme-underarctic {
+  --accent:#88ddff; --accent2:#aaeeff;
+  --text:#d8f0ff; --muted:#4080a0;
+  --glass:rgba(136,221,255,.06); --glass-b:rgba(136,221,255,.12);
+  --font-display:'DM Sans',sans-serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#d8f0ff;
+}
+body.theme-savanna {
+  --accent:#ffaa44; --accent2:#ffcc66;
+  --text:#f8e8cc; --muted:#aa7830;
+  --glass:rgba(255,255,255,.06); --glass-b:rgba(255,255,255,.12);
+  --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#f8e8cc;
+}
+body.theme-alps {
+  --accent:#88ccff; --accent2:#aaddff;
+  --text:#e8f4ff; --muted:#5080a8;
+  --glass:rgba(255,255,255,.07); --glass-b:rgba(255,255,255,.13);
+  --font-display:'Playfair Display',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#e8f4ff;
+}
+body.theme-festival {
+  --accent:#ffcc44; --accent2:#ffdd66;
+  --text:#fff8e0; --muted:#aa8830;
+  --glass:rgba(255,200,60,.06); --glass-b:rgba(255,200,60,.12);
+  --font-display:'Nunito',sans-serif; --font-body:'Nunito',sans-serif;
+  --timer-color:#fff8e0;
+}
+body.theme-jungle {
+  --accent:#44ff88; --accent2:#66ffaa;
+  --text:#d0f8d8; --muted:#2a7040;
+  --glass:rgba(50,255,100,.06); --glass-b:rgba(50,255,100,.11);
+  --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#d0f8d8;
+}
+body.theme-mars {
+  --accent:#ff8866; --accent2:#ffaa88;
+  --text:#f8d8cc; --muted:#aa5040;
+  --glass:rgba(255,120,80,.06); --glass-b:rgba(255,120,80,.12);
+  --font-display:'Playfair Display',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#f8d8cc;
+}

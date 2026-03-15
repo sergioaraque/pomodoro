@@ -124,6 +124,14 @@ function _buildScene(theme, ctx, out) {
     case 'volcano':  return _sceneVolcano(ctx, out);
     case 'rain':     return _sceneRain(ctx, out);
     case 'japan':    return _sceneJapan(ctx, out);
+    case 'swamp':    return _sceneSwamp(ctx, out);
+    case 'cave':     return _sceneCave(ctx, out);
+    case 'underarctic': return _sceneUnderArctic(ctx, out);
+    case 'savanna':  return _sceneSavanna(ctx, out);
+    case 'alps':     return _sceneAlps(ctx, out);
+    case 'festival': return _sceneFestival(ctx, out);
+    case 'jungle':   return _sceneJungle(ctx, out);
+    case 'mars':     return _sceneMars(ctx, out);
     default:         return _sceneOcean(ctx, out);
   }
 }
@@ -660,5 +668,345 @@ function _sceneJapan(ctx, out) {
   amO.connect(amG); amG.connect(gG.gain); osc.connect(gG); gG.connect(out);
   osc.start(); amO.start(); nodes.push(osc, amO);
 
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  SWAMP — croar de ranas + burbujas de barro + fuego fatuo
+// ─────────────────────────────────────────────────────────────────────
+function _sceneSwamp(ctx, out) {
+  const nodes = [];
+  // Ambiente pantanoso — ruido muy grave filtrado, húmedo
+  const buf = _makeNoise(ctx, 4);
+  const wSrc = _noiseLoop(ctx, buf);
+  const wLp  = ctx.createBiquadFilter(); wLp.type = 'lowpass'; wLp.frequency.value = 300;
+  const wG   = ctx.createGain(); wG.gain.value = 0.08;
+  wSrc.connect(wLp); wLp.connect(wG); wG.connect(out);
+  wSrc.start(); nodes.push(wSrc);
+  // Ranas — AM a frecuencia de croar
+  [320, 290, 340].forEach((f, i) => {
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+    const am = ctx.createOscillator(); am.type = 'square'; am.frequency.value = 1.8 + i * 0.4;
+    const amG = ctx.createGain(); amG.gain.value = 0.03;
+    const g   = ctx.createGain(); g.gain.value = 0;
+    am.connect(amG); amG.connect(g.gain);
+    o.connect(g); g.connect(out);
+    o.start(ctx.currentTime + i * 1.2); am.start(ctx.currentTime + i * 1.2);
+    nodes.push(o, am);
+  });
+  // Burbujas de barro
+  const stopped = { val: false };
+  function scheduleBubble() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const f = 80 + Math.random() * 120;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(f, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(f * 2.5, ctx.currentTime + 0.08);
+      g.gain.setValueAtTime(0.12, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      o.connect(g); g.connect(out); o.start(); o.stop(ctx.currentTime + 0.16);
+      scheduleBubble();
+    }, 600 + Math.random() * 2000);
+  }
+  scheduleBubble();
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  CAVE — resonancia mineral + gotas en eco + silencio subterráneo
+// ─────────────────────────────────────────────────────────────────────
+function _sceneCave(ctx, out) {
+  const nodes = [];
+  // Resonancia grave de caverna — fundamental muy baja con reverb simulado
+  [[55, 0.06], [110, 0.03], [165, 0.015]].forEach(([f, vol]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = f; g.gain.value = vol;
+    o.connect(g); g.connect(out); o.start(); nodes.push(o);
+  });
+  // Silencio subterráneo — ruido muy atenuado
+  const buf = _makeNoise(ctx, 3);
+  const nSrc = _noiseLoop(ctx, buf);
+  const nLp  = ctx.createBiquadFilter(); nLp.type = 'lowpass'; nLp.frequency.value = 200;
+  const nG   = ctx.createGain(); nG.gain.value = 0.025;
+  nSrc.connect(nLp); nLp.connect(nG); nG.connect(out); nSrc.start(); nodes.push(nSrc);
+  // Gotas con eco — clic + reverb simulado (delay + feedback)
+  const stopped = { val: false };
+  function scheduleDrop() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const delay = ctx.createDelay(2.0); delay.delayTime.value = 0.35;
+      const fbGain = ctx.createGain(); fbGain.gain.value = 0.45;
+      delay.connect(fbGain); fbGain.connect(delay);
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = 1400 + Math.random() * 600;
+      const t = ctx.currentTime;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.14, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      o.connect(g); g.connect(delay); delay.connect(out); g.connect(out);
+      o.start(t); o.stop(t + 0.11);
+      scheduleDrop();
+    }, 1500 + Math.random() * 4000);
+  }
+  scheduleDrop();
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  UNDERWATER ARCTIC — canto de beluga + hielo desde abajo
+// ─────────────────────────────────────────────────────────────────────
+function _sceneUnderArctic(ctx, out) {
+  const nodes = [];
+  const buf = _makeNoise(ctx, 5);
+  const wSrc = _noiseLoop(ctx, buf);
+  const wBp  = ctx.createBiquadFilter(); wBp.type = 'bandpass'; wBp.frequency.value = 200; wBp.Q.value = 0.5;
+  const wG   = ctx.createGain(); wG.gain.value = 0.18;
+  wSrc.connect(wBp); wBp.connect(wG); wG.connect(out); wSrc.start(); nodes.push(wSrc);
+  // Canto de beluga — glissando suave
+  const stopped = { val: false };
+  function scheduleWhale() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const startF = 600 + Math.random() * 400;
+      const endF   = startF * (0.7 + Math.random() * 0.6);
+      const dur    = 1.5 + Math.random() * 2;
+      const o = ctx.createOscillator(), vib = ctx.createOscillator();
+      const vibG = ctx.createGain(); vibG.gain.value = 15;
+      const g = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(startF, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(endF, ctx.currentTime + dur);
+      vib.frequency.value = 4.5; vib.connect(vibG); vibG.connect(o.frequency);
+      g.gain.setValueAtTime(0, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.2);
+      g.gain.setTargetAtTime(0, ctx.currentTime + dur - 0.3, 0.2);
+      o.connect(g); g.connect(out);
+      o.start(); vib.start(); o.stop(ctx.currentTime + dur + 0.5); vib.stop(ctx.currentTime + dur + 0.5);
+      scheduleWhale();
+    }, 5000 + Math.random() * 12000);
+  }
+  scheduleWhale();
+  // Crujido del hielo desde abajo — más seco
+  function scheduleIce() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const cBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.06), ctx.sampleRate);
+      const d = cBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/d.length, 2);
+      const s = ctx.createBufferSource(); s.buffer = cBuf;
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1000;
+      const g  = ctx.createGain(); g.gain.value = 0.2 + Math.random() * 0.3;
+      s.connect(hp); hp.connect(g); g.connect(out); s.start();
+      scheduleIce();
+    }, 1000 + Math.random() * 5000);
+  }
+  scheduleIce();
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  SAVANNA — grillos africanos + viento seco cálido + pájaro tejedor
+// ─────────────────────────────────────────────────────────────────────
+function _sceneSavanna(ctx, out) {
+  const nodes = [];
+  const buf = _makeNoise(ctx, 3);
+  const wSrc = _noiseLoop(ctx, buf);
+  const wBp  = ctx.createBiquadFilter(); wBp.type = 'bandpass'; wBp.frequency.value = 800; wBp.Q.value = 0.6;
+  const wG   = ctx.createGain(); wG.gain.value = 0.05;
+  const wLfo = ctx.createOscillator(); wLfo.type = 'sine'; wLfo.frequency.value = 0.06;
+  const wLfoG= ctx.createGain(); wLfoG.gain.value = 0.035;
+  wLfo.connect(wLfoG); wLfoG.connect(wG.gain);
+  wSrc.connect(wBp); wBp.connect(wG); wG.connect(out); wSrc.start(); wLfo.start(); nodes.push(wSrc, wLfo);
+  // Grillos africanos — más graves que los de prado
+  [3600, 3800, 4000].forEach((f, i) => {
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+    const am = ctx.createOscillator(); am.type = 'square'; am.frequency.value = 22 + i * 3;
+    const amG = ctx.createGain(); amG.gain.value = 0.03;
+    const g   = ctx.createGain(); g.gain.value = 0;
+    am.connect(amG); amG.connect(g.gain); o.connect(g); g.connect(out);
+    o.start(ctx.currentTime + i * 0.8); am.start(ctx.currentTime + i * 0.8); nodes.push(o, am);
+  });
+  // Pájaro tejedor — trino rápido ocasional
+  const stopped = { val: false };
+  function scheduleBird() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const notes = [1200, 1400, 1100, 1600, 1300, 1000];
+      notes.forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = f;
+        const t = ctx.currentTime + i * 0.07;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.07, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.11);
+      });
+      scheduleBird();
+    }, 6000 + Math.random() * 14000);
+  }
+  scheduleBird();
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  ALPS — viento suave alpino + cencerro lejano + río glaciar
+// ─────────────────────────────────────────────────────────────────────
+function _sceneAlps(ctx, out) {
+  const nodes = [];
+  const buf = _makeNoise(ctx, 4);
+  const wSrc = _noiseLoop(ctx, buf);
+  const wBp  = ctx.createBiquadFilter(); wBp.type = 'bandpass'; wBp.frequency.value = 1400; wBp.Q.value = 1.5;
+  const wG   = ctx.createGain(); wG.gain.value = 0.04;
+  const wLfo = ctx.createOscillator(); wLfo.type = 'sine'; wLfo.frequency.value = 0.08;
+  const wLfoG= ctx.createGain(); wLfoG.gain.value = 0.025;
+  wLfo.connect(wLfoG); wLfoG.connect(wG.gain);
+  wSrc.connect(wBp); wBp.connect(wG); wG.connect(out); wSrc.start(); wLfo.start(); nodes.push(wSrc, wLfo);
+  // Río glaciar — ruido blanco suave, highpass
+  const rBuf = _makeNoise(ctx, 2);
+  const rSrc = _noiseLoop(ctx, rBuf);
+  const rHp  = ctx.createBiquadFilter(); rHp.type = 'highpass'; rHp.frequency.value = 1800;
+  const rG   = ctx.createGain(); rG.gain.value = 0.06;
+  rSrc.connect(rHp); rHp.connect(rG); rG.connect(out); rSrc.start(); nodes.push(rSrc);
+  // Cencerro — tono puro con decaimiento
+  const stopped = { val: false };
+  function scheduleCowbell() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const freqs = [420, 560, 630]; // acorde de cencerro
+      freqs.forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = f;
+        const t = ctx.currentTime + i * 0.01;
+        g.gain.setValueAtTime(0.08/(i+1), t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 2.5 - i * 0.3);
+        o.connect(g); g.connect(out); o.start(t); o.stop(t + 2.6);
+      });
+      scheduleCowbell();
+    }, 8000 + Math.random() * 20000);
+  }
+  scheduleCowbell();
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  FESTIVAL — bullicio lejano + petardos suaves + música ambiente
+// ─────────────────────────────────────────────────────────────────────
+function _sceneFestival(ctx, out) {
+  const nodes = [];
+  // Bullicio de multitud — ruido mid con LFO de emoción
+  const buf = _makeNoise(ctx, 2);
+  const cSrc = _noiseLoop(ctx, buf);
+  const cBp  = ctx.createBiquadFilter(); cBp.type = 'bandpass'; cBp.frequency.value = 1000; cBp.Q.value = 0.4;
+  const cG   = ctx.createGain(); cG.gain.value = 0.055;
+  const cLfo = ctx.createOscillator(); cLfo.type = 'sine'; cLfo.frequency.value = 0.15;
+  const cLfoG= ctx.createGain(); cLfoG.gain.value = 0.03;
+  cLfo.connect(cLfoG); cLfoG.connect(cG.gain);
+  cSrc.connect(cBp); cBp.connect(cG); cG.connect(out); cSrc.start(); cLfo.start(); nodes.push(cSrc, cLfo);
+  // Música ambiente — acorde mayor simple con vibrato
+  const chord = [261, 329, 392]; // Do Mayor
+  chord.forEach(f => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.value = f; g.gain.value = 0.018;
+    o.connect(g); g.connect(out); o.start(); nodes.push(o);
+  });
+  // Petardos/fuegos artificiales
+  const stopped = { val: false };
+  function scheduleFirework() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      // Boom grave
+      const bBuf = _makeNoise(ctx, 0.3);
+      const bSrc = ctx.createBufferSource(); bSrc.buffer = bBuf;
+      const bLp  = ctx.createBiquadFilter(); bLp.type = 'lowpass'; bLp.frequency.value = 150;
+      const bG   = ctx.createGain();
+      bG.gain.setValueAtTime(0.35, ctx.currentTime); bG.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+      bSrc.connect(bLp); bLp.connect(bG); bG.connect(out); bSrc.start(); bSrc.stop(ctx.currentTime + 0.85);
+      // Destello agudo
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = 1800 + Math.random() * 1200;
+      g.gain.setValueAtTime(0.06, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      o.connect(g); g.connect(out); o.start(); o.stop(ctx.currentTime + 0.41);
+      scheduleFirework();
+    }, 8000 + Math.random() * 20000);
+  }
+  scheduleFirework();
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  JUNGLE — aves tropicales + cascada + lluvia de selva
+// ─────────────────────────────────────────────────────────────────────
+function _sceneJungle(ctx, out) {
+  const nodes = [];
+  // Cascada — ruido blanco suave continuo, ancho de banda completo
+  const buf = _makeNoise(ctx, 3);
+  const wSrc = _noiseLoop(ctx, buf);
+  const wBp  = ctx.createBiquadFilter(); wBp.type = 'bandpass'; wBp.frequency.value = 2000; wBp.Q.value = 0.3;
+  const wG   = ctx.createGain(); wG.gain.value = 0.14;
+  wSrc.connect(wBp); wBp.connect(wG); wG.connect(out); wSrc.start(); nodes.push(wSrc);
+  // Selva densa — capa grave
+  const bBuf = _makeNoise(ctx, 2);
+  const bSrc = _noiseLoop(ctx, bBuf);
+  const bLp  = ctx.createBiquadFilter(); bLp.type = 'lowpass'; bLp.frequency.value = 400;
+  const bG   = ctx.createGain(); bG.gain.value = 0.06;
+  bSrc.connect(bLp); bLp.connect(bG); bG.connect(out); bSrc.start(); nodes.push(bSrc);
+  // Aves tropicales — llamadas variadas
+  const stopped = { val: false };
+  const birdSongs = [
+    [800, 1200, 600, 1000],
+    [1600, 1200, 1800, 1400],
+    [2200, 1800, 2400, 2000],
+  ];
+  function scheduleBird(songIdx) {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const notes = birdSongs[songIdx % birdSongs.length];
+      notes.forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = f;
+        const t = ctx.currentTime + i * 0.12;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.065, t + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.19);
+      });
+      scheduleBird(songIdx + 1);
+    }, 1500 + Math.random() * 4000);
+  }
+  scheduleBird(0);
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  MARS — viento ultrafino marciano + pulso electromagnético
+// ─────────────────────────────────────────────────────────────────────
+function _sceneMars(ctx, out) {
+  const nodes = [];
+  // Viento marciano — muy tenue, alta frecuencia, casi silencio
+  const buf = _makeNoise(ctx, 6);
+  const wSrc = _noiseLoop(ctx, buf);
+  const wHp  = ctx.createBiquadFilter(); wHp.type = 'highpass'; wHp.frequency.value = 3000;
+  const wG   = ctx.createGain(); wG.gain.value = 0.022;
+  const wLfo = ctx.createOscillator(); wLfo.type = 'sine'; wLfo.frequency.value = 0.03;
+  const wLfoG= ctx.createGain(); wLfoG.gain.value = 0.015;
+  wLfo.connect(wLfoG); wLfoG.connect(wG.gain);
+  wSrc.connect(wHp); wHp.connect(wG); wG.connect(out); wSrc.start(); wLfo.start(); nodes.push(wSrc, wLfo);
+  // Silencio marciano profundo — sub-bass barely audible
+  const silo = ctx.createOscillator(); silo.type = 'sine'; silo.frequency.value = 28;
+  const siloG = ctx.createGain(); siloG.gain.value = 0.04;
+  silo.connect(siloG); siloG.connect(out); silo.start(); nodes.push(silo);
+  // Pulso electromagnético del rover — beep tonal ocasional
+  const stopped = { val: false };
+  function schedulePulse() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      [[440, 0.06, 0.08], [880, 0.03, 0.06]].forEach(([f, vol, dur], i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        const t = ctx.currentTime + i * 0.15;
+        g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.01);
+      });
+      schedulePulse();
+    }, 12000 + Math.random() * 25000);
+  }
+  schedulePulse();
   return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
 }

@@ -374,6 +374,14 @@ export function spawnCreatures(theme) {
     case 'volcano':  spawnVolcano(L);  break;
     case 'rain':     spawnRain(L);     break;
     case 'japan':    spawnJapan(L);    break;
+    case 'swamp':    spawnSwamp(L);    break;
+    case 'cave':     spawnCave(L);     break;
+    case 'underarctic': spawnUnderArctic(L); break;
+    case 'savanna':  spawnSavanna(L);  break;
+    case 'alps':     spawnAlps(L);     break;
+    case 'festival': spawnFestival(L); break;
+    case 'jungle':   spawnJungle(L);   break;
+    case 'mars':     spawnMars(L);     break;
   }
 }
 
@@ -690,5 +698,467 @@ function spawnJapan(L) {
   for (let i = 0; i < 8; i++) {
     const sz = 8 + Math.random() * 6;
     L.appendChild(el('firefly-el', `left:${10+i*10}%;top:${40+Math.random()*30}%;width:${sz}px;height:${sz}px;background:#ffcc44;box-shadow:0 0 ${sz*2}px #ffaa22;border-radius:3px;animation-duration:${4+i}s;animation-delay:-${i*1.5}s`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  SWAMP — ciénaga, fuegos fatuos, ranas, nenúfares, niebla
+// ══════════════════════════════════════════════════════════════════════
+function lilypadSVG(sz) {
+  return `<svg width="${sz}" height="${sz*.55}" viewBox="0 0 80 44" fill="none">
+    <ellipse cx="40" cy="24" rx="38" ry="20" fill="#2d6e1a" opacity=".85"/>
+    <path d="M40 4 L40 24" stroke="#1a4a0a" stroke-width="2" fill="none" opacity=".6"/>
+    <ellipse cx="40" cy="24" rx="28" ry="14" fill="#3a8520" opacity=".4"/>
+    <circle cx="32" cy="18" r="5" fill="#ffccdd" opacity=".9"/>
+    <circle cx="32" cy="18" r="3" fill="#ff88aa" opacity=".8"/>
+  </svg>`;
+}
+function frogSVG() {
+  return `<svg width="34" height="26" viewBox="0 0 34 26" fill="none">
+    <ellipse cx="17" cy="16" rx="13" ry="9" fill="#3a8520" opacity=".9"/>
+    <ellipse cx="8"  cy="9"  rx="6"  ry="5" fill="#3a8520" opacity=".9"/>
+    <ellipse cx="26" cy="9"  rx="6"  ry="5" fill="#3a8520" opacity=".9"/>
+    <circle  cx="6"  cy="8"  r="3.5" fill="#88cc44" opacity=".8"/>
+    <circle  cx="28" cy="8"  r="3.5" fill="#88cc44" opacity=".8"/>
+    <circle  cx="6"  cy="8"  r="1.5" fill="#111"/>
+    <circle  cx="28" cy="8"  r="1.5" fill="#111"/>
+    <path d="M12 20 Q17 23 22 20" stroke="#1a5010" stroke-width="1.5" fill="none" opacity=".7"/>
+  </svg>`;
+}
+function willowSVG(h) {
+  const w = h * 0.7;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 70 100" fill="none">
+    <rect x="32" y="70" width="6" height="30" rx="2" fill="#3a2010" opacity=".9"/>
+    <ellipse cx="35" cy="42" rx="28" ry="35" fill="#1a4a0a" opacity=".8"/>
+    <path d="M20 30 Q10 55 8 75 M30 25 Q25 55 22 78 M40 22 Q42 52 40 78 M50 25 Q55 52 58 75 M60 32 Q65 55 62 72" stroke="#2d6e1a" stroke-width="2" fill="none" opacity=".7"/>
+  </svg>`;
+}
+
+function spawnSwamp(L) {
+  // Sauce llorón
+  [2, 75].forEach((x, i) => {
+    const h = 120 + Math.random() * 60;
+    L.appendChild(el('seaweed-el', `left:${x}%;animation-duration:${6+i}s`, willowSVG(h)));
+  });
+  // Nenúfares
+  [10,22,35,50,65,78].forEach((x, i) => {
+    const sz = 40 + Math.random() * 30;
+    L.appendChild(el('jelly-el', `left:${x}%;bottom:2%;top:auto;animation-duration:${4+i}s;animation-delay:-${i}s`, lilypadSVG(sz)));
+  });
+  // Ranas
+  for (let i = 0; i < 4; i++) {
+    L.appendChild(el('bee-el', `left:${12+i*22}%;bottom:5%;top:auto;animation-duration:${5+i*2}s;animation-delay:-${i*2}s`, frogSVG()));
+  }
+  // Fuegos fatuos — verdes y azulados
+  const ffColors = ['#88ffaa','#aaffcc','#66ffee','#aaffee','#ccffaa'];
+  for (let i = 0; i < 18; i++) {
+    const sz = 5 + Math.random() * 8;
+    const c  = ffColors[i % ffColors.length];
+    L.appendChild(el('firefly-el', `left:${Math.random()*90+5}%;top:${20+Math.random()*60}%;width:${sz}px;height:${sz}px;background:${c};box-shadow:0 0 ${sz*2.5}px ${c};animation-duration:${4+Math.random()*7}s;animation-delay:-${Math.random()*7}s`));
+  }
+  // Niebla
+  for (let i = 0; i < 5; i++) {
+    const d = document.createElement('div');
+    d.style.cssText = `position:absolute;bottom:${i*6}%;left:${-5+i*20}%;width:45%;height:12%;background:radial-gradient(ellipse,rgba(180,220,180,.07),transparent);pointer-events:none`;
+    L.appendChild(d);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  CAVE — estalactitas, cristales, murciélagos, gotas
+// ══════════════════════════════════════════════════════════════════════
+function stalactiteSVG(h, glow) {
+  const w = h * 0.35;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 14 ${h}" fill="none">
+    <path d="M7 0 Q2 ${h*.4} 1 ${h} Q7 ${h*.85} 13 ${h} Q12 ${h*.4} 7 0Z" fill="#2a3040" opacity=".9"/>
+    <path d="M7 0 Q5 ${h*.3} 5 ${h*.6}" stroke="rgba(150,180,220,.2)" stroke-width="1" fill="none"/>
+    ${glow ? `<ellipse cx="7" cy="${h}" rx="4" ry="2" fill="${glow}" opacity=".6"/>` : ''}
+  </svg>`;
+}
+function crystalSVG(h, color) {
+  const w = h * 0.45;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 18 ${h}" fill="none">
+    <polygon points="9,0 18,${h*.6} 14,${h} 4,${h} 0,${h*.6}" fill="${color}" opacity=".8"/>
+    <polygon points="9,0 18,${h*.6} 14,${h*.4}" fill="rgba(255,255,255,.2)" opacity=".5"/>
+    <polygon points="9,0 0,${h*.6} 4,${h*.4}" fill="rgba(255,255,255,.1)" opacity=".4"/>
+  </svg>`;
+}
+function batSVG() {
+  return `<svg width="38" height="20" viewBox="0 0 38 20" fill="none">
+    <path d="M5 10 Q9 2 14 8 Q16 4 19 8 Q22 4 24 8 Q29 2 33 10" fill="#2a1a3a" opacity=".9"/>
+    <ellipse cx="19" cy="12" rx="5" ry="4" fill="#3a2a4a" opacity=".9"/>
+    <circle cx="17" cy="11" r="1.2" fill="#ffaa44" opacity=".8"/>
+    <circle cx="21" cy="11" r="1.2" fill="#ffaa44" opacity=".8"/>
+  </svg>`;
+}
+
+function spawnCave(L) {
+  // Estalactitas
+  [3,8,14,20,28,36,44,52,60,68,75,82,90].forEach((x, i) => {
+    const h = 40 + Math.random() * 80;
+    const glowColors = [null, null, '#88aaff', null, '#aaffcc', null, '#ff88aa', null];
+    L.appendChild(el('seaweed-el', `left:${x}%;animation-duration:0s`, stalactiteSVG(h, glowColors[i % glowColors.length])));
+  });
+  // Cristales en el suelo
+  const cColors = ['#88aaff','#aaccff','#ccaaff','#88ffcc','#ffaacc','#aaffee'];
+  [5,15,25,40,55,65,75,88].forEach((x, i) => {
+    const h = 30 + Math.random() * 50;
+    L.appendChild(el('ftree-el', `left:${x}%;animation-duration:3s;animation-delay:-${i}s`, crystalSVG(h, cColors[i % cColors.length])));
+  });
+  // Murciélagos
+  for (let i = 0; i < 5; i++) {
+    L.appendChild(el('butterfly-el', `left:${5+i*18}%;top:${5+Math.random()*20}%;animation-duration:${3+i*1.5}s;animation-delay:-${i*2}s`, batSVG()));
+  }
+  // Puntos de bioluminiscencia
+  for (let i = 0; i < 20; i++) {
+    const sz = 3 + Math.random() * 5;
+    const c  = cColors[i % cColors.length];
+    L.appendChild(el('firefly-el', `left:${Math.random()*100}%;top:${Math.random()*90}%;width:${sz}px;height:${sz}px;background:${c};box-shadow:0 0 ${sz*3}px ${c};animation-duration:${3+Math.random()*6}s;animation-delay:-${Math.random()*6}s`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  UNDERWATER ARCTIC — belugas, focas, hielo desde abajo, peces
+// ══════════════════════════════════════════════════════════════════════
+function belugaSVG() {
+  return `<svg width="90" height="40" viewBox="0 0 90 40" fill="none">
+    <path d="M80 20 C65 8 30 10 10 20 C30 30 65 32 80 20Z" fill="#e8f4ff" opacity=".92"/>
+    <path d="M80 20 L90 16 L88 20 L90 24Z" fill="#e8f4ff" opacity=".8"/>
+    <ellipse cx="15" cy="19" rx="5" ry="4" fill="rgba(0,0,0,.3)"/>
+    <circle  cx="14" cy="18" r="2" fill="#111"/>
+    <circle  cx="13.5" cy="17.5" r=".7" fill="rgba(255,255,255,.8)"/>
+    <path d="M20 26 Q30 32 45 28 M55 10 Q60 6 70 12" stroke="rgba(200,220,240,.5)" stroke-width="2" fill="none"/>
+  </svg>`;
+}
+function sealSVG() {
+  return `<svg width="60" height="30" viewBox="0 0 60 30" fill="none">
+    <ellipse cx="30" cy="17" rx="26" ry="12" fill="#c8c0b8" opacity=".9"/>
+    <ellipse cx="15" cy="15" rx="10" ry="7" fill="#d4ccc4" opacity=".85"/>
+    <circle  cx="10" cy="13" r="4.5" fill="#d4ccc4" opacity=".9"/>
+    <circle  cx="8"  cy="12" r="2" fill="#222"/>
+    <circle  cx="7.5" cy="11.5" r=".7" fill="rgba(255,255,255,.8)"/>
+    <path d="M5 14 Q2 12 1 14 M8 17 Q5 20 3 18" stroke="#c8c0b8" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M52 16 Q58 12 60 16 M52 20 Q58 24 60 20" stroke="#c8c0b8" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  </svg>`;
+}
+function iceUnderSVG(w) {
+  return `<svg width="${w}" height="50" viewBox="0 0 ${w} 50" fill="none">
+    <path d="M0 0 Q${w*.15} 20 ${w*.25} 8 Q${w*.35} 0 ${w*.45} 15 Q${w*.55} 28 ${w*.65} 10 Q${w*.75} 0 ${w*.85} 18 Q${w*.92} 28 ${w} 12 L${w} 50 L0 50Z" fill="rgba(180,220,255,.25)"/>
+    <path d="M0 0 Q${w*.2} 12 ${w*.3} 4 Q${w*.5} -2 ${w*.6} 8 Q${w*.75} 16 ${w} 6" stroke="rgba(200,235,255,.4)" stroke-width="2" fill="none"/>
+  </svg>`;
+}
+
+function spawnUnderArctic(L) {
+  // Hielo superior
+  L.appendChild(el('seaweed-el', `left:0;width:100%;animation-duration:0s`, iceUnderSVG(window.innerWidth || 1200)));
+  // Belugas
+  for (let i = 0; i < 3; i++) {
+    const rev = i % 2 === 1;
+    L.appendChild(el('fish-el'+(rev?' rev':''), `top:${15+i*18}%;animation-duration:${22+i*8}s;animation-delay:-${i*7}s`, belugaSVG()));
+  }
+  // Focas
+  for (let i = 0; i < 2; i++) {
+    L.appendChild(el('bee-el', `left:${20+i*50}%;top:${40+Math.random()*20}%;animation-duration:${8+i*3}s;animation-delay:-${i*4}s`, sealSVG()));
+  }
+  // Peces árticos pequeños
+  const FISH_C2 = ['#88ccff','#aaddff','#66bbee','#99ccdd'];
+  for (let i = 0; i < 8; i++) {
+    const sz = 16 + Math.random() * 14;
+    const c  = FISH_C2[i % FISH_C2.length];
+    L.appendChild(el('fish-el'+(i%2?' rev':''), `top:${30+Math.random()*55}%;animation-duration:${12+Math.random()*10}s;animation-delay:-${Math.random()*12}s`, `<svg width="${sz}" height="${sz*.45}" viewBox="0 0 45 20" fill="none"><ellipse cx="18" cy="10" rx="16" ry="8" fill="${c}" opacity=".8"/><path d="M34 10 L44 5 L44 15Z" fill="${c}" opacity=".6"/><circle cx="6" cy="8" r="2" fill="rgba(0,0,0,.4)"/></svg>`));
+  }
+  // Burbujas
+  for (let i = 0; i < 25; i++) {
+    const sz = 4 + Math.random() * 9;
+    L.appendChild(el('bubble-el', `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;background:rgba(180,220,255,.25);border-color:rgba(200,235,255,.4);animation-duration:${8+Math.random()*12}s;animation-delay:-${Math.random()*15}s`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  SAVANNA — acacia, jirafas, pájaros, sol
+// ══════════════════════════════════════════════════════════════════════
+function acaciaSVG(h) {
+  const w = h * 1.1;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 110 100" fill="none">
+    <rect x="50" y="55" width="10" height="45" rx="3" fill="#5a3a10" opacity=".9"/>
+    <path d="M55 55 Q30 40 10 30 M55 55 Q45 35 35 20 M55 55 Q70 38 90 28 M55 55 Q65 35 75 20" stroke="#5a3a10" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <ellipse cx="15"  cy="28" rx="18" ry="12" fill="#2a6a10" opacity=".85"/>
+    <ellipse cx="40"  cy="18" rx="16" ry="10" fill="#2d7012" opacity=".85"/>
+    <ellipse cx="78"  cy="26" rx="18" ry="11" fill="#2a6a10" opacity=".85"/>
+    <ellipse cx="55"  cy="42" rx="22" ry="13" fill="#336614" opacity=".8"/>
+  </svg>`;
+}
+function giraffeSVG() {
+  return `<svg width="30" height="80" viewBox="0 0 30 80" fill="none">
+    <rect x="12" y="0"  width="6"  height="28" rx="3" fill="#d4a030" opacity=".9"/>
+    <ellipse cx="15" cy="5" rx="8" ry="6" fill="#d4a030" opacity=".9"/>
+    <rect x="7"  y="30" width="5"  height="50" rx="2" fill="#c89028" opacity=".9"/>
+    <rect x="18" y="30" width="5"  height="50" rx="2" fill="#c89028" opacity=".9"/>
+    <rect x="10" y="50" width="4"  height="30" rx="2" fill="#c89028" opacity=".85"/>
+    <rect x="16" y="50" width="4"  height="30" rx="2" fill="#c89028" opacity=".85"/>
+    <circle cx="15" cy="4"  r="2.5" fill="#111"/>
+    <circle cx="14" cy="3.5" r=".9" fill="rgba(255,255,255,.8)"/>
+    <!-- spots -->
+    <ellipse cx="14" cy="14" rx="2.5" ry="2" fill="#8a5010" opacity=".6"/>
+    <ellipse cx="18" cy="22" rx="2" ry="1.8" fill="#8a5010" opacity=".6"/>
+    <ellipse cx="11" cy="35" rx="2" ry="1.8" fill="#8a5010" opacity=".5"/>
+    <ellipse cx="20" cy="40" rx="2" ry="1.5" fill="#8a5010" opacity=".5"/>
+  </svg>`;
+}
+
+function spawnSavanna(L) {
+  // Acacias
+  [2, 30, 62, 84].forEach((x, i) => {
+    const h = 80 + Math.random() * 50;
+    L.appendChild(el('ftree-el', `left:${x}%;animation-duration:${5+i}s;animation-delay:-${i}s`, acaciaSVG(h)));
+  });
+  // Jirafas en el horizonte
+  for (let i = 0; i < 3; i++) {
+    L.appendChild(el('ftree-el', `left:${15+i*30}%;animation-duration:${8+i*3}s;animation-delay:-${i*2}s`, giraffeSVG()));
+  }
+  // Pájaros tejedor (pequeños triángulos)
+  for (let i = 0; i < 8; i++) {
+    L.appendChild(el('snow-el', `left:${Math.random()*100}%;animation-duration:${6+Math.random()*8}s;animation-delay:-${Math.random()*8}s`, `<svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M6 0 L12 8 L0 8Z" fill="#2a1a0a" opacity=".7"/></svg>`));
+  }
+  // Sol grande en el fondo (div estático)
+  const sun = document.createElement('div');
+  sun.style.cssText = 'position:absolute;right:8%;top:8%;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(255,200,50,.35),rgba(255,150,0,.1),transparent);pointer-events:none';
+  L.appendChild(sun);
+  // Polvo en el suelo
+  for (let i = 0; i < 15; i++) {
+    const sz = 3 + Math.random() * 6;
+    L.appendChild(el('bubble-el', `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;background:rgba(210,160,80,.25);border:none;animation-duration:${5+Math.random()*8}s;animation-delay:-${Math.random()*8}s`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  ALPS — picos nevados, prados, vacas, río, flores alpinas
+// ══════════════════════════════════════════════════════════════════════
+function alpsTreeSVG(h) {
+  const w = h * 0.55;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 55 100" fill="none">
+    <rect x="24" y="80" width="7" height="20" rx="2" fill="#5a3a20" opacity=".9"/>
+    <polygon points="27.5,5 8,38 47,38"  fill="#2a6010" opacity=".9"/>
+    <polygon points="27.5,20 6,56 49,56" fill="#2d6814" opacity=".85"/>
+    <polygon points="27.5,35 5,74 50,74" fill="#306e16" opacity=".8"/>
+    <polygon points="27.5,5 8,38 47,38"  fill="rgba(240,248,255,.18)" clip-path="inset(0 0 60% 0)"/>
+  </svg>`;
+}
+function cowSVG() {
+  return `<svg width="55" height="34" viewBox="0 0 55 34" fill="none">
+    <ellipse cx="28" cy="20" rx="22" ry="12" fill="#f0e8e0" opacity=".9"/>
+    <ellipse cx="12" cy="16" rx="9"  ry="7"  fill="#f0e8e0" opacity=".9"/>
+    <circle  cx="8"  cy="14" r="2.5" fill="#111"/>
+    <circle  cx="7.5" cy="13.5" r=".9" fill="rgba(255,255,255,.8)"/>
+    <rect x="14" y="28" width="5" height="8" rx="2" fill="#e0d8d0" opacity=".9"/>
+    <rect x="22" y="28" width="5" height="8" rx="2" fill="#e0d8d0" opacity=".9"/>
+    <rect x="34" y="28" width="5" height="8" rx="2" fill="#e0d8d0" opacity=".9"/>
+    <rect x="42" y="28" width="5" height="8" rx="2" fill="#e0d8d0" opacity=".9"/>
+    <!-- spots -->
+    <ellipse cx="30" cy="16" rx="6" ry="4" fill="#3a2a1a" opacity=".4"/>
+    <ellipse cx="42" cy="22" rx="5" ry="3.5" fill="#3a2a1a" opacity=".35"/>
+    <!-- bell -->
+    <rect x="18" y="25" width="5" height="6" rx="1" fill="#cc9922" opacity=".8"/>
+  </svg>`;
+}
+function edelweissSVG() {
+  return `<svg width="20" height="28" viewBox="0 0 20 28" fill="none">
+    <line x1="10" y1="28" x2="10" y2="14" stroke="#4a8020" stroke-width="1.8"/>
+    <circle cx="10" cy="12" r="4" fill="#fafaf8" opacity=".9"/>
+    <ellipse cx="4"  cy="10" rx="4" ry="2.5" fill="#fafaf8" opacity=".85" transform="rotate(-30 4 10)"/>
+    <ellipse cx="16" cy="10" rx="4" ry="2.5" fill="#fafaf8" opacity=".85" transform="rotate(30 16 10)"/>
+    <ellipse cx="7"  cy="5"  rx="4" ry="2.5" fill="#fafaf8" opacity=".85" transform="rotate(-70 7 5)"/>
+    <ellipse cx="13" cy="5"  rx="4" ry="2.5" fill="#fafaf8" opacity=".85" transform="rotate(70 13 5)"/>
+    <circle cx="10" cy="12" r="2.5" fill="#ffee88" opacity=".9"/>
+  </svg>`;
+}
+
+function spawnAlps(L) {
+  // Abetos alpinos
+  [0, 8, 70, 80, 90].forEach((x, i) => {
+    const h = 90 + Math.random() * 60;
+    L.appendChild(el('ftree-el', `left:${x}%;animation-duration:${4+i}s;animation-delay:-${i}s`, alpsTreeSVG(h)));
+  });
+  // Vacas con cencerro
+  for (let i = 0; i < 3; i++) {
+    L.appendChild(el('bee-el', `left:${20+i*25}%;bottom:8%;top:auto;animation-duration:${8+i*3}s;animation-delay:-${i*3}s`, cowSVG()));
+  }
+  // Edelweiss
+  [15,25,38,52,62,72].forEach((x, i) => {
+    L.appendChild(el('flower-el', `left:${x}%;animation-duration:${3+i*.5}s;animation-delay:-${i*.5}s`, edelweissSVG()));
+  });
+  // Copos de nieve suaves
+  for (let i = 0; i < 15; i++) {
+    const sz = 5 + Math.random() * 8;
+    L.appendChild(el('snow-el', `left:${Math.random()*100}%;animation-duration:${12+Math.random()*10}s;animation-delay:-${Math.random()*12}s`, `<svg width="${sz}" height="${sz}" viewBox="0 0 10 10"><circle cx="5" cy="5" r="3" fill="rgba(220,235,255,.5)"/></svg>`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  FESTIVAL — farolillos, fuegos artificiales, chispas
+// ══════════════════════════════════════════════════════════════════════
+function lanternSVG(color) {
+  return `<svg width="22" height="32" viewBox="0 0 22 32" fill="none">
+    <line x1="11" y1="0" x2="11" y2="5" stroke="rgba(180,140,60,.6)" stroke-width="1.5"/>
+    <rect x="3" y="5" width="16" height="20" rx="4" fill="${color}" opacity=".85"/>
+    <rect x="5" y="5" width="12" height="20" rx="3" fill="${color}" opacity=".4"/>
+    <line x1="3" y1="12" x2="19" y2="12" stroke="rgba(0,0,0,.15)" stroke-width=".8"/>
+    <line x1="3" y1="18" x2="19" y2="18" stroke="rgba(0,0,0,.15)" stroke-width=".8"/>
+    <ellipse cx="11" cy="32" rx="5" ry="2.5" fill="${color}" opacity=".25"/>
+    <line x1="11" y1="25" x2="11" y2="32" stroke="rgba(180,140,60,.4)" stroke-width="1"/>
+  </svg>`;
+}
+function sparkSVG() {
+  return `<svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+    <circle cx="4" cy="4" r="2.5" fill="#ffee44" opacity=".9"/>
+    <circle cx="4" cy="4" r="4"   fill="#ffcc22" opacity=".3"/>
+  </svg>`;
+}
+
+function spawnFestival(L) {
+  const lanternColors = ['#ff4444','#ff8800','#ffcc00','#ff44aa','#44aaff','#44ff88'];
+  // Farolillos ascendiendo
+  for (let i = 0; i < 18; i++) {
+    const c = lanternColors[i % lanternColors.length];
+    L.appendChild(el('bubble-el', `left:${Math.random()*90+5}%;width:22px;height:32px;border-radius:4px;background:none;border:none;animation-duration:${8+Math.random()*12}s;animation-delay:-${Math.random()*15}s`, lanternSVG(c)));
+  }
+  // Fuegos artificiales (partículas en ráfagas)
+  for (let i = 0; i < 30; i++) {
+    const sz = 4 + Math.random() * 7;
+    const c  = lanternColors[i % lanternColors.length];
+    L.appendChild(el('firefly-el', `left:${Math.random()*100}%;top:${5+Math.random()*50}%;width:${sz}px;height:${sz}px;background:${c};box-shadow:0 0 ${sz*2}px ${c};animation-duration:${2+Math.random()*4}s;animation-delay:-${Math.random()*4}s`));
+  }
+  // Chispas cayendo
+  for (let i = 0; i < 20; i++) {
+    L.appendChild(el('snow-el', `left:${Math.random()*100}%;animation-duration:${1.5+Math.random()*2}s;animation-delay:-${Math.random()*3}s`, sparkSVG()));
+  }
+  // Multitud (siluetas en el fondo)
+  const crowd = document.createElement('div');
+  crowd.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:15%;background:linear-gradient(0deg,rgba(10,5,20,.6),transparent);pointer-events:none';
+  L.appendChild(crowd);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  JUNGLE — tucanes, mariposa morpho, cascada, dosel denso
+// ══════════════════════════════════════════════════════════════════════
+function toucanSVG() {
+  return `<svg width="55" height="45" viewBox="0 0 55 45" fill="none">
+    <ellipse cx="25" cy="28" rx="18" ry="14" fill="#111118" opacity=".92"/>
+    <ellipse cx="24" cy="22" rx="10" ry="8"  fill="#111118" opacity=".9"/>
+    <path d="M30 20 Q50 15 52 22 Q50 30 30 26 Q25 24 24 22Z" fill="#ffcc00" opacity=".92"/>
+    <path d="M30 20 Q50 15 52 22 Q50 30 30 26Z" fill="#ff4400" opacity=".6"/>
+    <circle cx="21" cy="20" r="4" fill="#ffffcc" opacity=".9"/>
+    <circle cx="20" cy="20" r="2" fill="#111"/>
+    <circle cx="19.5" cy="19.5" r=".8" fill="rgba(255,255,255,.9)"/>
+    <ellipse cx="25" cy="38" rx="10" ry="4" fill="#ff4400" opacity=".8"/>
+    <path d="M15 30 Q10 36 8 40 M35 30 Q40 36 42 40" stroke="#111118" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+function morphoSVG() {
+  return `<svg width="46" height="36" viewBox="0 0 46 36" fill="none">
+    <g class="bfly-wing">
+      <ellipse cx="9"  cy="13" rx="9"  ry="12" fill="#1166ff" opacity=".88"/>
+      <ellipse cx="9"  cy="26" rx="7"  ry="8"  fill="#0044cc" opacity=".78"/>
+      <ellipse cx="37" cy="13" rx="9"  ry="12" fill="#1166ff" opacity=".88" transform="scale(-1,1) translate(-46,0)"/>
+      <ellipse cx="37" cy="26" rx="7"  ry="8"  fill="#0044cc" opacity=".78" transform="scale(-1,1) translate(-46,0)"/>
+      <!-- iridescent spots -->
+      <ellipse cx="9"  cy="12" rx="4"  ry="5"  fill="#44aaff" opacity=".5"/>
+      <ellipse cx="37" cy="12" rx="4"  ry="5"  fill="#44aaff" opacity=".5" transform="scale(-1,1) translate(-46,0)"/>
+    </g>
+    <rect x="22" y="6" width="2" height="24" rx="1" fill="#1a0e00" opacity=".7"/>
+  </svg>`;
+}
+function jungleLeafSVG(h, c) {
+  const w = h * 1.2;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 120 100" fill="none">
+    <path d="M60 95 Q10 60 5 20 Q30 0 60 10 Q90 0 115 20 Q110 60 60 95Z" fill="${c}" opacity=".85"/>
+    <path d="M60 95 Q60 50 60 10" stroke="rgba(0,0,0,.2)" stroke-width="2" fill="none"/>
+    <path d="M60 65 Q30 55 15 35 M60 50 Q88 42 105 25" stroke="rgba(0,0,0,.12)" stroke-width="1.2" fill="none"/>
+  </svg>`;
+}
+
+function spawnJungle(L) {
+  const leafColors = ['#0a3a0a','#0d4a0d','#0a420a','#123a12','#154815'];
+  // Hojas del dosel
+  [0,8,16,60,70,80,90].forEach((x, i) => {
+    const h = 80 + Math.random() * 60;
+    L.appendChild(el('seaweed-el', `left:${x}%;animation-duration:${4+i*.8}s;animation-delay:-${i}s`, jungleLeafSVG(h, leafColors[i % leafColors.length])));
+  });
+  // Tucanes
+  for (let i = 0; i < 2; i++) {
+    L.appendChild(el('owl-el', `left:${20+i*45}%;top:${10+Math.random()*20}%;animation-duration:${5+i*2}s`, toucanSVG()));
+  }
+  // Mariposas morpho
+  for (let i = 0; i < 5; i++) {
+    L.appendChild(el('butterfly-el', `left:${8+i*18}%;top:${20+Math.random()*35}%;animation-duration:${5+i*1.5}s;animation-delay:-${i*2}s`, morphoSVG()));
+  }
+  // Cascada lateral
+  const waterfall = document.createElement('div');
+  waterfall.style.cssText = 'position:absolute;right:3%;top:10%;width:12px;height:80%;background:linear-gradient(180deg,rgba(180,220,255,.4),rgba(180,220,255,.15));border-radius:6px;pointer-events:none';
+  L.appendChild(waterfall);
+  // Partículas de agua
+  for (let i = 0; i < 15; i++) {
+    const sz = 3 + Math.random() * 5;
+    L.appendChild(el('bubble-el', `width:${sz}px;height:${sz}px;right:${Math.random()*8}%;background:rgba(180,220,255,.4);border-color:rgba(200,235,255,.5);animation-duration:${3+Math.random()*5}s;animation-delay:-${Math.random()*5}s`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  MARS — cielo rosa, dunas rojas, lunas, rover
+// ══════════════════════════════════════════════════════════════════════
+function duneSVG(w, h) {
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">
+    <path d="M0 ${h} Q${w*.25} ${h*.2} ${w*.5} ${h*.4} Q${w*.75} ${h*.6} ${w} ${h*.2} L${w} ${h}Z" fill="#8a2a10" opacity=".9"/>
+    <path d="M0 ${h} Q${w*.3} ${h*.4} ${w*.55} ${h*.55} Q${w*.75} ${h*.7} ${w} ${h*.35} L${w} ${h}Z" fill="#aa3818" opacity=".6"/>
+  </svg>`;
+}
+function roverSVG() {
+  return `<svg width="70" height="40" viewBox="0 0 70 40" fill="none">
+    <rect x="15" y="12" width="40" height="18" rx="3" fill="#8a8880" opacity=".9"/>
+    <rect x="8"  y="8"  width="54" height="8"  rx="2" fill="#aaa8a0" opacity=".85"/>
+    <!-- solar panels -->
+    <rect x="2"  y="4"  width="20" height="5" rx="1" fill="#4466aa" opacity=".8"/>
+    <rect x="48" y="4"  width="20" height="5" rx="1" fill="#4466aa" opacity=".8"/>
+    <!-- wheels -->
+    <circle cx="18" cy="32" r="7" fill="#555550" opacity=".9"/>
+    <circle cx="18" cy="32" r="4" fill="#444440" opacity=".8"/>
+    <circle cx="35" cy="34" r="6" fill="#555550" opacity=".9"/>
+    <circle cx="35" cy="34" r="3.5" fill="#444440" opacity=".8"/>
+    <circle cx="52" cy="32" r="7" fill="#555550" opacity=".9"/>
+    <circle cx="52" cy="32" r="4" fill="#444440" opacity=".8"/>
+    <!-- camera mast -->
+    <line x1="35" y1="12" x2="35" y2="2" stroke="#888" stroke-width="2"/>
+    <circle cx="35" cy="2" r="3" fill="#aaa" opacity=".9"/>
+    <circle cx="34" cy="1" r="1.2" fill="#222"/>
+  </svg>`;
+}
+function marsMoonSVG(r, opacity) {
+  return `<svg width="${r*2}" height="${r*2}" viewBox="0 0 ${r*2} ${r*2}" fill="none">
+    <circle cx="${r}" cy="${r}" r="${r*.9}" fill="#c8b890" opacity="${opacity}"/>
+    <circle cx="${r*.7}" cy="${r*.7}" r="${r*.2}" fill="#b8a880" opacity=".5"/>
+    <circle cx="${r*1.3}" cy="${r*1.1}" r="${r*.15}" fill="#b8a880" opacity=".4"/>
+  </svg>`;
+}
+
+function spawnMars(L) {
+  // Dunas
+  [0, 35, 60].forEach((x, i) => {
+    const w = 400 + Math.random() * 300, h = 80 + Math.random() * 60;
+    L.appendChild(el('seaweed-el', `left:${x}%;animation-duration:0s`, duneSVG(w, h)));
+  });
+  // Dos lunas marcianas (Fobos y Deimos)
+  L.appendChild(el('owl-el', `left:72%;top:8%;animation-duration:8s`, marsMoonSVG(18, 0.75)));
+  L.appendChild(el('owl-el', `left:85%;top:14%;animation-duration:12s`, marsMoonSVG(10, 0.55)));
+  // Rover cruzando
+  L.appendChild(el('fish-el', `top:72%;animation-duration:45s;animation-delay:-10s`, roverSVG()));
+  // Polvo marciano
+  for (let i = 0; i < 25; i++) {
+    const sz = 2 + Math.random() * 5;
+    L.appendChild(el('bubble-el', `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;background:rgba(180,80,40,.3);border:none;animation-duration:${6+Math.random()*10}s;animation-delay:-${Math.random()*10}s`));
+  }
+  // Partículas de polvo en el suelo
+  for (let i = 0; i < 10; i++) {
+    const sz = 3 + Math.random() * 4;
+    L.appendChild(el('snow-el', `left:${Math.random()*100}%;bottom:${Math.random()*20}%;animation-duration:${4+Math.random()*6}s;animation-delay:-${Math.random()*6}s`, `<svg width="${sz}" height="${sz}" viewBox="0 0 4 4"><circle cx="2" cy="2" r="1.5" fill="rgba(200,100,60,.4)"/></svg>`));
   }
 }
