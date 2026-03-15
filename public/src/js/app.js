@@ -578,15 +578,15 @@ function _checkStreakRisk(focusData) {
 window.exportCSV = () => {
   if (!currentUser) return;
   db.sessions.loadRecent(currentUser.id).then(({ data }) => {
-    if (!data?.length) return alert('Sin datos para exportar.');
-    const rows = [['Fecha','Modo','Duración (min)','Tarea']];
+    if (!data || !data.length) return alert('Sin datos para exportar.');
+    const rows = [['Fecha','Modo','Duracion (min)','Tarea']];
     data.forEach(s => {
       const d = new Date(s.completed_at).toLocaleString('es-ES');
       rows.push([d, s.mode, s.duration, s.task_name || '']);
     });
-    const csv  = rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('
-');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const CRLF = String.fromCharCode(13, 10);
+    const csv  = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join(CRLF);
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href = url; a.download = 'focusnature-sesiones.csv'; a.click();
