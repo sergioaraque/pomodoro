@@ -137,21 +137,24 @@ const THEMES = {
   city:     { title:'FocusCity',     subtitle:'La ciudad que nunca duerme',     cls:'theme-city',      info:'<b>🌃 Ciudad</b> — Lluvia, coches y luces de neón.' },
   arctic:   { title:'FocusArctic',   subtitle:'Paz infinita bajo la aurora',    cls:'theme-arctic',    info:'<b>❄️ Ártico</b> — Auroras boreales, oso polar e icebergs.' },
   space:    { title:'FocusSpace',    subtitle:'Silencio cósmico, foco infinito',cls:'theme-space',     info:'<b>🚀 Espacio</b> — Planetas, satélites y nebulosas.' },
-  deep:     { title:'FocusDeep',     subtitle:'Las profundidades del silencio', cls:'theme-deep',      info:'<b>🌊 Abisal</b> — Anglerfish, corales y bioluminiscencia.' },
+  deep:     { title:'FocusDeep',     subtitle:'Las profundidades del silencio', cls:'theme-deep',      info:'<b>🌑 Abisal</b> — Anglerfish, corales y bioluminiscencia.' },
+  volcano:  { title:'FocusVolcano',  subtitle:'La energía del magma en ti',     cls:'theme-volcano',   info:'<b>🌋 Volcán</b> — Lava, rocas y cenizas en el aire.' },
+  rain:     { title:'FocusRain',     subtitle:'La paz de la lluvia de otoño',   cls:'theme-rain',      info:'<b>🌧️ Lluvia</b> — Hojas, charcos y truenos lejanos.' },
+  japan:    { title:'FocusZen',      subtitle:'La serenidad del jardín zen',    cls:'theme-japan',     info:'<b>🏯 Japón</b> — Cerezos, grullas y tori al amanecer.' },
 };
 
 export function applyTheme(name) {
   const t = THEMES[name];
   document.body.className = t.cls;
 
-  ['ocean','meadow','mountain','forest','desert','city','arctic','space','deep'].forEach(k => {
+  ['ocean','meadow','mountain','forest','desert','city','arctic','space','deep','volcano','rain','japan'].forEach(k => {
     const el = $('bg-' + k);
     if (el) el.style.opacity = (k === name) ? '1' : '0';
   });
   $('wave1').style.opacity     = (name === 'ocean' || name === 'deep') ? '1'  : '0';
   $('wave2').style.opacity     = (name === 'ocean' || name === 'deep') ? '.5' : '0';
   $('grass-svg').style.opacity = name === 'meadow' ? '1'  : '0';
-  $('stars-canvas').style.opacity = (name === 'mountain' || name === 'forest' || name === 'arctic' || name === 'space') ? '1' : '0';
+  $('stars-canvas').style.opacity = (name === 'mountain' || name === 'forest' || name === 'arctic' || name === 'space' || name === 'japan') ? '1' : '0';
 
   $('app-title').textContent    = t.title;
   $('app-subtitle').textContent = t.subtitle;
@@ -427,6 +430,11 @@ function _buildHistoryList(sessions, onDelete) {
     const btn = e.target.closest('.hist-del');
     if (btn) onDelete(btn.dataset.id);
   };
+}
+
+// Update history list only (for filter)
+export function updateHistoryList(items, onDelete) {
+  _buildHistoryList(items, onDelete);
 }
 
 // ══════════════════════════════════════════════

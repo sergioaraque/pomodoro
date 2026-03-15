@@ -590,6 +590,10 @@ body.theme-city .snow-el { animation-name: rainFall; }
 /* ── Stars visible for arctic too (already handled in JS) ── */
 body.theme-arctic .stars-layer { opacity: 1; }
 
+/* ════════════════════════════════════════════════
+   REDISEÑO THEME PICKER + MEJORAS DE DISEÑO
+   ════════════════════════════════════════════════ */
+
 /* ── Theme pill button ─────────────────────────── */
 .theme-picker-wrap {
   position: relative;
@@ -759,3 +763,67 @@ body.theme-deep {
 .challenge-bar-wrap { height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-bottom:6px; overflow:hidden; }
 .challenge-bar { height:100%; background:var(--accent); border-radius:2px; transition:width 0.6s ease; }
 .challenge-progress { font-size:12px; color:var(--muted); text-align:right; }
+
+/* ════════════════════════════════════════════════
+   3 NUEVOS TEMAS + 10 FUNCIONALIDADES v4
+   ════════════════════════════════════════════════ */
+
+/* ── Volcano ─────────────────────────────────── */
+.bg-volcano { background: linear-gradient(180deg,#0a0300 0%,#1a0800 25%,#3a0f00 55%,#6a1800 80%,#aa2800 100%); }
+body.theme-volcano {
+  --accent:#ff6600; --accent2:#ff9944;
+  --text:#ffe0cc; --muted:#aa6644;
+  --glass:rgba(255,255,255,.06); --glass-b:rgba(255,255,255,.12);
+  --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#ffe0cc;
+}
+
+/* ── Rain ────────────────────────────────────── */
+.bg-rain { background: linear-gradient(180deg,#080c10 0%,#0d1420 30%,#101820 55%,#141e28 80%,#1a2535 100%); }
+body.theme-rain {
+  --accent:#88bbdd; --accent2:#aaccee;
+  --text:#d8e8f4; --muted:#5a7a90;
+  --glass:rgba(255,255,255,.06); --glass-b:rgba(255,255,255,.11);
+  --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#d8e8f4;
+}
+
+/* ── Japan ───────────────────────────────────── */
+.bg-japan { background: linear-gradient(180deg,#06020e 0%,#10061a 25%,#1a0c2a 55%,#240f38 80%,#2e1448 100%); }
+body.theme-japan {
+  --accent:#ff88aa; --accent2:#ffaabb;
+  --text:#f8e8ec; --muted:#886070;
+  --glass:rgba(255,255,255,.06); --glass-b:rgba(255,255,255,.12);
+  --font-display:'Playfair Display',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#f8e8ec;
+}
+
+/* ── Feature 1: Presets ──────────────────────── */
+.preset-grid {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:6px;
+}
+.preset-btn {
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  background:var(--glass); border:1px solid var(--glass-b);
+  color:var(--muted); border-radius:10px; padding:9px 6px;
+  font-size:12px; font-family:var(--font-body); cursor:pointer; transition:all .2s;
+}
+.preset-btn span { font-size:10px; color:var(--muted); }
+.preset-btn:hover  { border-color:var(--accent); color:var(--text); }
+.preset-btn.active { background:rgba(255,255,255,.1); border-color:var(--accent); color:var(--accent); }
+.preset-btn.active span { color:var(--accent); }
+@media(max-width:520px) { .preset-grid { grid-template-columns:repeat(2,1fr); } }
+
+/* ── Feature 3: Change password ──────────────── */
+.cp-msg { border-radius:8px; padding:8px 12px; font-size:13px; margin-bottom:10px; }
+.cp-msg.ok  { background:rgba(80,255,140,.09); border:1px solid rgba(80,255,140,.25); color:#80ffaa; }
+.cp-msg.err { background:rgba(255,80,80,.10);  border:1px solid rgba(255,80,80,.30);  color:#ff8080; }
+
+/* ── Feature 6: Streak risk banner ──────────── */
+/* uses existing .break-banner.lbreak */
+
+/* ── Feature 7: Quick notes ──────────────────── */
+#tab-notes .card { min-height:300px; }
+
+/* ── Feature 10: Estimated time badge ───────── */
+.cur-task-badge { flex-wrap:wrap; min-height:38px; }

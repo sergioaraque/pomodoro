@@ -63,6 +63,7 @@ initTimer({
         if (t) {
           t.pomodoros++;
           renderTasks();
+          if (t.id === activeTaskId) _updateTaskBadge(t);
           if (currentUser) await db.tasks.update(taskId, { pomodoros: t.pomodoros });
         }
       }
@@ -268,6 +269,8 @@ async function loadSettings() {
     cfg.deepFocus  = data.deep_focus  ?? false;
     cfg.autoBreak  = data.auto_break  ?? false;
     cfg.soundStyle = data.sound_style ?? 'bells';
+    cfg.autoTheme  = data.auto_theme  ?? false;
+    cfg.presetName = data.preset_name ?? '';
     applyTheme(data.theme || 'ocean', false);
     if (cfg.ambient) startAmbient(currentTheme);
     setVolume(cfg.ambientVol);
@@ -293,6 +296,8 @@ async function saveSettings() {
     deep_focus:  cfg.deepFocus,
     auto_break:  cfg.autoBreak,
     sound_style: cfg.soundStyle,
+    auto_theme:  cfg.autoTheme,
+    preset_name: cfg.presetName,
   });
   ui.setSyncState(error ? 'error' : 'ok');
 }
@@ -348,11 +353,31 @@ window.setAmbientVolume = (v) => {
   debounceSave();
 };
 
+window.toggleAutoTheme = () => {
+  cfg.autoTheme = !cfg.autoTheme;
+  if (cfg.autoTheme) _applyAutoTheme();
+  ui.renderSettings();
+  debounceSave();
+};
+
 window.toggleAutoBreak = () => {
   cfg.autoBreak = !cfg.autoBreak;
   ui.renderSettings();
   debounceSave();
 };
+
+window.toggleFullscreen = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+};
+// Update fullscreen button state on change
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('btn-fullscreen');
+  if (btn) btn.textContent = document.fullscreenElement ? '⊠' : '⛶';
+});
 
 window.toggleDeepFocus = () => {
   cfg.deepFocus = !cfg.deepFocus;
@@ -423,7 +448,7 @@ const taskHandlers = {
     activeTaskId = id;
     const t = tasks.find(t => t.id === id);
     setTask(id, t?.name || null);
-    ui.setCurrentTaskBadge(t?.name);
+    _updateTaskBadge(t);
     renderTasks();
   },
   onToggle: async (id) => {
@@ -464,6 +489,27 @@ const taskHandlers = {
   },
 };
 
+// ── Presets ───────────────────────────────────────────────────────────
+const PRESETS = {
+  standard:  { name: 'Estándar',     focus: 25, short: 5,  long: 15, sessions: 4 },
+  deep:      { name: 'Foco profundo',focus: 50, short: 10, long: 20, sessions: 3 },
+  sprint:    { name: 'Sprint',       focus: 15, short: 3,  long: 10, sessions: 6 },
+  ultralong: { name: 'Ultra largo',  focus: 90, short: 15, long: 30, sessions: 2 },
+};
+window.applyPreset = (key) => {
+  const p = PRESETS[key]; if (!p) return;
+  cfg.focus = p.focus; cfg.short = p.short; cfg.long = p.long; cfg.sessions = p.sessions;
+  cfg.presetName = key;
+  ui.renderSettings();
+  setMode(getState().mode);
+  ui.renderSessionDots(getState().sessionsDone);
+  debounceSave();
+  // Highlight active preset button
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('preset-' + key);
+  if (btn) btn.classList.add('active');
+};
+
 window.addTask = async () => {
   const name = ui.getTaskInputValue();
   if (!name || !currentUser) return;
@@ -491,7 +537,104 @@ async function loadTodayCount() {
   if (!data) return;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   todayCount = data.filter(s => new Date(s.completed_at) >= today).length;
+  _checkStreakRisk(data);
 }
+
+function _checkStreakRisk(focusData) {
+  const hour = new Date().getHours();
+  if (hour < 17 || todayCount > 0) return; // Only warn after 5pm with 0 today
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); yesterday.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const hadYesterday = focusData.some(s => {
+    const d = new Date(s.completed_at);
+    return d >= yesterday && d < today;
+  });
+  if (hadYesterday) {
+    const banner = document.getElementById('break-banner');
+    if (banner) {
+      banner.textContent = '🔥 Tu racha está en riesgo — ¡haz al menos 1 pomodoro hoy!';
+      banner.className = 'break-banner lbreak visible';
+      setTimeout(() => banner.classList.remove('visible'), 10000);
+    }
+  }
+}
+
+// ── Export CSV ───────────────────────────────────────────────────────
+window.exportCSV = () => {
+  if (!currentUser) return;
+  db.sessions.loadRecent(currentUser.id).then(({ data }) => {
+    if (!data?.length) return alert('Sin datos para exportar.');
+    const rows = [['Fecha','Modo','Duración (min)','Tarea']];
+    data.forEach(s => {
+      const d = new Date(s.completed_at).toLocaleString('es-ES');
+      rows.push([d, s.mode, s.duration, s.task_name || '']);
+    });
+    const csv  = rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('
+');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'focusnature-sesiones.csv'; a.click();
+    URL.revokeObjectURL(url);
+  });
+};
+
+// ── Change password (inline, for logged-in users) ─────────────────────
+window.doChangePassword = async () => {
+  const newPass  = (document.getElementById('cp-new')?.value  || '').trim();
+  const confPass = (document.getElementById('cp-conf')?.value || '').trim();
+  if (!newPass || !confPass) return _cpMsg('Rellena los dos campos.', 'err');
+  if (newPass.length < 6)    return _cpMsg('Mínimo 6 caracteres.', 'err');
+  if (newPass !== confPass)  return _cpMsg('Las contraseñas no coinciden.', 'err');
+  const btn = document.getElementById('cp-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+  const { error } = await sb.auth.updateUser({ password: newPass });
+  if (btn) { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
+  if (error) _cpMsg(error.message, 'err');
+  else {
+    _cpMsg('¡Contraseña actualizada!', 'ok');
+    if (document.getElementById('cp-new'))  document.getElementById('cp-new').value  = '';
+    if (document.getElementById('cp-conf')) document.getElementById('cp-conf').value = '';
+  }
+};
+function _cpMsg(msg, type) {
+  const el = document.getElementById('cp-msg');
+  if (!el) return;
+  el.textContent  = msg;
+  el.className    = 'cp-msg ' + type;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// ── History filter state ─────────────────────────────────────────────
+let _allHistoryItems = [];
+let _filteredTaskName = '';
+window.filterHistory = (val) => {
+  _filteredTaskName = val.toLowerCase().trim();
+  const filtered = _filteredTaskName
+    ? _allHistoryItems.filter(s => (s.task_name || '').toLowerCase().includes(_filteredTaskName))
+    : _allHistoryItems;
+  ui.updateHistoryList(filtered, async (id) => {
+    ui.setSyncState('syncing');
+    const { error } = await db.sessions.remove(id);
+    ui.setSyncState(error ? 'error' : 'ok');
+    if (!error) loadStats();
+  });
+};
+function _resetHistoryFilter() {
+  _filteredTaskName = '';
+  const el = document.getElementById('history-filter');
+  if (el) el.value = '';
+}
+
+// ── Quick notes (global, persisted in user_settings) ──────────────────
+let _notesTimer = null;
+window.onQuickNotesChange = (val) => {
+  clearTimeout(_notesTimer);
+  _notesTimer = setTimeout(() => {
+    if (currentUser) db.settings.save(currentUser.id, { quick_notes: val });
+  }, 1000);
+};
 
 async function loadStats() {
   if (!currentUser) return;
@@ -523,6 +666,8 @@ async function loadStats() {
     heatmap[k] = (heatmap[k] || 0) + 1;
   });
 
+  _allHistoryItems = recent || [];
+  _filteredTaskName = '';
   ui.renderStats({
     total:        focusData.length,
     today:        todayCount,
@@ -644,6 +789,9 @@ const THEME_META = {
   arctic:   { emoji: '❄️', name: 'Ártico'   },
   space:    { emoji: '🚀', name: 'Espacio'  },
   deep:     { emoji: '🌑', name: 'Abisal'   },
+  volcano:  { emoji: '🌋', name: 'Volcán'   },
+  rain:     { emoji: '🌧️', name: 'Lluvia'   },
+  japan:    { emoji: '🏯', name: 'Japón'    },
 };
 function _updateThemePill(name) {
   const meta = THEME_META[name];
@@ -666,7 +814,7 @@ window.switchTab = (name, event) => {
   if (event?.currentTarget) event.currentTarget.classList.add('active');
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  if (name === 'stats') loadStats();
+  if (name === 'stats') { loadStats(); _resetHistoryFilter(); }
 };
 
 // ══════════════════════════════════════════════════════════════════════
@@ -703,6 +851,30 @@ function _getAccentColor() {
   return getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#4ecdc4';
 }
 
+// ── Task badge with estimate ─────────────────────────────────────────
+function _updateTaskBadge(task) {
+  if (!task) { ui.setCurrentTaskBadge(null); return; }
+  const remaining = Math.max(0, (task.estimate || 0) - (task.pomodoros || 0));
+  const mins      = remaining * cfg.focus;
+  const suffix    = remaining > 0
+    ? ` · ~${remaining} 🍅 restantes (${mins} min)`
+    : '';
+  ui.setCurrentTaskBadge(task.name + suffix);
+}
+
+// ── Auto-theme by hour ───────────────────────────────────────────────
+function _applyAutoTheme() {
+  const h = new Date().getHours();
+  let theme;
+  if      (h >= 6  && h < 9)  theme = 'meadow';    // amanecer
+  else if (h >= 9  && h < 14) theme = 'mountain';   // mañana
+  else if (h >= 14 && h < 17) theme = 'ocean';      // tarde
+  else if (h >= 17 && h < 20) theme = 'japan';      // atardecer
+  else if (h >= 20 && h < 23) theme = 'forest';     // noche
+  else                         theme = 'space';      // madrugada
+  applyTheme(theme, false);   // false = no guardar, solo visual
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  BOOT
 // ══════════════════════════════════════════════════════════════════════
@@ -725,6 +897,9 @@ function _getAccentColor() {
     // Background visuals
     drawStars();
     window.addEventListener('resize', drawStars);
+
+    // Auto-theme by hour (if enabled and no saved theme preference)
+    if (cfg.autoTheme) _applyAutoTheme();
     ui.applyTheme('ocean');
     spawnCreatures('ocean');
     ui.renderTimer(getState());

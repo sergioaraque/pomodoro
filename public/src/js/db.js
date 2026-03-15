@@ -37,6 +37,11 @@ export const settings = {
       .upsert({ user_id: userId, ...values }, { onConflict: 'user_id' });
     return { error };
   },
+  loadQuickNotes: async (userId) => {
+    const { data } = await _sb
+      .from('user_settings').select('quick_notes').eq('user_id', userId).single();
+    return data?.quick_notes || '';
+  },
 };
 
 // ─── TASKS ────────────────────────────────────

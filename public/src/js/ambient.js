@@ -121,6 +121,9 @@ function _buildScene(theme, ctx, out) {
     case 'arctic':   return _sceneArctic(ctx, out);
     case 'space':    return _sceneSpace(ctx, out);
     case 'deep':     return _sceneDeep(ctx, out);
+    case 'volcano':  return _sceneVolcano(ctx, out);
+    case 'rain':     return _sceneRain(ctx, out);
+    case 'japan':    return _sceneJapan(ctx, out);
     default:         return _sceneOcean(ctx, out);
   }
 }
@@ -526,6 +529,136 @@ function _sceneDeep(ctx, out) {
     }, 5000 + Math.random() * 12000);
   }
   schedulePing();
+
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  VOLCANO — retumbo telúrico + crepitar de lava + vapor
+// ─────────────────────────────────────────────────────────────────────
+function _sceneVolcano(ctx, out) {
+  const nodes = [];
+  const buf = _makeNoise(ctx, 5);
+  const vSrc = _noiseLoop(ctx, buf);
+  const vLp  = ctx.createBiquadFilter(); vLp.type = 'lowpass'; vLp.frequency.value = 80;
+  const vG   = ctx.createGain(); vG.gain.value = 0.32;
+  const vLfo = ctx.createOscillator(); vLfo.type = 'sine'; vLfo.frequency.value = 0.035;
+  const vLfoG= ctx.createGain(); vLfoG.gain.value = 0.22;
+  vLfo.connect(vLfoG); vLfoG.connect(vG.gain);
+  vSrc.connect(vLp); vLp.connect(vG); vG.connect(out);
+  vSrc.start(); vLfo.start(); nodes.push(vSrc, vLfo);
+
+  const fBuf = _makeNoise(ctx, 2);
+  const fSrc = _noiseLoop(ctx, fBuf);
+  const fBp  = ctx.createBiquadFilter(); fBp.type = 'bandpass'; fBp.frequency.value = 900; fBp.Q.value = 0.7;
+  const fG   = ctx.createGain(); fG.gain.value = 0.07;
+  const fLfo = ctx.createOscillator(); fLfo.type = 'sine'; fLfo.frequency.value = 4.5;
+  const fLfoG= ctx.createGain(); fLfoG.gain.value = 0.04;
+  fLfo.connect(fLfoG); fLfoG.connect(fG.gain);
+  fSrc.connect(fBp); fBp.connect(fG); fG.connect(out);
+  fSrc.start(); fLfo.start(); nodes.push(fSrc, fLfo);
+
+  const stopped = { val: false };
+  function scheduleSteam() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const dur = 0.4 + Math.random() * 0.8;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(2200, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + dur);
+      g.gain.setValueAtTime(0, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      o.connect(g); g.connect(out); o.start(); o.stop(ctx.currentTime + dur + 0.05);
+      scheduleSteam();
+    }, 4000 + Math.random() * 10000);
+  }
+  scheduleSteam();
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  RAIN — lluvia de otoño + gotas en cristal + trueno lejano
+// ─────────────────────────────────────────────────────────────────────
+function _sceneRain(ctx, out) {
+  const nodes = [];
+  [[1500,1.2,0.15],[3000,0.8,0.08],[600,1.8,0.10]].forEach(([freq,Q,vol]) => {
+    const buf = _makeNoise(ctx, 2), src = _noiseLoop(ctx, buf);
+    const bp  = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = Q;
+    const g   = ctx.createGain(); g.gain.value = vol;
+    src.connect(bp); bp.connect(g); g.connect(out); src.start(); nodes.push(src);
+  });
+  const stopped = { val: false };
+  function scheduleDrop() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const f = 1200 + Math.random() * 1800;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0.035, ctx.currentTime + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      o.connect(g); g.connect(out); o.start(); o.stop(ctx.currentTime + 0.13);
+      scheduleDrop();
+    }, 80 + Math.random() * 280);
+  }
+  scheduleDrop();
+  function scheduleThunder() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      const buf2 = _makeNoise(ctx, 1), src2 = ctx.createBufferSource(); src2.buffer = buf2;
+      const lp   = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 120;
+      const g2   = ctx.createGain(); const t = ctx.currentTime;
+      g2.gain.setValueAtTime(0, t);
+      g2.gain.linearRampToValueAtTime(0.40, t + 0.08);
+      g2.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+      src2.connect(lp); lp.connect(g2); g2.connect(out); src2.start(t); src2.stop(t + 2.6);
+      scheduleThunder();
+    }, 18000 + Math.random() * 30000);
+  }
+  scheduleThunder();
+  return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  JAPAN — viento entre bambú + campana de templo + grillo solitario
+// ─────────────────────────────────────────────────────────────────────
+function _sceneJapan(ctx, out) {
+  const nodes = [];
+  const buf = _makeNoise(ctx, 3), wSrc = _noiseLoop(ctx, buf);
+  const wBp  = ctx.createBiquadFilter(); wBp.type = 'bandpass'; wBp.frequency.value = 1200; wBp.Q.value = 2.5;
+  const wG   = ctx.createGain(); wG.gain.value = 0.04;
+  const wLfo = ctx.createOscillator(); wLfo.type = 'sine'; wLfo.frequency.value = 0.12;
+  const wLfoG= ctx.createGain(); wLfoG.gain.value = 0.025;
+  wLfo.connect(wLfoG); wLfoG.connect(wG.gain);
+  wSrc.connect(wBp); wBp.connect(wG); wG.connect(out);
+  wSrc.start(); wLfo.start(); nodes.push(wSrc, wLfo);
+
+  const stopped = { val: false };
+  function scheduleBell() {
+    setTimeout(() => {
+      if (stopped.val) return;
+      [[220,0.16,3.5],[605,0.07,2.2],[990,0.03,1.5]].forEach(([f,vol,dur],i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        const t = ctx.currentTime + i * 0.05;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol, t + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.1);
+      });
+      scheduleBell();
+    }, 22000 + Math.random() * 28000);
+  }
+  scheduleBell();
+
+  const osc = ctx.createOscillator(), amO = ctx.createOscillator();
+  osc.type = 'sine'; osc.frequency.value = 4200;
+  amO.type = 'square'; amO.frequency.value = 14;
+  const amG = ctx.createGain(); amG.gain.value = 0.025;
+  const gG  = ctx.createGain(); gG.gain.value = 0;
+  amO.connect(amG); amG.connect(gG.gain); osc.connect(gG); gG.connect(out);
+  osc.start(); amO.start(); nodes.push(osc, amO);
 
   return { stop: () => { stopped.val = true; nodes.forEach(n => { try { n.stop(); } catch(e){} }); } };
 }

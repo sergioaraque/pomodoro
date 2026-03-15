@@ -371,6 +371,9 @@ export function spawnCreatures(theme) {
     case 'arctic':   spawnArctic(L);   break;
     case 'space':    spawnSpace(L);    break;
     case 'deep':     spawnDeep(L);     break;
+    case 'volcano':  spawnVolcano(L);  break;
+    case 'rain':     spawnRain(L);     break;
+    case 'japan':    spawnJapan(L);    break;
   }
 }
 
@@ -524,5 +527,168 @@ function spawnDeep(L) {
     const sz = 3 + Math.random() * 5;
     const c  = bioColors[Math.floor(Math.random()*bioColors.length)][1];
     L.appendChild(el('firefly-el', `left:${Math.random()*100}%;top:${Math.random()*90+5}%;width:${sz}px;height:${sz}px;background:${c};box-shadow:0 0 ${sz*2}px ${c};animation-duration:${4+Math.random()*7}s;animation-delay:-${Math.random()*7}s`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  VOLCANO — lava, rocas volando, cráter, ceniza
+// ══════════════════════════════════════════════════════════════════════
+function lavaBoulderSVG(sz) {
+  return `<svg width="${sz}" height="${sz*.8}" viewBox="0 0 50 40" fill="none">
+    <ellipse cx="25" cy="22" rx="22" ry="16" fill="#3a0800" opacity=".9"/>
+    <ellipse cx="25" cy="20" rx="18" ry="12" fill="#8a1500" opacity=".8"/>
+    <ellipse cx="20" cy="17" rx="8"  ry="5"  fill="#ff4400" opacity=".7"/>
+    <ellipse cx="30" cy="22" rx="5"  ry="3"  fill="#ff6600" opacity=".6"/>
+  </svg>`;
+}
+function ashParticleSVG() {
+  return `<svg width="6" height="6" viewBox="0 0 6 6" fill="none">
+    <circle cx="3" cy="3" r="2.5" fill="rgba(180,160,140,.6)"/>
+  </svg>`;
+}
+function lavaFlowSVG(w) {
+  return `<svg width="${w}" height="60" viewBox="0 0 ${w} 60" fill="none">
+    <defs><linearGradient id="lv" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff4400" stop-opacity=".9"/>
+      <stop offset="100%" stop-color="#8a1500" stop-opacity=".7"/>
+    </linearGradient></defs>
+    <path d="M0 0 Q${w*.3} 20 ${w*.5} 10 Q${w*.7} 0 ${w} 15 L${w} 60 L0 60Z" fill="url(#lv)"/>
+    <path d="M0 8 Q${w*.25} 28 ${w*.45} 18 Q${w*.65} 8 ${w} 22 L${w} 60 L0 60Z" fill="#ff6600" opacity=".4"/>
+  </svg>`;
+}
+function volcanoPlumeParticle(i) {
+  const sz = 8 + Math.random() * 18;
+  const x  = 35 + (Math.random() - 0.5) * 30;
+  const dur = 3 + Math.random() * 5;
+  const del = -Math.random() * 6;
+  return `left:${x}%;animation-duration:${dur}s;animation-delay:${del}s;width:${sz}px;height:${sz}px;background:rgba(${100+i*10},${80+i*5},${60+i*3},.5);border-radius:50%`;
+}
+
+function spawnVolcano(L) {
+  // Lava flows at bottom
+  [0, 30, 58, 75].forEach((x, i) => {
+    const w = 180 + Math.random() * 120;
+    L.appendChild(el('seaweed-el', `left:${x}%;animation-duration:${4+i}s;animation-delay:${-i}s`, lavaFlowSVG(w)));
+  });
+  // Flying boulders
+  for (let i = 0; i < 5; i++) {
+    const sz = 20 + Math.random() * 30;
+    L.appendChild(el('snow-el', `left:${10+i*18}%;animation-duration:${3+i*1.2}s;animation-delay:-${i*2}s`, lavaBoulderSVG(sz)));
+  }
+  // Ash column (rising particles)
+  for (let i = 0; i < 30; i++) {
+    L.appendChild(el('bubble-el', volcanoPlumeParticle(i)));
+  }
+  // Ember sparks
+  for (let i = 0; i < 20; i++) {
+    const sz = 3 + Math.random() * 5;
+    const c  = i % 3 === 0 ? '#ff4400' : i % 3 === 1 ? '#ff8800' : '#ffcc00';
+    L.appendChild(el('firefly-el', `left:${Math.random()*100}%;top:${30+Math.random()*60}%;width:${sz}px;height:${sz}px;background:${c};box-shadow:0 0 ${sz*2}px ${c};animation-duration:${2+Math.random()*4}s;animation-delay:-${Math.random()*4}s`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RAIN — lluvia, charcos, hojas de otoño, niebla
+// ══════════════════════════════════════════════════════════════════════
+function leafSVG(c, sz) {
+  return `<svg width="${sz}" height="${sz*1.4}" viewBox="0 0 30 42" fill="none">
+    <path d="M15 40 Q4 28 5 16 Q6 4 15 2 Q24 4 25 16 Q26 28 15 40Z" fill="${c}" opacity=".85"/>
+    <path d="M15 40 Q15 20 15 2" stroke="rgba(0,0,0,.2)" stroke-width="1" fill="none"/>
+    <path d="M15 25 Q8 22 5 16 M15 18 Q22 15 25 16" stroke="rgba(0,0,0,.15)" stroke-width=".8" fill="none"/>
+  </svg>`;
+}
+function rainRippleSVG() {
+  return `<svg width="30" height="14" viewBox="0 0 30 14" fill="none">
+    <ellipse cx="15" cy="7" rx="14" ry="5" fill="none" stroke="rgba(150,200,230,.35)" stroke-width="1.2"/>
+    <ellipse cx="15" cy="7" rx="8"  ry="3" fill="none" stroke="rgba(150,200,230,.25)" stroke-width="1"/>
+  </svg>`;
+}
+const LEAF_COLORS = ['#c0392b','#e67e22','#f39c12','#8b4513','#a04020','#d4500a'];
+
+function spawnRain(L) {
+  // Rain streaks
+  for (let i = 0; i < 80; i++) {
+    L.appendChild(el('snow-el', `left:${Math.random()*100}%;animation-duration:${0.4+Math.random()*.6}s;animation-delay:-${Math.random()*2}s`, '<svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="rgba(160,210,240,.5)" stroke-width="1.5" stroke-linecap="round"/></svg>'));
+  }
+  // Falling leaves
+  for (let i = 0; i < 14; i++) {
+    const c = LEAF_COLORS[i % LEAF_COLORS.length];
+    const sz = 14 + Math.random() * 16;
+    const rev = i % 3 === 0;
+    L.appendChild(el('butterfly-el', `left:${Math.random()*90}%;top:${Math.random()*60}%;animation-duration:${8+Math.random()*10}s;animation-delay:-${Math.random()*10}s`, leafSVG(c, sz)));
+  }
+  // Puddle ripples at bottom
+  for (let i = 0; i < 6; i++) {
+    L.appendChild(el('jelly-el', `left:${5+i*16}%;bottom:3%;top:auto;animation-duration:${2+i*.4}s;animation-delay:-${i*.6}s`, rainRippleSVG()));
+  }
+  // Fog layer (large blurry white ellipses low opacity)
+  for (let i = 0; i < 4; i++) {
+    const d = document.createElement('div');
+    d.style.cssText = `position:absolute;bottom:${i*8}%;left:${-10+i*25}%;width:50%;height:15%;background:radial-gradient(ellipse,rgba(200,220,240,.06),transparent);pointer-events:none`;
+    L.appendChild(d);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  JAPAN — cerezos, grullas, tori, pétalos
+// ══════════════════════════════════════════════════════════════════════
+function cherrySVG(h) {
+  const w = h * .7;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 70 100" fill="none">
+    <rect x="32" y="70" width="6" height="30" rx="2" fill="#5a3020" opacity=".9"/>
+    <path d="M35 70 Q10 50 5 25 Q8 5 25 3 Q35 2 35 15 Q35 2 45 3 Q62 5 65 25 Q60 50 35 70Z" fill="#e8b4c8" opacity=".85"/>
+    <path d="M35 70 Q15 45 18 25 Q22 10 35 15 Q48 10 52 25 Q55 45 35 70Z" fill="#f5cad8" opacity=".6"/>
+    <!-- blossoms -->
+    <circle cx="18" cy="22" r="5" fill="#ffb3cc" opacity=".8"/>
+    <circle cx="52" cy="20" r="5" fill="#ffb3cc" opacity=".8"/>
+    <circle cx="25" cy="38" r="4" fill="#ffc8d8" opacity=".7"/>
+    <circle cx="46" cy="36" r="4" fill="#ffc8d8" opacity=".7"/>
+    <circle cx="35" cy="28" r="5" fill="#ffe0ec" opacity=".75"/>
+  </svg>`;
+}
+function craneSVG() {
+  return `<svg width="70" height="50" viewBox="0 0 70 50" fill="none">
+    <path d="M5 30 Q18 10 35 22 Q52 10 65 30" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".9"/>
+    <path d="M5 30 Q10 38 14 32 M65 30 Q60 38 56 32" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none" opacity=".7"/>
+    <ellipse cx="35" cy="22" rx="7" ry="5" fill="white" opacity=".9"/>
+    <path d="M35 22 L32 18 L30 20" stroke="#cc2200" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    <circle cx="33" cy="20" r="1.5" fill="#cc2200" opacity=".9"/>
+  </svg>`;
+}
+function petalSVG() {
+  return `<svg width="10" height="13" viewBox="0 0 10 13" fill="none">
+    <path d="M5 12 Q1 8 1 5 Q1 1 5 0 Q9 1 9 5 Q9 8 5 12Z" fill="#ffb3cc" opacity=".8"/>
+  </svg>`;
+}
+function toriSVG() {
+  return `<svg width="90" height="90" viewBox="0 0 90 90" fill="none">
+    <rect x="5"  y="20" width="10" height="70" rx="3" fill="#cc2200" opacity=".85"/>
+    <rect x="75" y="20" width="10" height="70" rx="3" fill="#cc2200" opacity=".85"/>
+    <rect x="0"  y="18" width="90" height="9"  rx="2" fill="#cc2200" opacity=".9"/>
+    <path d="M0 18 Q45 2 90 18" stroke="#cc2200" stroke-width="6" stroke-linecap="round" fill="none" opacity=".9"/>
+    <rect x="8"  y="30" width="74" height="7" rx="2" fill="#cc2200" opacity=".7"/>
+  </svg>`;
+}
+
+function spawnJapan(L) {
+  // Cherry trees
+  [2, 20, 60, 80].forEach((x, i) => {
+    const h = 110 + Math.random() * 60;
+    L.appendChild(el('ftree-el', `left:${x}%;animation-duration:${5+i}s;animation-delay:-${i}s`, cherrySVG(h)));
+  });
+  // Torii gate
+  L.appendChild(el('ftree-el', 'left:42%;animation-duration:0s', toriSVG()));
+  // Cranes
+  for (let i = 0; i < 3; i++) {
+    L.appendChild(el('eagle-el', `animation-duration:${22+i*8}s;animation-delay:-${i*7}s;top:${10+i*7}%`, craneSVG()));
+  }
+  // Cherry petals falling
+  for (let i = 0; i < 25; i++) {
+    L.appendChild(el('snow-el', `left:${Math.random()*100}%;animation-duration:${5+Math.random()*8}s;animation-delay:-${Math.random()*12}s`, petalSVG()));
+  }
+  // Firefly-like paper lanterns (dots)
+  for (let i = 0; i < 8; i++) {
+    const sz = 8 + Math.random() * 6;
+    L.appendChild(el('firefly-el', `left:${10+i*10}%;top:${40+Math.random()*30}%;width:${sz}px;height:${sz}px;background:#ffcc44;box-shadow:0 0 ${sz*2}px #ffaa22;border-radius:3px;animation-duration:${4+i}s;animation-delay:-${i*1.5}s`));
   }
 }

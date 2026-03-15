@@ -1,6 +1,5 @@
 /**
  * config.js — Configuración compartida
- * Se muta directamente; todos los módulos leen del mismo objeto.
  */
 export const cfg = {
   focus:       25,
@@ -8,10 +7,12 @@ export const cfg = {
   long:        15,
   sessions:    4,
   sound:       true,
-  soundStyle:  'bells',   // 'bells' | 'bowl' | 'gong' | 'ding' | 'theme'
-  autoBreak:   false,     // auto-iniciar pausa al terminar sesión de enfoque
+  soundStyle:  'bells',
+  autoBreak:   false,
   dailyGoal:   8,
   ambient:     false,
   ambientVol:  0.4,
   deepFocus:   false,
+  autoTheme:   false,   // cambio automático de tema según hora
+  presetName:  '',      // nombre del preset activo (vacío = custom)
 };

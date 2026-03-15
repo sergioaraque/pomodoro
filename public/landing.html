@@ -438,11 +438,19 @@ footer a:hover { text-decoration: underline; }
           <div class="preview-dot cur"></div>
           <div class="preview-dot empty"></div>
         </div>
-        <div class="preview-themes">
+        <div class="preview-themes" style="flex-wrap:wrap;gap:4px">
           <div class="preview-theme-dot active-t" title="Mar">🌊</div>
           <div class="preview-theme-dot" title="Prado">🌿</div>
           <div class="preview-theme-dot" title="Montaña">🏔️</div>
           <div class="preview-theme-dot" title="Bosque">🌲</div>
+          <div class="preview-theme-dot" title="Desierto">🏜️</div>
+          <div class="preview-theme-dot" title="Ciudad">🌃</div>
+          <div class="preview-theme-dot" title="Ártico">❄️</div>
+          <div class="preview-theme-dot" title="Espacio">🚀</div>
+          <div class="preview-theme-dot" title="Abisal">🌑</div>
+          <div class="preview-theme-dot" title="Volcán">🌋</div>
+          <div class="preview-theme-dot" title="Lluvia">🌧️</div>
+          <div class="preview-theme-dot" title="Japón">🏯</div>
         </div>
       </div>
     </div>
@@ -454,8 +462,8 @@ footer a:hover { text-decoration: underline; }
 <section class="themes-section" id="themes">
   <div class="wrap">
     <span class="section-label reveal">Escenarios</span>
-    <h2 class="section-title reveal">Cuatro mundos,<br>un solo objetivo</h2>
-    <p class="section-sub reveal">Cada tema tiene sus propias criaturas animadas y su propia banda sonora generativa. Cambia en cualquier momento.</p>
+    <h2 class="section-title reveal">Doce mundos,<br>un solo objetivo</h2>
+    <p class="section-sub reveal">Doce escenarios únicos, cada uno con criaturas animadas y banda sonora generativa procedural. Cambia en cualquier momento.</p>
 
     <div class="themes-grid">
 
@@ -544,6 +552,66 @@ footer a:hover { text-decoration: underline; }
         </div>
       </div>
 
+      <div class="theme-card reveal" style="background:linear-gradient(145deg,#0a0300 0%,#3a0f00 100%);border-color:rgba(255,102,0,.15)">
+        <span class="theme-card-emoji">🌋</span>
+        <div class="theme-card-name" style="color:#ff6600">Volcán</div>
+        <div class="theme-card-desc">Lava fluyendo por las laderas, rocas volcánicas en el aire, columnas de ceniza y brasas brillando en la oscuridad.</div>
+        <div class="theme-card-creatures">
+          <span class="creature-tag">Lava</span>
+          <span class="creature-tag">Rocas</span>
+          <span class="creature-tag">Ceniza</span>
+          <span class="creature-tag">Brasas</span>
+        </div>
+      </div>
+
+      <div class="theme-card reveal reveal-delay-1" style="background:linear-gradient(145deg,#080c10 0%,#141e28 100%);border-color:rgba(136,187,221,.15)">
+        <span class="theme-card-emoji">🌧️</span>
+        <div class="theme-card-name" style="color:#88bbdd">Lluvia de otoño</div>
+        <div class="theme-card-desc">Lluvia íntima sobre el cristal, hojas de otoño cayendo en rojo y naranja, charcos con ondas y truenos lejanos.</div>
+        <div class="theme-card-creatures">
+          <span class="creature-tag">Lluvia</span>
+          <span class="creature-tag">Hojas</span>
+          <span class="creature-tag">Charcos</span>
+          <span class="creature-tag">Niebla</span>
+        </div>
+      </div>
+
+      <div class="theme-card reveal reveal-delay-2" style="background:linear-gradient(145deg,#06020e 0%,#2e1448 100%);border-color:rgba(255,136,170,.15)">
+        <span class="theme-card-emoji">🏯</span>
+        <div class="theme-card-name" style="color:#ff88aa">Japón feudal</div>
+        <div class="theme-card-desc">Cerezos en flor con pétalos cayendo, grullas sobrevolando un tori, linternas de papel y la campana lejana de un templo.</div>
+        <div class="theme-card-creatures">
+          <span class="creature-tag">Cerezos</span>
+          <span class="creature-tag">Grullas</span>
+          <span class="creature-tag">Pétalos</span>
+          <span class="creature-tag">Tori</span>
+        </div>
+      </div>
+
+      <div class="theme-card reveal" style="background:linear-gradient(145deg,#000005 0%,#080035 100%);border-color:rgba(170,136,255,.15)">
+        <span class="theme-card-emoji">🚀</span>
+        <div class="theme-card-name" style="color:#aa88ff">Espacio</div>
+        <div class="theme-card-desc">Planetas con anillos orbitando, satélites cruzando la pantalla, nebulosas de colores y estrellas fugaces en la madrugada.</div>
+        <div class="theme-card-creatures">
+          <span class="creature-tag">Planetas</span>
+          <span class="creature-tag">Satélites</span>
+          <span class="creature-tag">Nebulosas</span>
+          <span class="creature-tag">Estrellas fugaces</span>
+        </div>
+      </div>
+
+      <div class="theme-card reveal reveal-delay-1" style="background:linear-gradient(145deg,#000508 0%,#001e38 100%);border-color:rgba(0,255,170,.15)">
+        <span class="theme-card-emoji">🌑</span>
+        <div class="theme-card-name" style="color:#00ffaa">Fondo oceánico</div>
+        <div class="theme-card-desc">Las profundidades abisales: anglerfish con su linterna, peces bioluminiscentes y corales de colores vibrantes.</div>
+        <div class="theme-card-creatures">
+          <span class="creature-tag">Anglerfish</span>
+          <span class="creature-tag">Bioluminiscencia</span>
+          <span class="creature-tag">Corales</span>
+          <span class="creature-tag">Abismo</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -592,7 +660,25 @@ footer a:hover { text-decoration: underline; }
       <div class="feat-card reveal reveal-delay-2">
         <div class="feat-icon pink">📊</div>
         <div class="feat-name">Historial y estadísticas</div>
-        <div class="feat-desc">Mapa de calor de actividad de 12 semanas, racha de días consecutivos, horas totales de enfoque y más.</div>
+        <div class="feat-desc">Mapa de calor de 12 semanas, racha de días, reto semanal personalizado y exportación a CSV.</div>
+      </div>
+
+      <div class="feat-card reveal">
+        <div class="feat-icon teal">⚡</div>
+        <div class="feat-name">Presets de configuración</div>
+        <div class="feat-desc">Cambia entre Estándar (25/5), Foco profundo (50/10), Sprint (15/3) y Ultra (90/15) con un clic.</div>
+      </div>
+
+      <div class="feat-card reveal reveal-delay-1">
+        <div class="feat-icon amber">📝</div>
+        <div class="feat-name">Notas rápidas globales</div>
+        <div class="feat-desc">Una libreta siempre disponible para ideas sueltas, recordatorios y apuntes. Sincronizada con tu cuenta.</div>
+      </div>
+
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-icon green">🔄</div>
+        <div class="feat-name">Tema automático por hora</div>
+        <div class="feat-desc">El escenario cambia solo según el momento del día: prado al amanecer, espacio en la madrugada.</div>
       </div>
 
     </div>
@@ -628,6 +714,10 @@ footer a:hover { text-decoration: underline; }
           <tr><td>Estadísticas y racha</td>                    <td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
           <tr><td>Objetivo diario</td>                         <td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
           <tr><td>Notas por tarea</td>                         <td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
+          <tr><td>Notas rápidas globales</td>                  <td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
+          <tr><td>Presets de configuración</td>                <td><span class="yes">✓</span></td><td><span class="yes">✓</span></td></tr>
+          <tr><td>Reto semanal personalizado</td>              <td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
+          <tr><td>Exportar sesiones CSV</td>                   <td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
           <tr><td>Ajustes guardados en la nube</td>            <td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
           <tr><td>Acceso desde cualquier dispositivo</td>      <td><span class="no">—</span></td><td><span class="yes">✓</span></td></tr>
         </tbody>

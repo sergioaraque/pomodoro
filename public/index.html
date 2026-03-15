@@ -44,6 +44,9 @@
 <div class="bg-layer bg-arctic"   id="bg-arctic"   style="opacity:0"></div>
 <div class="bg-layer bg-space"    id="bg-space"    style="opacity:0"></div>
 <div class="bg-layer bg-deep"     id="bg-deep"     style="opacity:0"></div>
+<div class="bg-layer bg-volcano"  id="bg-volcano"  style="opacity:0"></div>
+<div class="bg-layer bg-rain"     id="bg-rain"     style="opacity:0"></div>
+<div class="bg-layer bg-japan"    id="bg-japan"    style="opacity:0"></div>
 <canvas class="stars-layer" id="stars-canvas"></canvas>
 <svg class="wave-el" id="wave1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none" style="animation-duration:12s">
   <path d="M0,70 C360,130 720,10 1080,70 C1260,100 1350,40 1440,70 L1440,160 L0,160 Z" fill="rgba(14,48,80,.65)"/>
@@ -153,9 +156,13 @@
       <button class="tpick"        id="tbtn-arctic"   onclick="pickTheme('arctic')"   title="Ártico">❄️<span>Ártico</span></button>
       <button class="tpick"        id="tbtn-space"    onclick="pickTheme('space')"    title="Espacio">🚀<span>Espacio</span></button>
       <button class="tpick"        id="tbtn-deep"     onclick="pickTheme('deep')"     title="Abisal">🌑<span>Abisal</span></button>
+      <button class="tpick"        id="tbtn-volcano"  onclick="pickTheme('volcano')"  title="Volcán">🌋<span>Volcán</span></button>
+      <button class="tpick"        id="tbtn-rain"     onclick="pickTheme('rain')"     title="Lluvia">🌧️<span>Lluvia</span></button>
+      <button class="tpick"        id="tbtn-japan"    onclick="pickTheme('japan')"    title="Japón">🏯<span>Japón</span></button>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
+    <button id="btn-fullscreen" onclick="toggleFullscreen()" title="Pantalla completa" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer;transition:all .2s">⛶</button>
     <a href="/" style="color:var(--muted);text-decoration:none;font-size:12px;padding:5px 10px;border-radius:8px;transition:color .2s"
        onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">← Inicio</a>
     <button class="btn-logout" onclick="doLogout()">Salir</button>
@@ -183,6 +190,7 @@
     <button class="tab-btn"        data-tab="tasks"    onclick="switchTab('tasks',event)">Tareas</button>
     <button class="tab-btn"        data-tab="stats"    onclick="switchTab('stats',event)">Estadísticas</button>
     <button class="tab-btn"        data-tab="settings" onclick="switchTab('settings',event)">Ajustes</button>
+    <button class="tab-btn"        data-tab="notes"    onclick="switchTab('notes',event)">Notas</button>
   </div>
 
   <!-- TIMER TAB -->
@@ -277,7 +285,13 @@
     </div>
 
     <div class="card" style="padding:16px">
-      <div class="section-title">Historial reciente</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+        <div class="section-title" style="margin-bottom:0;flex:1">Historial reciente</div>
+        <input id="history-filter" class="task-inp" type="text" placeholder="Filtrar por tarea…"
+          style="width:160px;padding:6px 10px;font-size:12px"
+          oninput="filterHistory(this.value)">
+        <button onclick="exportCSV()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--muted)'">⬇ CSV</button>
+      </div>
       <div class="history-list" id="history-list">
         <div class="empty-msg">Sin sesiones aún</div>
       </div>
@@ -288,6 +302,15 @@
   <div id="tab-settings" class="tab-panel">
     <div class="card">
       <div style="font-size:13px;color:var(--muted);margin-bottom:15px;font-style:italic">Los cambios se guardan automáticamente en tu cuenta.</div>
+
+      <div class="settings-section-title" style="margin-top:0;padding-top:0;border-top:none">Presets rápidos</div>
+      <div class="preset-grid" style="margin-bottom:14px">
+        <button class="preset-btn active" id="preset-standard"  onclick="applyPreset('standard')">⏱ Estándar<span>25/5</span></button>
+        <button class="preset-btn"        id="preset-deep"      onclick="applyPreset('deep')">🧠 Profundo<span>50/10</span></button>
+        <button class="preset-btn"        id="preset-sprint"    onclick="applyPreset('sprint')">⚡ Sprint<span>15/3</span></button>
+        <button class="preset-btn"        id="preset-ultralong" onclick="applyPreset('ultralong')">🏔 Ultra<span>90/15</span></button>
+      </div>
+
       <div class="settings-grid">
         <div class="sblock"><div class="slabel">Sesión de enfoque</div>
           <div class="sctrl"><button class="badj" onclick="adjSetting('focus',-5)">−</button><div class="sval" id="sv-focus">25</div><button class="badj" onclick="adjSetting('focus',5)">+</button><span style="font-size:12px;color:var(--muted)">min</span></div></div>
@@ -337,6 +360,10 @@
         <div><div style="font-size:14px">Auto-iniciar pausa</div><div style="font-size:12px;color:var(--muted);margin-top:2px">La pausa arranca sola al terminar una sesión</div></div>
         <div class="sw" id="sw-autobreak"></div>
       </div>
+      <div class="stoggle-row" onclick="toggleAutoTheme()" style="margin-bottom:10px">
+        <div><div style="font-size:14px">Tema automático por hora</div><div style="font-size:12px;color:var(--muted);margin-top:2px">El tema cambia según el momento del día</div></div>
+        <div class="sw" id="sw-autotheme"></div>
+      </div>
       <div class="stoggle-row" onclick="toggleDeepFocus()" style="margin-bottom:14px">
         <div><div style="font-size:14px">Modo foco profundo</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Atenúa todo salvo el temporizador al iniciar</div></div>
         <div class="sw" id="sw-deepfocus"></div>
@@ -345,8 +372,36 @@
       <div class="scene-info" id="scene-info">
         <b>🌊 Mar</b> — Peces de colores, medusas flotantes, algas y burbujas.
       </div>
+
+      <div class="settings-section-title">Seguridad</div>
+      <div id="cp-msg" class="cp-msg" style="display:none"></div>
+      <div class="auth-field">
+        <label>Nueva contraseña</label>
+        <input class="auth-inp" id="cp-new" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password">
+      </div>
+      <div class="auth-field">
+        <label>Confirmar contraseña</label>
+        <input class="auth-inp" id="cp-conf" type="password" placeholder="repite la contraseña" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter') doChangePassword()">
+      </div>
+      <button id="cp-btn" class="auth-btn" style="margin-top:4px" onclick="doChangePassword()">Cambiar contraseña</button>
     </div>
   </div>
+
+  <!-- QUICK NOTES TAB -->
+  <div id="tab-notes" class="tab-panel">
+    <div class="card">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">
+        Notas rápidas — ideas sueltas, recordatorios, lo que sea. Se guardan automáticamente.
+      </div>
+      <textarea id="quick-notes-area" class="task-notes-input"
+        style="width:100%;min-height:220px;max-height:500px;font-size:14px;line-height:1.65;resize:vertical"
+        placeholder="Escribe aquí tus notas…"
+        oninput="onQuickNotesChange(this.value)"></textarea>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD TAB (inside settings, shown via scroll) -->
 
 </div><!-- /app -->
 
