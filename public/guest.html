@@ -86,6 +86,19 @@
 <div class="bg-layer bg-desert"   id="bg-desert"   style="opacity:0"></div>
 <div class="bg-layer bg-city"     id="bg-city"     style="opacity:0"></div>
 <div class="bg-layer bg-arctic"   id="bg-arctic"   style="opacity:0"></div>
+<div class="bg-layer bg-space"    id="bg-space"    style="opacity:0"></div>
+<div class="bg-layer bg-deep"     id="bg-deep"     style="opacity:0"></div>
+<div class="bg-layer bg-volcano"  id="bg-volcano"  style="opacity:0"></div>
+<div class="bg-layer bg-rain"     id="bg-rain"     style="opacity:0"></div>
+<div class="bg-layer bg-japan"    id="bg-japan"    style="opacity:0"></div>
+<div class="bg-layer bg-swamp"    id="bg-swamp"    style="opacity:0"></div>
+<div class="bg-layer bg-cave"     id="bg-cave"     style="opacity:0"></div>
+<div class="bg-layer bg-underarctic" id="bg-underarctic" style="opacity:0"></div>
+<div class="bg-layer bg-savanna"  id="bg-savanna"  style="opacity:0"></div>
+<div class="bg-layer bg-alps"     id="bg-alps"     style="opacity:0"></div>
+<div class="bg-layer bg-festival" id="bg-festival" style="opacity:0"></div>
+<div class="bg-layer bg-jungle"   id="bg-jungle"   style="opacity:0"></div>
+<div class="bg-layer bg-mars"     id="bg-mars"     style="opacity:0"></div>
 <canvas class="stars-layer" id="stars-canvas"></canvas>
 <svg class="wave-el" id="wave1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none" style="animation-duration:12s"><path d="M0,70 C360,130 720,10 1080,70 C1260,100 1350,40 1440,70 L1440,160 L0,160 Z" fill="rgba(14,48,80,.65)"/></svg>
 <svg class="wave-el w2" id="wave2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 160" preserveAspectRatio="none"><path d="M0,90 C240,30 480,150 720,90 C960,30 1200,130 1440,90 L1440,160 L0,160 Z" fill="rgba(16,60,90,.45)"/></svg>
@@ -98,14 +111,34 @@
     <a class="guest-logo" href="/">FocusNature</a>
     <span class="guest-badge">Modo invitado</span>
   </div>
-  <div class="guest-bar-center">
-    <button class="theme-btn active" id="tbtn-ocean"    onclick="setTheme('ocean')"    title="Mar">🌊</button>
-    <button class="theme-btn"        id="tbtn-meadow"   onclick="setTheme('meadow')"   title="Prado">🌿</button>
-    <button class="theme-btn"        id="tbtn-mountain" onclick="setTheme('mountain')" title="Montaña">🏔️</button>
-    <button class="theme-btn"        id="tbtn-forest"   onclick="setTheme('forest')"   title="Bosque">🌲</button>
-    <button class="theme-btn"        id="tbtn-desert"   onclick="setTheme('desert')"   title="Desierto">🏜️</button>
-    <button class="theme-btn"        id="tbtn-city"     onclick="setTheme('city')"     title="Ciudad">🌃</button>
-    <button class="theme-btn"        id="tbtn-arctic"   onclick="setTheme('arctic')"   title="Ártico">❄️</button>
+  <div class="guest-bar-center" style="position:relative">
+    <button id="guest-theme-pill" onclick="toggleGuestPicker()"
+      style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:50px;padding:5px 12px;cursor:pointer;color:var(--text,#e8f4f8);font-size:13px;font-family:inherit">
+      <span id="guest-pill-emoji">🌊</span><span id="guest-pill-name">Mar</span>
+      <span style="font-size:10px;color:rgba(255,255,255,.4)">&#9662;</span>
+    </button>
+    <div id="guest-theme-grid" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:rgba(5,14,25,.96);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:8px;grid-template-columns:repeat(5,1fr);gap:4px;min-width:290px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,.4)">
+      <button class="tpick active" id="tbtn-ocean"       onclick="guestPickTheme('ocean')">🌊<span>Mar</span></button>
+      <button class="tpick"        id="tbtn-meadow"      onclick="guestPickTheme('meadow')">🌿<span>Prado</span></button>
+      <button class="tpick"        id="tbtn-mountain"    onclick="guestPickTheme('mountain')">🏔️<span>Montaña</span></button>
+      <button class="tpick"        id="tbtn-forest"      onclick="guestPickTheme('forest')">🌲<span>Bosque</span></button>
+      <button class="tpick"        id="tbtn-desert"      onclick="guestPickTheme('desert')">🏜️<span>Desierto</span></button>
+      <button class="tpick"        id="tbtn-city"        onclick="guestPickTheme('city')">🌃<span>Ciudad</span></button>
+      <button class="tpick"        id="tbtn-arctic"      onclick="guestPickTheme('arctic')">❄️<span>Ártico</span></button>
+      <button class="tpick"        id="tbtn-space"       onclick="guestPickTheme('space')">🚀<span>Espacio</span></button>
+      <button class="tpick"        id="tbtn-deep"        onclick="guestPickTheme('deep')">🌑<span>Abisal</span></button>
+      <button class="tpick"        id="tbtn-volcano"     onclick="guestPickTheme('volcano')">🌋<span>Volcán</span></button>
+      <button class="tpick"        id="tbtn-rain"        onclick="guestPickTheme('rain')">🌧️<span>Lluvia</span></button>
+      <button class="tpick"        id="tbtn-japan"       onclick="guestPickTheme('japan')">🏯<span>Japón</span></button>
+      <button class="tpick"        id="tbtn-swamp"       onclick="guestPickTheme('swamp')">🌿<span>Ciénaga</span></button>
+      <button class="tpick"        id="tbtn-cave"        onclick="guestPickTheme('cave')">🐉<span>Cueva</span></button>
+      <button class="tpick"        id="tbtn-underarctic" onclick="guestPickTheme('underarctic')">🐋<span>Ártico sb.</span></button>
+      <button class="tpick"        id="tbtn-savanna"     onclick="guestPickTheme('savanna')">🌅<span>Sabana</span></button>
+      <button class="tpick"        id="tbtn-alps"        onclick="guestPickTheme('alps')">🏔<span>Alpes</span></button>
+      <button class="tpick"        id="tbtn-festival"    onclick="guestPickTheme('festival')">🎆<span>Festival</span></button>
+      <button class="tpick"        id="tbtn-jungle"      onclick="guestPickTheme('jungle')">🌺<span>Selva</span></button>
+      <button class="tpick"        id="tbtn-mars"        onclick="guestPickTheme('mars')">🔭<span>Marte</span></button>
+    </div>
   </div>
   <div class="guest-bar-right">
     <a class="btn-login"  href="/app">Iniciar sesión</a>
@@ -246,30 +279,53 @@ let upsellDismissed = false;
 
 // ── THEME ────────────────────────────────────────────────────────────
 const THEMES = {
-  ocean:    { title:'FocusSea',    subtitle:'Sumérgete en la concentración',  cls:'',               info:'<b>🌊 Mar</b> — Peces, medusas, algas y burbujas.' },
-  meadow:   { title:'FocusMeadow', subtitle:'Calma entre flores y brisa',     cls:'theme-meadow',   info:'<b>🌿 Prado</b> — Mariposas, abejas y flores.' },
-  mountain: { title:'FocusPeak',   subtitle:'La claridad de las alturas',     cls:'theme-mountain', info:'<b>🏔️ Montaña</b> — Águilas, nieve y pinos.' },
-  forest:   { title:'FocusForest', subtitle:'Quietud del bosque en la noche', cls:'theme-forest',   info:'<b>🌲 Bosque</b> — Luciérnagas, búho y árboles.' },
+  ocean:       { title:'FocusSea',     subtitle:'Sumérgete en la concentración',  cls:'',                  info:'<b>🌊 Mar</b> — Peces, medusas y burbujas.' },
+  meadow:      { title:'FocusMeadow',  subtitle:'Calma entre flores y brisa',     cls:'theme-meadow',      info:'<b>🌿 Prado</b> — Mariposas, abejas y flores.' },
+  mountain:    { title:'FocusPeak',    subtitle:'La claridad de las alturas',     cls:'theme-mountain',    info:'<b>🏔️ Montaña</b> — Águilas, nieve y pinos.' },
+  forest:      { title:'FocusForest',  subtitle:'Quietud del bosque en la noche', cls:'theme-forest',      info:'<b>🌲 Bosque</b> — Luciérnagas, búho y árboles.' },
+  desert:      { title:'FocusDesert',  subtitle:'Silencio ardiente del desierto', cls:'theme-desert',      info:'<b>🏜️ Desierto</b> — Cactus, escorpiones y remolinos.' },
+  city:        { title:'FocusCity',    subtitle:'La ciudad que nunca duerme',     cls:'theme-city',        info:'<b>🌃 Ciudad</b> — Lluvia, coches y luces.' },
+  arctic:      { title:'FocusArctic',  subtitle:'Paz infinita bajo la aurora',    cls:'theme-arctic',      info:'<b>❄️ Ártico</b> — Auroras, oso polar e icebergs.' },
+  space:       { title:'FocusSpace',   subtitle:'Silencio cósmico, foco infinito',cls:'theme-space',       info:'<b>🚀 Espacio</b> — Planetas, satélites y nebulosas.' },
+  deep:        { title:'FocusDeep',    subtitle:'Las profundidades del silencio', cls:'theme-deep',        info:'<b>🌑 Abisal</b> — Anglerfish y bioluminiscencia.' },
+  volcano:     { title:'FocusVolcano', subtitle:'La energía del magma en ti',     cls:'theme-volcano',     info:'<b>🌋 Volcán</b> — Lava, rocas y cenizas.' },
+  rain:        { title:'FocusRain',    subtitle:'La paz de la lluvia de otoño',   cls:'theme-rain',        info:'<b>🌧️ Lluvia</b> — Hojas, charcos y truenos.' },
+  japan:       { title:'FocusZen',     subtitle:'La serenidad del jardín zen',    cls:'theme-japan',       info:'<b>🏯 Japón</b> — Cerezos, grullas y tori.' },
+  swamp:       { title:'FocusSwamp',   subtitle:'Calma misteriosa de la ciénaga', cls:'theme-swamp',       info:'<b>🌿 Ciénaga</b> — Ranas, nenúfares y fuegos fatuos.' },
+  cave:        { title:'FocusCave',    subtitle:'Profundidad y silencio mineral', cls:'theme-cave',        info:'<b>🐉 Cueva</b> — Cristales, murciélagos y estalactitas.' },
+  underarctic: { title:'FocusBelow',   subtitle:'Bajo el hielo eterno',           cls:'theme-underarctic', info:'<b>🐋 Ártico sub.</b> — Belugas y focas.' },
+  savanna:     { title:'FocusSavanna', subtitle:'Horizontes infinitos africanos', cls:'theme-savanna',     info:'<b>🌅 Sabana</b> — Jirafas, acacias y atardecer.' },
+  alps:        { title:'FocusAlps',    subtitle:'Aire limpio de las cumbres',     cls:'theme-alps',        info:'<b>🏔 Alpes</b> — Vacas, edelweiss y cencerros.' },
+  festival:    { title:'FocusFest',    subtitle:'Celebra mientras te concentras', cls:'theme-festival',    info:'<b>🎆 Festival</b> — Farolillos, fuegos y multitud.' },
+  jungle:      { title:'FocusJungle',  subtitle:'Energía salvaje de la selva',    cls:'theme-jungle',      info:'<b>🌺 Selva</b> — Tucanes, morpho azul y cascada.' },
+  mars:        { title:'FocusMars',    subtitle:'El silencio rojo de Marte',      cls:'theme-mars',        info:'<b>🔭 Marte</b> — Rover, dunas y dos lunas.' },
 };
 
+const ALL_THEMES   = Object.keys(THEMES);
+const STARS_THEMES = new Set(['mountain','forest','arctic','space','japan','festival','mars']);
+const WAVE_THEMES  = new Set(['ocean','deep']);
+
 window.setTheme = (name) => {
+  if (!THEMES[name]) return;
   currentTheme = name;
   cfg.theme = name;
   saveCfg();
   const t = THEMES[name];
   document.body.className = t.cls;
-  ['ocean','meadow','mountain','forest','desert','city','arctic'].forEach(k => {
-    document.getElementById('bg-'+k).style.opacity = k === name ? '1' : '0';
+  ALL_THEMES.forEach(k => {
+    const el = document.getElementById('bg-' + k);
+    if (el) el.style.opacity = k === name ? '1' : '0';
   });
-  document.getElementById('wave1').style.opacity     = name==='ocean' ? '1'  : '0';
-  document.getElementById('wave2').style.opacity     = name==='ocean' ? '.5' : '0';
-  document.getElementById('grass-svg').style.opacity = name==='meadow'? '1'  : '0';
-  document.getElementById('stars-canvas').style.opacity = (name==='mountain'||name==='forest') ? '1' : '0';
-  document.getElementById('app-title').textContent    = t.title;
-  document.getElementById('app-subtitle').textContent = t.subtitle;
-  document.getElementById('scene-info').innerHTML     = t.info;
-  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tbtn-'+name).classList.add('active');
+  document.getElementById('wave1').style.opacity        = WAVE_THEMES.has(name) ? '1'  : '0';
+  document.getElementById('wave2').style.opacity        = WAVE_THEMES.has(name) ? '.5' : '0';
+  document.getElementById('grass-svg').style.opacity    = name === 'meadow' ? '1' : '0';
+  document.getElementById('stars-canvas').style.opacity = STARS_THEMES.has(name) ? '1' : '0';
+  document.getElementById('app-title').textContent      = t.title;
+  document.getElementById('app-subtitle').textContent   = t.subtitle;
+  document.getElementById('scene-info').innerHTML       = t.info;
+  document.querySelectorAll('.theme-btn, .tpick').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tbtn-' + name);
+  if (btn) btn.classList.add('active');
   spawnCreatures(name);
   if (cfg.ambient) { stopAmbient(); setTimeout(() => startAmbient(name), 600); }
 };
@@ -519,6 +575,53 @@ setVolume(cfg.ambientVol);
 // Apply theme and spawn creatures
 setTheme(currentTheme);
 applyMode('focus');
+
+// Guest theme picker logic
+window.toggleGuestPicker = () => {
+  const grid = document.getElementById('guest-theme-grid');
+  if (!grid) return;
+  const open = grid.style.display !== 'grid';
+  grid.style.display = open ? 'grid' : 'none';
+  if (open) setTimeout(() => document.addEventListener('click', _closeGuestPicker, { once: true }), 10);
+};
+function _closeGuestPicker() {
+  const grid = document.getElementById('guest-theme-grid');
+  if (grid) grid.style.display = 'none';
+}
+const GUEST_EMOJI = { ocean:'🌊',meadow:'🌿',mountain:'🏔️',forest:'🌲',desert:'🏜️',city:'🌃',arctic:'❄️',space:'🚀',deep:'🌑',volcano:'🌋',rain:'🌧️',japan:'🏯',swamp:'🌿',cave:'🐉',underarctic:'🐋',savanna:'🌅',alps:'🏔',festival:'🎆',jungle:'🌺',mars:'🔭' };
+const GUEST_NAME  = { ocean:'Mar',meadow:'Prado',mountain:'Montaña',forest:'Bosque',desert:'Desierto',city:'Ciudad',arctic:'Ártico',space:'Espacio',deep:'Abisal',volcano:'Volcán',rain:'Lluvia',japan:'Japón',swamp:'Ciénaga',cave:'Cueva',underarctic:'Ártico sb.',savanna:'Sabana',alps:'Alpes',festival:'Festival',jungle:'Selva',mars:'Marte' };
+window.guestPickTheme = (name) => {
+  setTheme(name);
+  _closeGuestPicker();
+  const emoji = document.getElementById('guest-pill-emoji');
+  const label = document.getElementById('guest-pill-name');
+  if (emoji) emoji.textContent = GUEST_EMOJI[name] || '🌊';
+  if (label) label.textContent = GUEST_NAME[name]  || name;
+};
+
+// Guest theme picker
+window.toggleGuestPicker = () => {
+  const grid = document.getElementById('guest-theme-grid');
+  if (!grid) return;
+  const open = grid.style.display !== 'grid';
+  grid.style.display = open ? 'grid' : 'none';
+  if (open) setTimeout(() => document.addEventListener('click', closeGuestPicker, { once: true }), 10);
+};
+function closeGuestPicker() {
+  const grid = document.getElementById('guest-theme-grid');
+  if (grid) grid.style.display = 'none';
+}
+window.guestPickTheme = (name) => {
+  setTheme(name);
+  closeGuestPicker();
+  // Update pill
+  const emojis = { ocean:'🌊',meadow:'🌿',mountain:'🏔️',forest:'🌲',desert:'🏜️',city:'🌃',arctic:'❄️',space:'🚀',deep:'🌑',volcano:'🌋',rain:'🌧️',japan:'🏯',swamp:'🌿',cave:'🐉',underarctic:'🐋',savanna:'🌅',alps:'🏔',festival:'🎆',jungle:'🌺',mars:'🔭' };
+  const names  = { ocean:'Mar',meadow:'Prado',mountain:'Montaña',forest:'Bosque',desert:'Desierto',city:'Ciudad',arctic:'Ártico',space:'Espacio',deep:'Abisal',volcano:'Volcán',rain:'Lluvia',japan:'Japón',swamp:'Ciénaga',cave:'Cueva',underarctic:'Ártico sub.',savanna:'Sabana',alps:'Alpes',festival:'Festival',jungle:'Selva',mars:'Marte' };
+  const emoji = document.getElementById('guest-pill-emoji');
+  const nameEl = document.getElementById('guest-pill-name');
+  if (emoji) emoji.textContent = emojis[name] || '🌊';
+  if (nameEl) nameEl.textContent = names[name] || name;
+};
 
 // ── Keyboard shortcuts ────────────────────────────────────────────
 document.addEventListener('keydown', e => {

@@ -897,3 +897,5 @@ body.theme-mars {
   --font-display:'Playfair Display',serif; --font-body:'DM Sans',sans-serif;
   --timer-color:#f8d8cc;
 }
+
+@keyframes statPulse { 0%,100%{opacity:.4} 50%{opacity:.7} }

@@ -653,10 +653,23 @@ window.onQuickNotesChange = (val) => {
 
 async function loadStats() {
   if (!currentUser) return;
-  const [{ data: fd }, { data: recent }] = await Promise.all([
-    db.sessions.loadFocus(currentUser.id),
-    db.sessions.loadRecent(currentUser.id),
-  ]);
+
+  // Show loading state
+  ui.setSyncState('syncing');
+  _setStatsLoading(true);
+
+  try {
+    // Add timeout so it never hangs forever
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Tiempo de espera agotado')), 12000)
+    );
+    const [{ data: fd }, { data: recent }] = await Promise.race([
+      Promise.all([
+        db.sessions.loadFocus(currentUser.id),
+        db.sessions.loadRecent(currentUser.id),
+      ]),
+      timeout,
+    ]);
   const focusData = fd || [];
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -702,7 +715,44 @@ async function loadStats() {
   ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
 
   // Weekly challenge
-  _renderWeeklyChallenge(focusData);
+    _renderWeeklyChallenge(focusData);
+    ui.setSyncState('ok');
+  } catch (err) {
+    console.error('loadStats error:', err);
+    ui.setSyncState('error');
+    _showStatsError(err.message);
+  } finally {
+    _setStatsLoading(false);
+  }
+}
+
+function _setStatsLoading(loading) {
+  // Show/hide a skeleton loading state in each stat card
+  const statIds = ['stat-total','stat-today','stat-streak','stat-hours'];
+  statIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (loading) {
+      el.dataset.orig = el.textContent;
+      el.style.opacity = '0.4';
+      el.style.animation = 'statPulse 1s ease-in-out infinite';
+    } else {
+      el.style.opacity = '';
+      el.style.animation = '';
+    }
+  });
+  // Show loading in history list
+  const hist = document.getElementById('history-list');
+  if (loading && hist && hist.children.length <= 1) {
+    hist.innerHTML = '<div class="empty-msg" style="opacity:.5">Cargando historial…</div>';
+  }
+}
+
+function _showStatsError(msg) {
+  const hist = document.getElementById('history-list');
+  if (hist) {
+    hist.innerHTML = '<div class="empty-msg" style="color:var(--muted)">⚠️ Error al cargar: ' + (msg || 'inténtalo de nuevo') + '</div>';
+  }
 }
 
 function _renderWeeklyChallenge(focusData) {
@@ -837,7 +887,13 @@ window.switchTab = (name, event) => {
   if (event?.currentTarget) event.currentTarget.classList.add('active');
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  if (name === 'stats') { loadStats(); _resetHistoryFilter(); }
+  if (name === 'stats') {
+    _resetHistoryFilter();
+    loadStats().catch(err => {
+      console.error('Stats load error:', err);
+      ui.setSyncState('error');
+    });
+  }
 };
 
 // ══════════════════════════════════════════════════════════════════════
