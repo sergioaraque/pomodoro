@@ -81,34 +81,49 @@ initTimer({
 // ══════════════════════════════════════════════════════════════════════
 async function handleLogin(user) {
   currentUser = user;
-  // Show app, hide auth
+
+  // Show app immediately — do this FIRST before any await
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('top-bar').style.display     = 'flex';
   document.getElementById('app-main').style.display    = 'block';
   document.getElementById('user-avatar').textContent   = user.email.charAt(0).toUpperCase();
   document.getElementById('user-email-lbl').textContent = user.email;
-  // Greeting based on time of day
+
+  // Greeting
   const hour = new Date().getHours();
   const greetings = {
-    morning: ['Buenos días. El mejor momento para enfocarse.','Empieza el día con intención.','La mañana es tuya. Aprovéchala.'],
+    morning:   ['Buenos días. El mejor momento para enfocarse.','Empieza el día con intención.','La mañana es tuya. Aprovéchala.'],
     afternoon: ['Buenas tardes. A por la segunda mitad.','El momento de mantener el impulso.','Tarde productiva por delante.'],
-    evening: ['Buenas noches. Un último esfuerzo.','La noche es silenciosa. Aprovéchala.','Concentración nocturna activa.'],
+    evening:   ['Buenas noches. Un último esfuerzo.','La noche es silenciosa. Aprovéchala.','Concentración nocturna activa.'],
   };
   const period = hour < 13 ? 'morning' : hour < 20 ? 'afternoon' : 'evening';
   const list = greetings[period];
   const msg = list[Math.floor(Math.random() * list.length)];
   const sub = document.getElementById('app-subtitle');
-  if (sub) { sub.textContent = msg; setTimeout(() => { const t = ui.getThemeSubtitle(currentTheme); if (sub.textContent === msg) sub.textContent = t; }, 4000); }
+  if (sub) {
+    sub.textContent = msg;
+    setTimeout(() => { const t = ui.getThemeSubtitle(currentTheme); if (sub.textContent === msg) sub.textContent = t; }, 4000);
+  }
 
-  await loadSettings();
-  await loadTasks();
-  await loadTodayCount();
+  // Load data — wrapped so a DB error never hides the app
+  try { await loadSettings(); } catch(e) { console.warn('loadSettings error:', e); }
+  try { await loadTasks();    } catch(e) { console.warn('loadTasks error:', e); }
+  try { await loadTodayCount(); } catch(e) { console.warn('loadTodayCount error:', e); }
+
+  // Load quick notes
+  try {
+    const notes = await db.settings.loadQuickNotes(user.id);
+    const el = document.getElementById('quick-notes-area');
+    if (el && notes) el.value = notes;
+  } catch(e) { /* ignore */ }
+
   spawnCreatures(currentTheme);
   drawStars();
   ui.renderTimer(getState());
   ui.renderSessionDots(getState().sessionsDone);
   ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
   ui.setStartButtonText('Iniciar');
+  _updateSoundBtns(cfg.soundStyle || 'bells');
 }
 
 function handleLogout() {
