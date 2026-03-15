@@ -589,3 +589,73 @@ body.theme-city .snow-el { animation-name: rainFall; }
 
 /* ── Stars visible for arctic too (already handled in JS) ── */
 body.theme-arctic .stars-layer { opacity: 1; }
+
+
+/* ── Theme pill button ─────────────────────────── */
+.theme-picker-wrap {
+  position: relative;
+}
+.theme-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--glass); border: 1px solid var(--glass-b);
+  border-radius: 50px; padding: 6px 12px;
+  cursor: pointer; color: var(--text);
+  font-size: 13px; font-family: var(--font-body);
+  transition: all 0.2s; white-space: nowrap;
+}
+.theme-pill:hover { background: rgba(255,255,255,0.1); border-color: var(--accent); }
+.theme-pill-arrow { font-size: 10px; color: var(--muted); transition: transform 0.2s; }
+
+/* ── Theme grid dropdown ───────────────────────── */
+.theme-picker-grid {
+  display: none;
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: rgba(5,14,25,0.96); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 14px; padding: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px; min-width: 240px;
+  z-index: 200; animation: fadeUp 0.15s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.theme-picker-grid.open { display: grid; }
+
+.tpick {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: none; border: 1px solid transparent;
+  border-radius: 10px; padding: 10px 6px;
+  cursor: pointer; color: var(--muted);
+  font-size: 20px; transition: all 0.15s;
+  font-family: var(--font-body);
+}
+.tpick span { font-size: 10px; color: var(--muted); letter-spacing: 0.3px; }
+.tpick:hover  { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: var(--text); }
+.tpick:hover span { color: var(--text); }
+.tpick.active { background: rgba(255,255,255,0.1); border-color: var(--accent); }
+.tpick.active span { color: var(--accent); }
+
+/* ── Stat cards with icons ─────────────────────── */
+.stat-icon {
+  font-size: 22px; margin-bottom: 6px; display: block;
+  filter: grayscale(0.2);
+}
+.stat-card { transition: transform 0.2s; }
+.stat-card:hover { transform: translateY(-2px); }
+
+/* ── Heatmap legend ────────────────────────────── */
+.heatmap-legend {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10px; color: var(--muted);
+}
+.heatmap-legend .hday { cursor: default; }
+.heatmap-legend span { white-space: nowrap; }
+
+/* ── Responsive tweaks ─────────────────────────── */
+@media (max-width: 520px) {
+  .theme-picker-grid { right: auto; left: 0; min-width: 200px; grid-template-columns: repeat(4, 1fr); }
+  .user-email { display: none; }
+}
+@media (max-width: 380px) {
+  .theme-pill-name { display: none; }
+  .theme-pill { padding: 6px 9px; }
+}

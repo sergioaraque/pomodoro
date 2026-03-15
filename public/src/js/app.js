@@ -80,6 +80,18 @@ async function handleLogin(user) {
   document.getElementById('app-main').style.display    = 'block';
   document.getElementById('user-avatar').textContent   = user.email.charAt(0).toUpperCase();
   document.getElementById('user-email-lbl').textContent = user.email;
+  // Greeting based on time of day
+  const hour = new Date().getHours();
+  const greetings = {
+    morning: ['Buenos días. El mejor momento para enfocarse.','Empieza el día con intención.','La mañana es tuya. Aprovéchala.'],
+    afternoon: ['Buenas tardes. A por la segunda mitad.','El momento de mantener el impulso.','Tarde productiva por delante.'],
+    evening: ['Buenas noches. Un último esfuerzo.','La noche es silenciosa. Aprovéchala.','Concentración nocturna activa.'],
+  };
+  const period = hour < 13 ? 'morning' : hour < 20 ? 'afternoon' : 'evening';
+  const list = greetings[period];
+  const msg = list[Math.floor(Math.random() * list.length)];
+  const sub = document.getElementById('app-subtitle');
+  if (sub) { sub.textContent = msg; setTimeout(() => { const t = ui.getThemeSubtitle(currentTheme); if (sub.textContent === msg) sub.textContent = t; }, 4000); }
 
   await loadSettings();
   await loadTasks();
@@ -475,11 +487,56 @@ async function loadStats() {
 function applyTheme(name, persist = true) {
   currentTheme = name;
   ui.applyTheme(name);
+  _updateThemePill(name);
   if (currentUser) spawnCreatures(name);
   if (cfg.ambient && currentUser) { switchAmbient(name); }
   if (persist && currentUser) debounceSave();
 }
 window.setTheme = applyTheme;
+
+// ── Theme picker dropdown ─────────────────────────────────────────────
+window.toggleThemePicker = () => {
+  const grid = document.getElementById('theme-picker-grid');
+  if (!grid) return;
+  const open = grid.classList.toggle('open');
+  // Close when clicking outside
+  if (open) {
+    setTimeout(() => {
+      document.addEventListener('click', _closePicker, { once: true });
+    }, 10);
+  }
+};
+function _closePicker() {
+  const grid = document.getElementById('theme-picker-grid');
+  if (grid) grid.classList.remove('open');
+}
+window.pickTheme = (name) => {
+  applyTheme(name);
+  _closePicker();
+};
+
+// ── Update theme pill label ───────────────────────────────────────────
+const THEME_META = {
+  ocean:    { emoji: '🌊', name: 'Mar'      },
+  meadow:   { emoji: '🌿', name: 'Prado'    },
+  mountain: { emoji: '🏔️', name: 'Montaña'  },
+  forest:   { emoji: '🌲', name: 'Bosque'   },
+  desert:   { emoji: '🏜️', name: 'Desierto' },
+  city:     { emoji: '🌃', name: 'Ciudad'   },
+  arctic:   { emoji: '❄️', name: 'Ártico'   },
+};
+function _updateThemePill(name) {
+  const meta = THEME_META[name];
+  if (!meta) return;
+  const emoji = document.getElementById('theme-pill-emoji');
+  const label = document.getElementById('theme-pill-name');
+  if (emoji) emoji.textContent = meta.emoji;
+  if (label) label.textContent = meta.name;
+  // Update active button
+  document.querySelectorAll('.tpick').forEach(b => b.classList.remove('active'));
+  const active = document.getElementById('tbtn-' + name);
+  if (active) active.classList.add('active');
+}
 
 // ══════════════════════════════════════════════════════════════════════
 //  TABS

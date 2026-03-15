@@ -156,7 +156,12 @@ export function applyTheme(name) {
   $('scene-info').innerHTML     = t.info;
 
   document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-  $('tbtn-' + name).classList.add('active');
+  const tBtn = $('tbtn-' + name);
+  if (tBtn) tBtn.classList.add('active');
+}
+
+export function getThemeSubtitle(name) {
+  return THEMES[name]?.subtitle || '';
 }
 
 // ══════════════════════════════════════════════
