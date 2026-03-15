@@ -14,5 +14,6 @@ export const cfg = {
   ambientVol:  0.4,
   deepFocus:   false,
   autoTheme:   false,   // cambio automático de tema según hora
-  presetName:  '',      // nombre del preset activo (vacío = custom)
+  presetName:   '',      // nombre del preset activo (vacío = custom)
+  customAccent: '',      // color hex personalizado (#rrggbb) o '' para usar el del tema
 };

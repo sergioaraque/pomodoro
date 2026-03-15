@@ -14,6 +14,13 @@ import { burstConfetti }                                from './confetti.js';
 import { spawnCreatures, drawStars }                   from './creatures.js';
 import { initAmbient, startAmbient, stopAmbient,
          switchAmbient, setVolume }                     from './ambient.js';
+import { notifySessionEnd,
+         requestNotificationPermission,
+         getNotificationPermission }                    from './notifications.js';
+import { t, setLang, getLang,
+         getSupportedLangs, applyToDOM }                from './i18n.js';
+import { registerCommand, openPalette,
+         closePalette, isPaletteOpen }                  from './commands.js';
 
 // ─── Supabase client — initialized inside boot ────────────────────────
 let sb = null;
@@ -46,6 +53,8 @@ initTimer({
   onEnd: async (finishedMode, durationMin, taskId, taskName) => {
     playSessionEnd(currentTheme);
     if (finishedMode === 'focus') burstConfetti(_getAccentColor());
+    // System notification (fires even if tab is in background)
+    notifySessionEnd(finishedMode, getState().mode, getState().currentTaskName);
 
     if (currentUser) {
       ui.setSyncState('syncing');
@@ -124,6 +133,8 @@ async function handleLogin(user) {
   ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
   ui.setStartButtonText('Iniciar');
   _updateSoundBtns(cfg.soundStyle || 'bells');
+  applyToDOM();
+  _updateNotifToggle(getNotificationPermission());
 }
 
 function handleLogout() {
@@ -284,8 +295,11 @@ async function loadSettings() {
     cfg.deepFocus  = data.deep_focus  ?? false;
     cfg.autoBreak  = data.auto_break  ?? false;
     cfg.soundStyle = data.sound_style ?? 'bells';
-    cfg.autoTheme  = data.auto_theme  ?? false;
-    cfg.presetName = data.preset_name ?? '';
+    cfg.autoTheme   = data.auto_theme   ?? false;
+    cfg.presetName  = data.preset_name  ?? '';
+    cfg.customAccent= data.custom_accent || '';
+    if (data.lang) setLang(data.lang);
+    if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
     applyTheme(data.theme || 'ocean', false);
     if (cfg.ambient) startAmbient(currentTheme);
     setVolume(cfg.ambientVol);
@@ -311,8 +325,10 @@ async function saveSettings() {
     deep_focus:  cfg.deepFocus,
     auto_break:  cfg.autoBreak,
     sound_style: cfg.soundStyle,
-    auto_theme:  cfg.autoTheme,
-    preset_name: cfg.presetName,
+    auto_theme:   cfg.autoTheme,
+    preset_name:  cfg.presetName,
+    custom_accent: cfg.customAccent || '',
+    lang:          getLang(),
   });
   ui.setSyncState(error ? 'error' : 'ok');
 }
@@ -755,6 +771,44 @@ function _showStatsError(msg) {
   }
 }
 
+// ── Command palette registration ─────────────────────────────────────
+function _registerCommands() {
+  const T = (tab) => () => window.switchTab(tab, null);
+  const themes = [
+    ['ocean','🌊'],['meadow','🌿'],['mountain','🏔️'],['forest','🌲'],
+    ['desert','🏜️'],['city','🌃'],['arctic','❄️'],['space','🚀'],
+    ['deep','🌑'],['volcano','🌋'],['rain','🌧️'],['japan','🏯'],
+    ['swamp','🌿'],['cave','🐉'],['underarctic','🐋'],['savanna','🌅'],
+    ['alps','🏔'],['festival','🎆'],['jungle','🌺'],['mars','🔭'],
+  ];
+  const THEME_NAMES = {
+    ocean:'Mar',meadow:'Prado',mountain:'Montaña',forest:'Bosque',
+    desert:'Desierto',city:'Ciudad',arctic:'Ártico',space:'Espacio',
+    deep:'Abisal',volcano:'Volcán',rain:'Lluvia',japan:'Japón',
+    swamp:'Ciénaga',cave:'Cueva',underarctic:'Ártico sub.',savanna:'Sabana',
+    alps:'Alpes',festival:'Festival',jungle:'Selva',mars:'Marte',
+  };
+  // Navigation
+  [['timer','⏱'],['tasks','✓'],['stats','📊'],['settings','⚙️'],['notes','📝']].forEach(([tab,icon]) => {
+    registerCommand({ id:'tab_'+tab, label:'Ir a '+tab.charAt(0).toUpperCase()+tab.slice(1), icon, section:'Navegación', action: T(tab) });
+  });
+  // Timer
+  registerCommand({ id:'start',  label:'Iniciar / Pausar timer', icon:'▶', section:'Timer', action: window.toggleTimer });
+  registerCommand({ id:'reset',  label:'Reiniciar timer',        icon:'↺', section:'Timer', action: window.resetTimer });
+  registerCommand({ id:'skip',   label:'Saltar sesión',          icon:'⏭', section:'Timer', action: window.skipSession });
+  // Themes
+  themes.forEach(([key, emoji]) => {
+    registerCommand({ id:'theme_'+key, label:'Tema: '+THEME_NAMES[key], icon:emoji, section:'Temas', action: () => applyTheme(key) });
+  });
+  // Presets
+  [['standard','Estándar 25/5'],['deep','Foco profundo 50/10'],['sprint','Sprint 15/3'],['ultralong','Ultra 90/15']].forEach(([k,l]) => {
+    registerCommand({ id:'preset_'+k, label:'Preset: '+l, icon:'⚡', section:'Presets', action: () => window.applyPreset(k) });
+  });
+  // Fullscreen
+  registerCommand({ id:'fullscreen', label:'Pantalla completa', icon:'⛶', section:'App', action: window.toggleFullscreen });
+  registerCommand({ id:'deepfocus',  label:'Activar foco profundo', icon:'🎯', section:'App', action: window.toggleDeepFocus });
+}
+
 function _renderWeeklyChallenge(focusData) {
   const el = document.getElementById('weekly-challenge');
   if (!el) return;
@@ -917,12 +971,20 @@ window.skipSession = () => skipSession();
 //  KEYBOARD SHORTCUTS
 // ══════════════════════════════════════════════════════════════════════
 document.addEventListener('keydown', e => {
+  // Cmd/Ctrl+K — command palette (works always, including in inputs)
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    if (isPaletteOpen()) closePalette();
+    else openPalette();
+    return;
+  }
   if (['INPUT','TEXTAREA','BUTTON'].includes(e.target.tagName)) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (!currentUser) return;
-  if (e.key === ' ')              { e.preventDefault(); window.toggleTimer(); }
+  if (e.key === ' ')               { e.preventDefault(); window.toggleTimer(); }
   if (e.key.toLowerCase() === 'r') { e.preventDefault(); window.resetTimer(); }
   if (e.key.toLowerCase() === 's') { e.preventDefault(); window.skipSession(); }
+  if (e.key === 'Escape')          { closePalette(); }
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -954,6 +1016,57 @@ function _applyAutoTheme() {
   applyTheme(theme, false);   // false = no guardar, solo visual
 }
 
+// ── Custom accent color ──────────────────────────────────────────────
+function _applyCustomAccent(hex) {
+  if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return;
+  cfg.customAccent = hex;
+  // Compute a lighter variant for accent2
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  const lighten = v => Math.min(255, v + 40);
+  const accent2 = '#' + [lighten(r),lighten(g),lighten(b)].map(v => v.toString(16).padStart(2,'0')).join('');
+  document.body.style.setProperty('--accent',  hex);
+  document.body.style.setProperty('--accent2', accent2);
+  document.body.style.setProperty('--timer-color', '#e8f4f8');
+}
+window.applyCustomAccent = (hex) => {
+  _applyCustomAccent(hex);
+  debounceSave();
+};
+window.clearCustomAccent = () => {
+  cfg.customAccent = '';
+  document.body.style.removeProperty('--accent');
+  document.body.style.removeProperty('--accent2');
+  document.body.style.removeProperty('--timer-color');
+  debounceSave();
+  // Re-apply current theme tokens
+  applyTheme(currentTheme, false);
+};
+
+// ── Language switcher ─────────────────────────────────────────────────
+window.switchLang = (code) => {
+  setLang(code);
+  applyToDOM();
+  debounceSave();
+  // Update active lang button
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === code));
+};
+
+// ── Notifications toggle ──────────────────────────────────────────────
+window.toggleNotifications = async () => {
+  const perm = getNotificationPermission();
+  if (perm === 'granted') {
+    // Can't revoke programmatically — show browser instructions
+    alert('Para desactivar las notificaciones, usa la configuración de tu navegador.');
+    return;
+  }
+  const result = await requestNotificationPermission();
+  _updateNotifToggle(result);
+};
+function _updateNotifToggle(perm) {
+  const sw = document.getElementById('sw-notifications');
+  if (sw) sw.className = 'sw' + (perm === 'granted' ? ' on' : '');
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  BOOT
 // ══════════════════════════════════════════════════════════════════════
@@ -981,6 +1094,20 @@ function _applyAutoTheme() {
     if (cfg.autoTheme) _applyAutoTheme();
     ui.applyTheme('ocean');
     spawnCreatures('ocean');
+
+    // Apply language
+    applyToDOM();
+
+    // Register service worker (PWA)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    // Check notification permission state on boot
+    _updateNotifToggle(getNotificationPermission());
+
+    // Register command palette commands
+    _registerCommands();
     ui.renderTimer(getState());
     ui.renderDailyGoalRing(0, cfg.dailyGoal);
 

@@ -1,0 +1,20 @@
+{
+  "name": "FocusNature — Pomodoro",
+  "short_name": "FocusNature",
+  "description": "Temporizador Pomodoro con 20 escenarios naturales animados y música ambiental generativa.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#071020",
+  "theme_color": "#4ecdc4",
+  "categories": ["productivity", "lifestyle"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    { "name": "Iniciar timer", "url": "/app", "description": "Abre FocusNature directamente en el timer" }
+  ]
+}

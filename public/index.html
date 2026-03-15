@@ -7,6 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@400;600&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4ecdc4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FocusNature">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <style>
 /* Auth visible immediately — no JS needed, no flash */
 #auth-screen { display:flex; }
@@ -202,11 +208,11 @@
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" data-tab="timer"    onclick="switchTab('timer',event)">Temporizador</button>
-    <button class="tab-btn"        data-tab="tasks"    onclick="switchTab('tasks',event)">Tareas</button>
-    <button class="tab-btn"        data-tab="stats"    onclick="switchTab('stats',event)">Estadísticas</button>
-    <button class="tab-btn"        data-tab="settings" onclick="switchTab('settings',event)">Ajustes</button>
-    <button class="tab-btn"        data-tab="notes"    onclick="switchTab('notes',event)">Notas</button>
+    <button class="tab-btn active" data-tab="timer"    onclick="switchTab('timer',event)"    data-i18n="tab_timer">Timer</button>
+    <button class="tab-btn"        data-tab="tasks"    onclick="switchTab('tasks',event)"    data-i18n="tab_tasks">Tareas</button>
+    <button class="tab-btn"        data-tab="stats"    onclick="switchTab('stats',event)"    data-i18n="tab_stats">Stats</button>
+    <button class="tab-btn"        data-tab="settings" onclick="switchTab('settings',event)" data-i18n="tab_settings">Ajustes</button>
+    <button class="tab-btn"        data-tab="notes"    onclick="switchTab('notes',event)"    data-i18n="tab_notes">Notas</button>
   </div>
 
   <!-- TIMER TAB -->
@@ -389,6 +395,55 @@
         <b>🌊 Mar</b> — Peces de colores, medusas flotantes, algas y burbujas.
       </div>
 
+      <!-- Notifications -->
+      <div class="stoggle-row" onclick="toggleNotifications()" style="margin-bottom:10px">
+        <div>
+          <div style="font-size:14px" data-i18n="settings_notifications">Notificaciones del sistema</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px" data-i18n="settings_notifications_sub">Aviso cuando cambia el modo</div>
+        </div>
+        <div class="sw" id="sw-notifications"></div>
+      </div>
+
+      <!-- Language -->
+      <div class="settings-section-title">Idioma</div>
+      <div class="lang-grid" id="lang-grid">
+        <button class="lang-btn active" data-lang="es" onclick="switchLang('es')">🇪🇸 ES</button>
+        <button class="lang-btn"        data-lang="en" onclick="switchLang('en')">🇬🇧 EN</button>
+        <button class="lang-btn"        data-lang="fr" onclick="switchLang('fr')">🇫🇷 FR</button>
+        <button class="lang-btn"        data-lang="de" onclick="switchLang('de')">🇩🇪 DE</button>
+        <button class="lang-btn"        data-lang="pt" onclick="switchLang('pt')">🇧🇷 PT</button>
+      </div>
+
+      <!-- Custom theme accent -->
+      <div class="settings-section-title">Tema personalizado</div>
+      <div class="custom-theme-wrap">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
+          Elige tu color de acento. Sobreescribe el color del tema activo.
+        </div>
+        <div class="custom-theme-colors" id="custom-theme-colors">
+          <button class="ctheme-swatch" style="background:#4ecdc4" onclick="applyCustomAccent('#4ecdc4')" title="Teal"></button>
+          <button class="ctheme-swatch" style="background:#ff6b9d" onclick="applyCustomAccent('#ff6b9d')" title="Rosa"></button>
+          <button class="ctheme-swatch" style="background:#ffa552" onclick="applyCustomAccent('#ffa552')" title="Naranja"></button>
+          <button class="ctheme-swatch" style="background:#7ecf3e" onclick="applyCustomAccent('#7ecf3e')" title="Verde"></button>
+          <button class="ctheme-swatch" style="background:#a78bfa" onclick="applyCustomAccent('#a78bfa')" title="Violeta"></button>
+          <button class="ctheme-swatch" style="background:#38bdf8" onclick="applyCustomAccent('#38bdf8')" title="Azul cielo"></button>
+          <button class="ctheme-swatch" style="background:#fb7185" onclick="applyCustomAccent('#fb7185')" title="Coral"></button>
+          <button class="ctheme-swatch" style="background:#facc15" onclick="applyCustomAccent('#facc15')" title="Amarillo"></button>
+          <div class="ctheme-custom">
+            <input type="color" id="custom-color-input" value="#4ecdc4"
+              oninput="applyCustomAccent(this.value)"
+              style="width:32px;height:32px;border:none;border-radius:50%;cursor:pointer;padding:0;background:none">
+            <span style="font-size:11px;color:var(--muted)">Custom</span>
+          </div>
+        </div>
+        <button onclick="clearCustomAccent()"
+          style="margin-top:8px;background:none;border:1px solid rgba(255,255,255,.12);color:var(--muted);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .2s"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+          onmouseout="this.style.borderColor='rgba(255,255,255,.12)';this.style.color='var(--muted)'">
+          Restaurar color del tema
+        </button>
+      </div>
+
       <div class="settings-section-title">Seguridad</div>
       <div id="cp-msg" class="cp-msg" style="display:none"></div>
       <div class="auth-field">
@@ -422,5 +477,6 @@
 </div><!-- /app -->
 
 <script type="module" src="/src/js/app.js"></script>
+<!-- Command palette CSS is in styles.css -->
 </body>
 </html>
