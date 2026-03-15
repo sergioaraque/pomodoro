@@ -1,93 +1,70 @@
 /**
- * app.js — Punto de entrada principal
- *
- * Nuevas funcionalidades v2:
- *   🎵 Música ambiental generativa por tema (Web Audio API)
- *   🎯 Objetivo diario con anillo de progreso SVG
- *   📝 Notas por tarea (expandibles, sincronizadas)
- *   🌑 Modo foco profundo (atenúa UI, bloquea distracciones)
+ * app.js — FocusNature v2
+ * Punto de entrada principal. Conecta todos los módulos.
  */
 
-import { cfg }                                               from './config.js';
-import * as db                                               from './db.js';
-import { initTimer, toggleTimer, resetTimer, skipSession,
-         setMode, setTask, clearTask, getState }             from './timer.js';
-import * as ui                                               from './ui.js';
-import { playSessionEnd }                                    from './sound.js';
-import { spawnCreatures, drawStars }                         from './creatures.js';
+import { cfg }                                         from './config.js';
+import * as db                                         from './db.js';
+import { initTimer, toggleTimer, resetTimer,
+         skipSession, setMode, setTask,
+         clearTask, getState }                         from './timer.js';
+import * as ui                                         from './ui.js';
+import { playSessionEnd }                              from './sound.js';
+import { spawnCreatures, drawStars }                   from './creatures.js';
 import { initAmbient, startAmbient, stopAmbient,
-         setVolume }                                         from './ambient.js';
+         setVolume }                                   from './ambient.js';
 
-// ─── SUPABASE ─────────────────────────────────────────────────────────
-// sb is initialized inside the boot IIFE so any failure is caught gracefully.
-// Top-level throws in ES modules crash the entire module silently in browsers.
+// ─── Supabase client — initialized inside boot ────────────────────────
 let sb = null;
 
-// ─── APP STATE ────────────────────────────────────────────────────────
+// ─── App state ────────────────────────────────────────────────────────
 let currentUser  = null;
 let tasks        = [];
 let activeTaskId = null;
 let currentTheme = 'ocean';
 let saveTimer    = null;
-let todayCount   = 0;   // pomodoros completados hoy (se actualiza en onEnd)
+let todayCount   = 0;
 
 // ══════════════════════════════════════════════════════════════════════
-//  TIMER — callbacks
+//  TIMER
 // ══════════════════════════════════════════════════════════════════════
 initTimer({
   onTick: (state) => {
     ui.renderTimer(state);
-    ui.setStartButtonText(
-      state.running
-        ? 'Pausar'
-        : (state.secondsLeft < state.totalSeconds ? 'Reanudar' : 'Iniciar')
-    );
+    const running = state.running;
+    const sLeft   = state.secondsLeft;
+    const sTotal  = state.totalSeconds;
+    ui.setStartButtonText(running ? 'Pausar' : (sLeft < sTotal ? 'Reanudar' : 'Iniciar'));
     // Live tab title
-    const m = String(Math.floor(state.secondsLeft/60)).padStart(2,'0');
-    const s = String(state.secondsLeft%60).padStart(2,'0');
-    const modeEmoji = state.mode === 'focus' ? '🍅' : state.mode === 'short' ? '🌿' : '🌊';
-    document.title = state.running
-      ? `${modeEmoji} ${m}:${s} — FocusNature`
-      : 'FocusNature — Pomodoro';
+    const mm = String(Math.floor(sLeft / 60)).padStart(2, '0');
+    const ss = String(sLeft % 60).padStart(2, '0');
+    const emoji = state.mode === 'focus' ? '🍅' : state.mode === 'short' ? '🌿' : '🌊';
+    document.title = running ? `${emoji} ${mm}:${ss} — FocusNature` : 'FocusNature — Pomodoro';
   },
 
   onEnd: async (finishedMode, durationMin, taskId, taskName) => {
     playSessionEnd();
 
-    // Guardar en BD
     if (currentUser) {
       ui.setSyncState('syncing');
-      const { error } = await db.sessions.create(
-        currentUser.id, finishedMode, durationMin, taskId, taskName
-      );
+      const { error } = await db.sessions.create(currentUser.id, finishedMode, durationMin, taskId, taskName);
       ui.setSyncState(error ? 'error' : 'ok');
     }
 
-    // Incrementar tarea
-    if (finishedMode === 'focus' && taskId) {
-      const t = tasks.find(t => t.id === taskId);
-      if (t) {
-        t.pomodoros++;
-        renderTasks();
-        if (currentUser) await db.tasks.update(taskId, { pomodoros: t.pomodoros });
-      }
-    }
-
-    // Actualizar objetivo diario
     if (finishedMode === 'focus') {
       todayCount++;
       ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
-      // Celebración si se alcanza el objetivo
-      if (todayCount === cfg.dailyGoal) {
-        ui.showGoalAchieved();
+      if (todayCount === cfg.dailyGoal) ui.showGoalAchieved();
+
+      if (taskId) {
+        const t = tasks.find(t => t.id === taskId);
+        if (t) {
+          t.pomodoros++;
+          renderTasks();
+          if (currentUser) await db.tasks.update(taskId, { pomodoros: t.pomodoros });
+        }
       }
     }
-
-    // Si estaba en modo foco profundo y empieza pausa → salir del modo
-    if (cfg.deepFocus && finishedMode === 'focus') {
-      // Mantener deep focus durante la pausa — es decisión del usuario salir
-    }
-
     ui.setStartButtonText('Iniciar');
   },
 });
@@ -97,17 +74,22 @@ initTimer({
 // ══════════════════════════════════════════════════════════════════════
 async function handleLogin(user) {
   currentUser = user;
-  ui.showApp(user);
+  // Show app, hide auth
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('top-bar').style.display     = 'flex';
+  document.getElementById('app-main').style.display    = 'block';
+  document.getElementById('user-avatar').textContent   = user.email.charAt(0).toUpperCase();
+  document.getElementById('user-email-lbl').textContent = user.email;
+
   await loadSettings();
   await loadTasks();
-  await _loadTodayCount();
+  await loadTodayCount();
   spawnCreatures(currentTheme);
   drawStars();
   ui.renderTimer(getState());
   ui.renderSessionDots(getState().sessionsDone);
   ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
   ui.setStartButtonText('Iniciar');
-  ui.hideLoading();
 }
 
 function handleLogout() {
@@ -116,23 +98,34 @@ function handleLogout() {
   activeTaskId = null;
   todayCount   = 0;
   stopAmbient();
-  if (cfg.deepFocus) _exitDeepFocus();
-  ui.hideApp();
+  _exitDeepFocus();
+  // Show auth, hide app
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('top-bar').style.display     = 'none';
+  document.getElementById('app-main').style.display    = 'none';
   ui.clearAuthMessages();
   ui.setCurrentTaskBadge(null);
   ui.renderTasks([], null, taskHandlers);
 }
 
+// ── Auth form handlers ────────────────────────────────────────────────
 window.doLogin = async () => {
   const email = document.getElementById('li-email').value.trim();
   const pass  = document.getElementById('li-pass').value;
   if (!email || !pass) return ui.showAuthError('Rellena todos los campos.');
-  ui.setAuthButtonLoading('li-btn', true, 'Entrar');
+
+  const btn = document.getElementById('li-btn');
+  btn.disabled    = true;
+  btn.textContent = 'Entrando…';
+
   const { error } = await db.auth.signIn(email, pass);
-  ui.setAuthButtonLoading('li-btn', false, 'Entrar');
-  if (error) ui.showAuthError(
-    error.message.includes('Invalid') ? 'Correo o contraseña incorrectos.' : error.message
-  );
+
+  btn.disabled    = false;
+  btn.textContent = 'Entrar';
+
+  if (error) {
+    ui.showAuthError(error.message.includes('Invalid') ? 'Correo o contraseña incorrectos.' : error.message);
+  }
 };
 
 window.doRegister = async () => {
@@ -140,18 +133,94 @@ window.doRegister = async () => {
   const pass  = document.getElementById('reg-pass').value;
   if (!email || !pass) return ui.showAuthError('Rellena todos los campos.');
   if (pass.length < 6) return ui.showAuthError('La contraseña debe tener al menos 6 caracteres.');
-  ui.setAuthButtonLoading('reg-btn', true, 'Crear cuenta');
+
+  const btn = document.getElementById('reg-btn');
+  btn.disabled    = true;
+  btn.textContent = 'Creando cuenta…';
+
   const { error } = await db.auth.signUp(email, pass);
-  ui.setAuthButtonLoading('reg-btn', false, 'Crear cuenta');
+
+  btn.disabled    = false;
+  btn.textContent = 'Crear cuenta';
+
   if (error) ui.showAuthError(error.message);
-  else ui.showAuthSuccess('¡Cuenta creada! Revisa tu correo y luego inicia sesión.');
+  else       ui.showAuthSuccess('¡Cuenta creada! Revisa tu correo y luego inicia sesión.');
 };
 
 window.doLogout = async () => {
   await db.auth.signOut();
 };
 
-window.showAuthTab = ui.switchAuthTab;
+window.doResetPassword = async () => {
+  const email = (document.getElementById('reset-email')?.value || '').trim();
+  if (!email) return ui.showAuthError('Introduce tu correo electrónico.');
+
+  const btn = document.getElementById('reset-btn');
+  btn.disabled    = true;
+  btn.textContent = 'Enviando…';
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/app',
+  });
+
+  btn.disabled    = false;
+  btn.textContent = 'Enviar enlace';
+
+  if (error) ui.showAuthError(error.message);
+  else       ui.showAuthSuccess('¡Listo! Revisa tu correo para restablecer tu contraseña.');
+};
+
+// ── Tab switcher (login / register / reset) ───────────────────────────
+window.showAuthTab = (tab) => {
+  ui.clearAuthMessages();
+  const tabs  = document.getElementById('auth-tabs');
+  const forms = {
+    login:    document.getElementById('auth-login-form'),
+    register: document.getElementById('auth-register-form'),
+    reset:    document.getElementById('auth-reset-form'),
+  };
+  const btnLogin = document.getElementById('at-login');
+  const btnReg   = document.getElementById('at-register');
+
+  // Hide/show tabs bar
+  if (tabs) tabs.style.display = tab === 'reset' ? 'none' : '';
+
+  // Activate button
+  if (btnLogin) btnLogin.classList.toggle('active', tab === 'login');
+  if (btnReg)   btnReg.classList.toggle('active',   tab === 'register');
+
+  // Show correct form
+  Object.entries(forms).forEach(([key, el]) => {
+    if (el) el.style.display = key === tab ? 'block' : 'none';
+  });
+};
+
+// ── Password strength indicator ───────────────────────────────────────
+window.checkPasswordStrength = (val) => {
+  const bar  = document.getElementById('pw-bar');
+  const hint = document.getElementById('pw-hint');
+  if (!bar) return;
+
+  let score = 0;
+  if (val.length >= 6)           score++;
+  if (val.length >= 10)          score++;
+  if (/[A-Z]/.test(val))         score++;
+  if (/[0-9]/.test(val))         score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+
+  const levels = [
+    { w: '0%',   c: 'transparent', t: '' },
+    { w: '20%',  c: '#ff6b6b',     t: 'Muy débil' },
+    { w: '40%',  c: '#ffa552',     t: 'Débil' },
+    { w: '60%',  c: '#ffd54f',     t: 'Aceptable' },
+    { w: '80%',  c: '#7ecf3e',     t: 'Fuerte' },
+    { w: '100%', c: '#4ecdc4',     t: 'Muy fuerte' },
+  ];
+  const lvl = levels[Math.min(score, 5)];
+  bar.style.width      = lvl.w;
+  bar.style.background = lvl.c;
+  if (hint) { hint.textContent = lvl.t; hint.style.color = lvl.c; }
+};
 
 // ══════════════════════════════════════════════════════════════════════
 //  SETTINGS
@@ -195,63 +264,58 @@ async function saveSettings() {
   ui.setSyncState(error ? 'error' : 'ok');
 }
 
-function debounceSaveSettings() {
+function debounceSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveSettings, 700);
 }
 
-const SETTING_LIMITS = {
-  focus:[5,90], short:[1,30], long:[5,60], sessions:[2,8], dailyGoal:[1,20]
-};
+const LIMITS = { focus:[5,90], short:[1,30], long:[5,60], sessions:[2,8], dailyGoal:[1,20] };
 
 window.adjSetting = (key, delta) => {
-  const [min, max] = SETTING_LIMITS[key];
+  const [min, max] = LIMITS[key];
   cfg[key] = Math.max(min, Math.min(max, cfg[key] + delta));
   ui.renderSettings();
   if (key !== 'dailyGoal') setMode(getState().mode);
   ui.renderSessionDots(getState().sessionsDone);
   ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
-  debounceSaveSettings();
+  debounceSave();
 };
 
 window.toggleSound = () => {
   cfg.sound = !cfg.sound;
   ui.renderSettings();
-  debounceSaveSettings();
+  debounceSave();
 };
 
-// ── Música ambiental ──────────────────────────────────────────────────
 window.toggleAmbient = () => {
   cfg.ambient = !cfg.ambient;
   if (cfg.ambient) startAmbient(currentTheme);
   else             stopAmbient();
   ui.renderSettings();
-  debounceSaveSettings();
+  debounceSave();
 };
 
 window.setAmbientVolume = (v) => {
   cfg.ambientVol = parseFloat(v);
   setVolume(cfg.ambientVol);
-  debounceSaveSettings();
+  debounceSave();
 };
 
-// ── Modo foco profundo ────────────────────────────────────────────────
 window.toggleDeepFocus = () => {
   cfg.deepFocus = !cfg.deepFocus;
   if (cfg.deepFocus) _enterDeepFocus();
   else               _exitDeepFocus();
   ui.renderSettings();
-  debounceSaveSettings();
+  debounceSave();
 };
 
 function _enterDeepFocus() {
   document.body.classList.add('deep-focus');
-  // Mostrar overlay con botón para salir
   ui.showDeepFocusOverlay(() => {
     cfg.deepFocus = false;
     _exitDeepFocus();
     ui.renderSettings();
-    debounceSaveSettings();
+    debounceSave();
   });
 }
 
@@ -299,11 +363,7 @@ const taskHandlers = {
   },
   onDelete: async (id) => {
     tasks = tasks.filter(t => t.id !== id);
-    if (activeTaskId === id) {
-      activeTaskId = null;
-      clearTask();
-      ui.setCurrentTaskBadge(null);
-    }
+    if (activeTaskId === id) { activeTaskId = null; clearTask(); ui.setCurrentTaskBadge(null); }
     renderTasks();
     if (currentUser) {
       ui.setSyncState('syncing');
@@ -339,58 +399,53 @@ window.addTask = async () => {
 };
 
 // ══════════════════════════════════════════════════════════════════════
-//  DAILY GOAL
+//  STATS
 // ══════════════════════════════════════════════════════════════════════
-async function _loadTodayCount() {
+async function loadTodayCount() {
   if (!currentUser) return;
   const { data } = await db.sessions.loadFocus(currentUser.id);
   if (!data) return;
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   todayCount = data.filter(s => new Date(s.completed_at) >= today).length;
 }
 
-// ══════════════════════════════════════════════════════════════════════
-//  STATS
-// ══════════════════════════════════════════════════════════════════════
 async function loadStats() {
   if (!currentUser) return;
-
-  const [{ data: focusData }, { data: recent }] = await Promise.all([
+  const [{ data: fd }, { data: recent }] = await Promise.all([
     db.sessions.loadFocus(currentUser.id),
     db.sessions.loadRecent(currentUser.id),
   ]);
+  const focusData = fd || [];
 
-  const fd = focusData || [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  todayCount = focusData.filter(s => new Date(s.completed_at) >= today).length;
+  const totalMins = focusData.reduce((a, s) => a + s.duration, 0);
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  todayCount = fd.filter(s => new Date(s.completed_at) >= today).length;
-  const totalMins = fd.reduce((a, s) => a + s.duration, 0);
-
-  const daySet = new Set(fd.map(s => new Date(s.completed_at).toDateString()));
+  const daySet = new Set(focusData.map(s => new Date(s.completed_at).toDateString()));
   let streak = 0;
-  const check = new Date();
-  while (daySet.has(check.toDateString())) { streak++; check.setDate(check.getDate() - 1); }
+  const chk = new Date();
+  while (daySet.has(chk.toDateString())) { streak++; chk.setDate(chk.getDate() - 1); }
 
   const weekCounts = [];
   for (let i = 6; i >= 0; i--) {
-    const d  = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
+    const d  = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
     const nx = new Date(d); nx.setDate(nx.getDate() + 1);
-    weekCounts.push(fd.filter(s => { const sd = new Date(s.completed_at); return sd >= d && sd < nx; }).length);
+    weekCounts.push(focusData.filter(s => { const sd = new Date(s.completed_at); return sd >= d && sd < nx; }).length);
   }
 
-  const heatmapMap = {};
-  fd.forEach(s => {
+  const heatmap = {};
+  focusData.forEach(s => {
     const k = new Date(s.completed_at).toDateString();
-    heatmapMap[k] = (heatmapMap[k] || 0) + 1;
+    heatmap[k] = (heatmap[k] || 0) + 1;
   });
 
   ui.renderStats({
-    total:        fd.length,
+    total:        focusData.length,
     today:        todayCount,
     streak,
     hours:        (totalMins / 60).toFixed(1) + 'h',
     weekData:     weekCounts,
-    heatmapData:  heatmapMap,
+    heatmapData:  heatmap,
     historyItems: recent || [],
     dailyGoal:    cfg.dailyGoal,
     onDeleteHistory: async (id) => {
@@ -400,7 +455,6 @@ async function loadStats() {
       if (!error) loadStats();
     },
   });
-
   ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
 }
 
@@ -411,14 +465,9 @@ function applyTheme(name, persist = true) {
   currentTheme = name;
   ui.applyTheme(name);
   if (currentUser) spawnCreatures(name);
-  // Reiniciar música ambiental con el nuevo tema
-  if (cfg.ambient && currentUser) {
-    stopAmbient();
-    setTimeout(() => startAmbient(name), 800);
-  }
-  if (persist && currentUser) debounceSaveSettings();
+  if (cfg.ambient && currentUser) { stopAmbient(); setTimeout(() => startAmbient(name), 800); }
+  if (persist && currentUser) debounceSave();
 }
-
 window.setTheme = applyTheme;
 
 // ══════════════════════════════════════════════════════════════════════
@@ -441,97 +490,72 @@ window.toggleTimer = () => {
   if (running && cfg.deepFocus) _enterDeepFocus();
   if (!running && cfg.deepFocus) _exitDeepFocus();
 };
-
 window.resetTimer = () => {
   resetTimer();
   _exitDeepFocus();
   ui.setStartButtonText('Iniciar');
   ui.renderTimer(getState());
 };
+window.skipSession = () => skipSession();
 
-window.skipSession = () => {
-  skipSession();
-};
+// ══════════════════════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA','BUTTON'].includes(e.target.tagName)) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!currentUser) return;
+  if (e.key === ' ')              { e.preventDefault(); window.toggleTimer(); }
+  if (e.key.toLowerCase() === 'r') { e.preventDefault(); window.resetTimer(); }
+  if (e.key.toLowerCase() === 's') { e.preventDefault(); window.skipSession(); }
+});
 
 // ══════════════════════════════════════════════════════════════════════
 //  BOOT
 // ══════════════════════════════════════════════════════════════════════
-// ── Global error safety net ─────────────────────────────────────────
-window.addEventListener('unhandledrejection', e => {
-  console.error('FocusNature error:', e.reason);
-});
-
 (async () => {
   try {
-    // ── Initialize Supabase (inside try so failures show a nice error) ──
-    if (!window.supabase) throw new Error('Supabase CDN no cargó. Comprueba tu conexión a internet.');
-    if (!window.__SUPABASE_URL__ || window.__SUPABASE_URL__.includes('TU-PROYECTO')) {
-      throw new Error('Falta configurar SUPABASE_URL en el archivo .env del servidor.');
+    // Validate Supabase config
+    if (!window.supabase) {
+      throw new Error('Supabase no cargó. Comprueba tu conexión a internet.');
     }
+    if (!window.__SUPABASE_URL__ || window.__SUPABASE_URL__.includes('TU-PROYECTO')) {
+      throw new Error('Faltan las credenciales de Supabase. Configura el archivo .env del servidor.');
+    }
+
+    // Initialize Supabase
     const { createClient } = window.supabase;
     sb = createClient(window.__SUPABASE_URL__, window.__SUPABASE_ANON__);
     db.initDb(sb);
     initAmbient();
 
+    // Background visuals
     drawStars();
     window.addEventListener('resize', drawStars);
-
-    // ── Keyboard shortcuts ───────────────────────────────────────────
-    document.addEventListener('keydown', e => {
-      // Don't trigger when typing in inputs/textareas
-      if (['INPUT','TEXTAREA','BUTTON'].includes(e.target.tagName)) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === ' ') {
-        e.preventDefault();
-        if (currentUser) window.toggleTimer();
-      }
-      if (e.key.toLowerCase() === 'r') {
-        e.preventDefault();
-        if (currentUser) window.resetTimer();
-      }
-      if (e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        if (currentUser) window.skipSession();
-      }
-    });
-
     ui.applyTheme('ocean');
+    spawnCreatures('ocean');
     ui.renderTimer(getState());
     ui.renderDailyGoalRing(0, cfg.dailyGoal);
 
-    // Handle #register hash — open the register tab directly (linked from guest page)
+    // Open register tab if linked from guest page
     if (window.location.hash === '#register') {
-      ui.switchAuthTab('register');
+      window.showAuthTab('register');
     }
 
+    // Auth state — this is the single source of truth
+    // SIGNED_IN fires when a user logs in (or already has a session on load)
+    // SIGNED_OUT fires on logout
     db.auth.onStateChange(async (event, session) => {
-      try {
-        if (session?.user) await handleLogin(session.user);
-        else handleLogout();
-      } catch (err) {
-        console.error('Auth state change error:', err);
-        ui.hideLoading();
-      }
+      if (event === 'SIGNED_IN'  && session?.user) await handleLogin(session.user);
+      if (event === 'SIGNED_OUT')                  handleLogout();
     });
 
-    const { data: { session }, error } = await db.auth.getSession();
-    if (error) console.error('getSession error:', error.message);
-    if (!session) ui.hideLoading();
-    else setTimeout(ui.hideLoading, 1200);
+    // Check for existing session — triggers onStateChange above if present
+    await db.auth.getSession();
+
   } catch (err) {
-    console.error('Boot error:', err);
-    // Show error to user instead of hanging on the loading screen
-    const ls = document.getElementById('loading-screen');
-    if (ls) {
-      ls.innerHTML = [
-        '<div style="text-align:center;padding:32px;max-width:360px">',
-          '<div style="font-size:32px;margin-bottom:16px">⚠️</div>',
-          '<div style="font-size:15px;color:#e8f4f8;margin-bottom:8px">Error al cargar la app</div>',
-          '<div style="font-size:13px;color:#8ab4cc;margin-bottom:20px">' + err.message + '</div>',
-          '<a href="/" style="color:#4ecdc4;font-size:13px">← Volver al inicio</a>',
-        '</div>'
-      ].join('');
-      ls.style.opacity = '1';
-    }
+    // Show the error in the auth card (which is already visible)
+    console.error('FocusNature boot error:', err);
+    ui.showAuthError('⚠️ ' + err.message);
   }
 })();

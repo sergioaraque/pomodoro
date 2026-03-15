@@ -16,6 +16,15 @@ export function showAuthError(msg) {
   $('auth-err').style.display = 'block';
   $('auth-ok').style.display  = 'none';
 }
+
+export function shakeAuthCard() {
+  const card = document.querySelector('.auth-card');
+  if (!card) return;
+  card.classList.remove('auth-shake');
+  void card.offsetWidth; // force reflow
+  card.classList.add('auth-shake');
+  card.addEventListener('animationend', () => card.classList.remove('auth-shake'), { once: true });
+}
 export function showAuthSuccess(msg) {
   $('auth-ok').textContent = msg;
   $('auth-ok').style.display  = 'block';
@@ -44,23 +53,46 @@ export function setAuthButtonLoading(btn, loading, defaultText) {
 //  APP SHELL
 // ══════════════════════════════════════════════
 export function showApp(user) {
-  $('auth-screen').style.display = 'none';
-  $('top-bar').style.display     = 'flex';
-  $('app-main').style.display    = 'block';
-  $('user-avatar').textContent   = user.email.charAt(0).toUpperCase();
+  // Hide auth screen
+  const authEl = $('auth-screen');
+  authEl.style.opacity = '0';
+  authEl.style.transition = 'opacity 0.25s ease';
+  setTimeout(() => { authEl.style.display = 'none'; }, 260);
+
+  // Show top bar with fade-in
+  const topBar = $('top-bar');
+  topBar.style.display = 'flex';
+  requestAnimationFrame(() => { topBar.style.opacity = '1'; });
+
+  // Show app with fade-in
+  const appEl = $('app-main');
+  appEl.style.display = 'block';
+  requestAnimationFrame(() => { appEl.style.opacity = '1'; });
+
+  $('user-avatar').textContent    = user.email.charAt(0).toUpperCase();
   $('user-email-lbl').textContent = user.email;
 }
 
 export function hideApp() {
-  $('auth-screen').style.display = 'flex';
-  $('top-bar').style.display     = 'none';
-  $('app-main').style.display    = 'none';
+  // Reset app opacity for next login fade-in
+  const appEl = $('app-main');
+  const topBar = $('top-bar');
+  appEl.style.opacity  = '0';
+  topBar.style.opacity = '0';
+  appEl.style.display  = 'none';
+  topBar.style.display = 'none';
+
+  // Show auth screen immediately
+  const authEl = $('auth-screen');
+  authEl.style.display  = 'flex';
+  authEl.style.opacity  = '0';
+  authEl.style.transition = 'opacity 0.3s ease';
+  requestAnimationFrame(() => { authEl.style.opacity = '1'; });
 }
 
 export function hideLoading() {
-  const ls = $('loading-screen');
-  ls.style.opacity = '0';
-  setTimeout(() => ls.style.display = 'none', 500);
+  // No-op: loading screen removed. Login form is visible immediately.
+  // Auth state is handled by onAuthStateChange → showApp / hideApp.
 }
 
 // ══════════════════════════════════════════════
