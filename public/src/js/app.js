@@ -52,14 +52,31 @@ initTimer({
 
   onEnd: async (finishedMode, durationMin, taskId, taskName) => {
     playSessionEnd(currentTheme);
-    if (finishedMode === 'focus') burstConfetti(_getAccentColor());
+    if (finishedMode === 'focus') {
+      burstConfetti(_getAccentColor());
+      // Bounce the timer number
+      const td = document.getElementById('timer-disp');
+      if (td) {
+        td.classList.add('timer-bounce');
+        setTimeout(() => td.classList.remove('timer-bounce'), 600);
+      }
+    }
     // System notification (fires even if tab is in background)
     notifySessionEnd(finishedMode, getState().mode, getState().currentTaskName);
 
     if (currentUser) {
       ui.setSyncState('syncing');
       const { error } = await db.sessions.create(currentUser.id, finishedMode, durationMin, taskId, taskName);
-      ui.setSyncState(error ? 'error' : 'ok');
+      if (error) {
+        // Queue for retry — don't lose the session
+        _queueFailedSession({ userId: currentUser.id, mode: finishedMode, duration: durationMin, taskId, taskName });
+        ui.setSyncState('error');
+        _showToast('Sin conexión — sesión guardada localmente', null, null);
+      } else {
+        ui.setSyncState('ok');
+        // Flush any pending sessions
+        _flushSessionQueue();
+      }
     }
 
     if (finishedMode === 'focus') {
@@ -119,6 +136,13 @@ async function handleLogin(user) {
   try { await loadTasks();    } catch(e) { console.warn('loadTasks error:', e); }
   try { await loadTodayCount(); } catch(e) { console.warn('loadTodayCount error:', e); }
 
+  // Flush any sessions that failed to save while offline
+  const queued = _getQueuedCount();
+  if (queued > 0) {
+    _showToast(queued + ' sesión' + (queued > 1 ? 'es pendientes' : ' pendiente') + ' — sincronizando…', null, null);
+    setTimeout(_flushSessionQueue, 1500);
+  }
+
   // Load quick notes
   try {
     const notes = await db.settings.loadQuickNotes(user.id);
@@ -135,6 +159,18 @@ async function handleLogin(user) {
   _updateSoundBtns(cfg.soundStyle || 'bells');
   applyToDOM();
   _updateNotifToggle(getNotificationPermission());
+  // Highlight current language button
+  const curLang = getLang();
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === curLang));
+  // Highlight custom accent swatch if set
+  if (cfg.customAccent) {
+    document.querySelectorAll('.ctheme-swatch').forEach(b => {
+      const bg = b.style.backgroundColor || b.style.background;
+      b.classList.toggle('active', bg === cfg.customAccent);
+    });
+    const ci = document.getElementById('custom-color-input');
+    if (ci) ci.value = cfg.customAccent;
+  }
 }
 
 function handleLogout() {
@@ -193,17 +229,13 @@ window.doRegister = async () => {
 };
 
 window.doLogout = async () => {
-  try {
-    // Intentar cerrar sesión en Supabase
-    await db.auth.signOut();
-  } catch (e) {
-    console.warn('signOut error (ignorado):', e);
-  }
-  // Limpiar tokens de Supabase del localStorage manualmente por si acaso
+  try { await db.auth.signOut(); } catch (e) { console.warn('signOut error:', e); }
+  // Clear SW cache so next user gets fresh assets
+  _clearSWCache();
+  // Clear Supabase tokens
   Object.keys(localStorage)
     .filter(k => k.startsWith('sb-') || k.includes('supabase'))
     .forEach(k => localStorage.removeItem(k));
-  // Redirigir al landing
   window.location.replace('/');
 };
 
@@ -499,14 +531,33 @@ const taskHandlers = {
     }
   },
   onDelete: async (id) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    // Soft-remove from UI immediately
     tasks = tasks.filter(t => t.id !== id);
     if (activeTaskId === id) { activeTaskId = null; clearTask(); ui.setCurrentTaskBadge(null); }
     renderTasks();
-    if (currentUser) {
-      ui.setSyncState('syncing');
-      const { error } = await db.tasks.remove(id);
-      ui.setSyncState(error ? 'error' : 'ok');
-    }
+    // Show undo toast
+    let undone = false;
+    _showToast(
+      (task.done ? '✓ ' : '') + (task.name.length > 28 ? task.name.slice(0,28)+'…' : task.name) + ' eliminada',
+      'Deshacer',
+      async () => {
+        undone = true;
+        tasks.splice(0, 0, task);
+        tasks.sort((a, b) => (a.position||0) - (b.position||0));
+        renderTasks();
+      }
+    );
+    // Persist after 4s unless undone
+    setTimeout(async () => {
+      if (undone) return;
+      if (currentUser) {
+        ui.setSyncState('syncing');
+        const { error } = await db.tasks.remove(id);
+        ui.setSyncState(error ? 'error' : 'ok');
+      }
+    }, 4200);
   },
   onSaveNotes: async (id, notes) => {
     const t = tasks.find(t => t.id === id);
@@ -870,6 +921,8 @@ function applyTheme(name, persist = true) {
   currentTheme = name;
   ui.applyTheme(name);
   _updateThemePill(name);
+  // Re-apply custom accent AFTER theme (theme class would otherwise win)
+  if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
   if (currentUser) spawnCreatures(name);
   if (cfg.ambient && currentUser) { switchAmbient(name); }
   if (persist && currentUser) debounceSave();
@@ -988,6 +1041,108 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────
+
+// ── Offline session queue ─────────────────────────────────────────────
+const SESSION_QUEUE_KEY = 'fn_session_queue';
+
+function _queueFailedSession(session) {
+  try {
+    const q = JSON.parse(localStorage.getItem(SESSION_QUEUE_KEY) || '[]');
+    q.push({ ...session, queuedAt: Date.now() });
+    localStorage.setItem(SESSION_QUEUE_KEY, JSON.stringify(q));
+  } catch(e) { console.warn('Queue error:', e); }
+}
+
+async function _flushSessionQueue() {
+  if (!currentUser) return;
+  try {
+    const q = JSON.parse(localStorage.getItem(SESSION_QUEUE_KEY) || '[]');
+    if (!q.length) return;
+    let saved = 0;
+    const remaining = [];
+    for (const s of q) {
+      const { error } = await db.sessions.create(s.userId || currentUser.id, s.mode, s.duration, s.taskId, s.taskName);
+      if (error) remaining.push(s);
+      else saved++;
+    }
+    localStorage.setItem(SESSION_QUEUE_KEY, JSON.stringify(remaining));
+    if (saved > 0) {
+      _showToast(saved + ' sesión' + (saved > 1 ? 'es' : '') + ' sincronizada' + (saved > 1 ? 's' : '') + ' ✓', null, null);
+      ui.setSyncState('ok');
+    }
+    if (remaining.length > 0) ui.setSyncState('error');
+  } catch(e) { console.warn('Flush error:', e); }
+}
+
+function _getQueuedCount() {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_QUEUE_KEY) || '[]').length;
+  } catch { return 0; }
+}
+
+// ── Manual sync button ────────────────────────────────────────────────
+window.manualSync = async () => {
+  if (!currentUser) return;
+  const btn = document.getElementById('btn-sync');
+  if (btn) { btn.style.animation = 'spin 1s linear infinite'; }
+  ui.setSyncState('syncing');
+  try {
+    await _flushSessionQueue();
+    await loadTodayCount();
+    ui.setSyncState('ok');
+    _showToast('Sincronizado ✓', null, null);
+  } catch(e) {
+    ui.setSyncState('error');
+    _showToast('Error de sincronización', null, null);
+  } finally {
+    if (btn) { btn.style.animation = ''; }
+  }
+};
+
+// ── Cache clear on logout ─────────────────────────────────────────────
+function _clearSWCache() {
+  if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
+  const ch = new MessageChannel();
+  ch.port1.onmessage = () => { console.log('SW cache cleared'); };
+  navigator.serviceWorker.controller.postMessage('CLEAR_CACHE', [ch.port2]);
+}
+
+// ── Sync badge ───────────────────────────────────────────────────────
+function _updateSyncBadge() {
+  const badge = document.getElementById('sync-badge');
+  const count = _getQueuedCount();
+  if (badge) {
+    badge.textContent = count > 0 ? count : '';
+    badge.style.display = count > 0 ? 'flex' : 'none';
+  }
+  const btn = document.getElementById('btn-sync');
+  if (btn) btn.title = count > 0 ? count + ' sesiones pendientes de sincronizar' : 'Sincronizar ahora';
+}
+
+// Toast notification (bottom of screen)
+let _toastTimer = null;
+function _showToast(msg, actionLabel, actionFn) {
+  let toast = document.getElementById('fn-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'fn-toast';
+    toast.className = 'fn-toast';
+    document.body.appendChild(toast);
+  }
+  clearTimeout(_toastTimer);
+  toast.innerHTML = '<span class="fn-toast-msg"></span>' +
+    (actionLabel ? `<button class="fn-toast-btn">${actionLabel}</button>` : '');
+  toast.querySelector('.fn-toast-msg').textContent = msg;
+  if (actionLabel && actionFn) {
+    toast.querySelector('.fn-toast-btn').onclick = () => {
+      actionFn();
+      toast.classList.remove('fn-toast-show');
+    };
+  }
+  toast.classList.add('fn-toast-show');
+  _toastTimer = setTimeout(() => toast.classList.remove('fn-toast-show'), 4000);
+}
+
 function _getAccentColor() {
   return getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#4ecdc4';
 }
@@ -1020,13 +1175,23 @@ function _applyAutoTheme() {
 function _applyCustomAccent(hex) {
   if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return;
   cfg.customAccent = hex;
-  // Compute a lighter variant for accent2
   const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
   const lighten = v => Math.min(255, v + 40);
   const accent2 = '#' + [lighten(r),lighten(g),lighten(b)].map(v => v.toString(16).padStart(2,'0')).join('');
-  document.body.style.setProperty('--accent',  hex);
-  document.body.style.setProperty('--accent2', accent2);
-  document.body.style.setProperty('--timer-color', '#e8f4f8');
+  // Apply on :root via injected <style> — beats any CSS class on body
+  let tag = document.getElementById('_custom-accent-style');
+  if (!tag) {
+    tag = document.createElement('style');
+    tag.id = '_custom-accent-style';
+    document.head.appendChild(tag);
+  }
+  tag.textContent = `:root{--accent:${hex}!important;--accent2:${accent2}!important;}`;
+  // Mark active swatch
+  document.querySelectorAll('.ctheme-swatch').forEach(b => {
+    b.classList.toggle('active', b.style.background === hex || b.style.backgroundColor === hex);
+  });
+  const colorInput = document.getElementById('custom-color-input');
+  if (colorInput) colorInput.value = hex;
 }
 window.applyCustomAccent = (hex) => {
   _applyCustomAccent(hex);
@@ -1034,11 +1199,10 @@ window.applyCustomAccent = (hex) => {
 };
 window.clearCustomAccent = () => {
   cfg.customAccent = '';
-  document.body.style.removeProperty('--accent');
-  document.body.style.removeProperty('--accent2');
-  document.body.style.removeProperty('--timer-color');
+  const tag = document.getElementById('_custom-accent-style');
+  if (tag) tag.remove();
+  document.querySelectorAll('.ctheme-swatch').forEach(b => b.classList.remove('active'));
   debounceSave();
-  // Re-apply current theme tokens
   applyTheme(currentTheme, false);
 };
 

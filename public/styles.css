@@ -991,3 +991,40 @@ body.theme-mars {
   border-top: 1px solid rgba(255,255,255,.06);
   font-size: 11px; color: rgba(255,255,255,.3);
 }
+
+/* ── Toast notification ───────────────────────── */
+.fn-toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: rgba(20,28,42,.97); backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,.14); border-radius: 50px;
+  padding: 11px 18px; display: flex; align-items: center; gap: 14px;
+  font-size: 13px; color: var(--text); z-index: 8888;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+  opacity: 0; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+.fn-toast.fn-toast-show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1; pointer-events: all;
+}
+.fn-toast-msg { flex: 1; }
+.fn-toast-btn {
+  background: none; border: 1px solid rgba(255,255,255,.2);
+  color: var(--accent); border-radius: 20px; padding: 4px 12px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-body); transition: all .2s;
+}
+.fn-toast-btn:hover { background: rgba(255,255,255,.08); }
+
+/* ── Timer bounce on session complete ─────────── */
+@keyframes timerBounce {
+  0%   { transform: scale(1);    }
+  30%  { transform: scale(1.12); }
+  60%  { transform: scale(0.96); }
+  80%  { transform: scale(1.04); }
+  100% { transform: scale(1);    }
+}
+.timer-bounce { animation: timerBounce .6s cubic-bezier(.34,1.56,.64,1); }
+
+/* ── Sync button spin ─────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
