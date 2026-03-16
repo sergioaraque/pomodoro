@@ -1,5 +1,5 @@
 /**
- * app.js — FocusNature v2
+ * app.js — FocusNature v5
  * Punto de entrada principal. Conecta todos los módulos.
  */
 
@@ -54,27 +54,24 @@ initTimer({
     playSessionEnd(currentTheme);
     if (finishedMode === 'focus') {
       burstConfetti(_getAccentColor());
-      // Bounce the timer number
       const td = document.getElementById('timer-disp');
       if (td) {
         td.classList.add('timer-bounce');
         setTimeout(() => td.classList.remove('timer-bounce'), 600);
       }
     }
-    // System notification (fires even if tab is in background)
+    
     notifySessionEnd(finishedMode, getState().mode, getState().currentTaskName);
 
     if (currentUser) {
       ui.setSyncState('syncing');
       const { error } = await db.sessions.create(currentUser.id, finishedMode, durationMin, taskId, taskName);
       if (error) {
-        // Queue for retry — don't lose the session
         _queueFailedSession({ userId: currentUser.id, mode: finishedMode, duration: durationMin, taskId, taskName });
         ui.setSyncState('error');
         _showToast('Sin conexión — sesión guardada localmente', null, null);
       } else {
         ui.setSyncState('ok');
-        // Flush any pending sessions
         _flushSessionQueue();
       }
     }
@@ -95,7 +92,6 @@ initTimer({
       }
     }
     ui.setStartButtonText('Iniciar');
-    // Auto-start break if enabled
     if (cfg.autoBreak && finishedMode === 'focus') {
       setTimeout(() => window.toggleTimer(), 1200);
     }
@@ -106,70 +102,95 @@ initTimer({
 //  AUTH
 // ══════════════════════════════════════════════════════════════════════
 async function handleLogin(user) {
-  currentUser = user;
-
-  // Show app immediately — do this FIRST before any await
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('top-bar').style.display     = 'flex';
-  document.getElementById('app-main').style.display    = 'block';
-  document.getElementById('user-avatar').textContent   = user.email.charAt(0).toUpperCase();
-  document.getElementById('user-email-lbl').textContent = user.email;
-
-  // Greeting
-  const hour = new Date().getHours();
-  const greetings = {
-    morning:   ['Buenos días. El mejor momento para enfocarse.','Empieza el día con intención.','La mañana es tuya. Aprovéchala.'],
-    afternoon: ['Buenas tardes. A por la segunda mitad.','El momento de mantener el impulso.','Tarde productiva por delante.'],
-    evening:   ['Buenas noches. Un último esfuerzo.','La noche es silenciosa. Aprovéchala.','Concentración nocturna activa.'],
-  };
-  const period = hour < 13 ? 'morning' : hour < 20 ? 'afternoon' : 'evening';
-  const list = greetings[period];
-  const msg = list[Math.floor(Math.random() * list.length)];
-  const sub = document.getElementById('app-subtitle');
-  if (sub) {
-    sub.textContent = msg;
-    setTimeout(() => { const t = ui.getThemeSubtitle(currentTheme); if (sub.textContent === msg) sub.textContent = t; }, 4000);
-  }
-
-  // Load data — wrapped so a DB error never hides the app
-  try { await loadSettings(); } catch(e) { console.warn('loadSettings error:', e); }
-  try { await loadTasks();    } catch(e) { console.warn('loadTasks error:', e); }
-  try { await loadTodayCount(); } catch(e) { console.warn('loadTodayCount error:', e); }
-
-  // Flush any sessions that failed to save while offline
-  const queued = _getQueuedCount();
-  if (queued > 0) {
-    _showToast(queued + ' sesión' + (queued > 1 ? 'es pendientes' : ' pendiente') + ' — sincronizando…', null, null);
-    setTimeout(_flushSessionQueue, 1500);
-  }
-
-  // Load quick notes
   try {
-    const notes = await db.settings.loadQuickNotes(user.id);
-    const el = document.getElementById('quick-notes-area');
-    if (el && notes) el.value = notes;
-  } catch(e) { /* ignore */ }
+    currentUser = user;
 
-  spawnCreatures(currentTheme);
-  drawStars();
-  ui.renderTimer(getState());
-  ui.renderSessionDots(getState().sessionsDone);
-  ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
-  ui.setStartButtonText('Iniciar');
-  _updateSoundBtns(cfg.soundStyle || 'bells');
-  applyToDOM();
-  _updateNotifToggle(getNotificationPermission());
-  // Highlight current language button
-  const curLang = getLang();
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === curLang));
-  // Highlight custom accent swatch if set
-  if (cfg.customAccent) {
-    document.querySelectorAll('.ctheme-swatch').forEach(b => {
-      const bg = b.style.backgroundColor || b.style.background;
-      b.classList.toggle('active', bg === cfg.customAccent);
-    });
-    const ci = document.getElementById('custom-color-input');
-    if (ci) ci.value = cfg.customAccent;
+    // Mostrar app inmediatamente
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('top-bar').style.display     = 'flex';
+    document.getElementById('app-main').style.display    = 'block';
+    document.getElementById('user-avatar').textContent   = user.email.charAt(0).toUpperCase();
+    document.getElementById('user-email-lbl').textContent = user.email;
+
+    // Resetear UI
+    ui.resetUI();
+    
+    // Esperar a que el DOM esté listo
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Cargar datos en paralelo con manejo de errores individual
+    const [settingsResult, tasksResult, todayResult] = await Promise.allSettled([
+      loadSettings().catch(e => { console.warn('Settings error:', e); return null; }),
+      loadTasks().catch(e => { console.warn('Tasks error:', e); return null; }),
+      loadTodayCount().catch(e => { console.warn('Today count error:', e); return null; })
+    ]);
+
+    // Si settings fallaron, usar defaults
+    if (settingsResult.status === 'rejected') {
+      applyTheme('ocean', false);
+    }
+
+    // Flush sesiones pendientes
+    const queued = _getQueuedCount();
+    if (queued > 0) {
+      setTimeout(() => _flushSessionQueue(), 1500);
+    }
+
+    // Cargar notas rápidas
+    try {
+      const notes = await db.settings.loadQuickNotes(user.id);
+      const el = document.getElementById('quick-notes-area');
+      if (el && notes) el.value = notes;
+    } catch(e) { /* ignore */ }
+
+    // Inicializar todo
+    spawnCreatures(currentTheme);
+    drawStars();
+    ui.renderTimer(getState());
+    ui.renderSessionDots(getState().sessionsDone);
+    ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
+    ui.setStartButtonText('Iniciar');
+    
+    // Actualizar UI de idioma y sonido
+    _updateSoundBtns(cfg.soundStyle || 'bells');
+    applyToDOM();
+    _updateNotifToggle(getNotificationPermission());
+    
+    // Highlight current language
+    const curLang = getLang();
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === curLang));
+    
+    // Highlight custom accent
+    if (cfg.customAccent) {
+      document.querySelectorAll('.ctheme-swatch').forEach(b => {
+        const bg = b.style.backgroundColor || b.style.background;
+        b.classList.toggle('active', bg === cfg.customAccent);
+      });
+      const ci = document.getElementById('custom-color-input');
+      if (ci) ci.value = cfg.customAccent;
+    }
+
+    // Mostrar mensaje de bienvenida
+    _showWelcomeMessage(user.email);
+
+  } catch (err) {
+    console.error('Login error:', err);
+    ui.showAuthError('Error al cargar la aplicación. Por favor, recarga la página.');
+  }
+}
+
+function _showWelcomeMessage(email) {
+  const hour = new Date().getHours();
+  let msg = '';
+  if (hour < 12) msg = '¡Buenos días!';
+  else if (hour < 18) msg = '¡Buenas tardes!';
+  else msg = '¡Buenas noches!';
+  
+  const banner = document.getElementById('break-banner');
+  if (banner) {
+    banner.textContent = `${msg} Bienvenido/a de nuevo, ${email.split('@')[0]}`;
+    banner.className = 'break-banner visible';
+    setTimeout(() => banner.classList.remove('visible'), 4000);
   }
 }
 
@@ -180,7 +201,6 @@ function handleLogout() {
   todayCount   = 0;
   stopAmbient();
   _exitDeepFocus();
-  // Show auth, hide app
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('top-bar').style.display     = 'none';
   document.getElementById('app-main').style.display    = 'none';
@@ -188,6 +208,49 @@ function handleLogout() {
   ui.setCurrentTaskBadge(null);
   ui.renderTasks([], null, taskHandlers);
 }
+
+window.doLogout = async () => {
+  try {
+    stopAmbient();
+    if (window.timerInterval) clearInterval(window.timerInterval);
+    await db.auth.signOut();
+    
+    currentUser = null;
+    tasks = [];
+    activeTaskId = null;
+    todayCount = 0;
+    
+    const guestCfg = localStorage.getItem('fn_guest_cfg');
+    localStorage.clear();
+    if (guestCfg) localStorage.setItem('fn_guest_cfg', guestCfg);
+    
+    sessionStorage.clear();
+    
+    if ('indexedDB' in window) {
+      const databases = await indexedDB.databases?.() || [];
+      for (const db of databases) {
+        if (db.name?.includes('supabase') || db.name?.includes('focusnature')) {
+          indexedDB.deleteDatabase(db.name);
+        }
+      }
+    }
+    
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      const channel = new MessageChannel();
+      navigator.serviceWorker.controller.postMessage('CLEAR_CACHE', [channel.port2]);
+      await new Promise(resolve => {
+        channel.port1.onmessage = resolve;
+        setTimeout(resolve, 500);
+      });
+    }
+    
+    window.location.replace('/');
+    
+  } catch (e) {
+    console.warn('Logout error:', e);
+    window.location.replace('/');
+  }
+};
 
 // ── Auth form handlers ────────────────────────────────────────────────
 window.doLogin = async () => {
@@ -228,17 +291,6 @@ window.doRegister = async () => {
   else       ui.showAuthSuccess('¡Cuenta creada! Revisa tu correo y luego inicia sesión.');
 };
 
-window.doLogout = async () => {
-  try { await db.auth.signOut(); } catch (e) { console.warn('signOut error:', e); }
-  // Clear SW cache so next user gets fresh assets
-  _clearSWCache();
-  // Clear Supabase tokens
-  Object.keys(localStorage)
-    .filter(k => k.startsWith('sb-') || k.includes('supabase'))
-    .forEach(k => localStorage.removeItem(k));
-  window.location.replace('/');
-};
-
 window.doResetPassword = async () => {
   const email = (document.getElementById('reset-email')?.value || '').trim();
   if (!email) return ui.showAuthError('Introduce tu correo electrónico.');
@@ -258,7 +310,7 @@ window.doResetPassword = async () => {
   else       ui.showAuthSuccess('¡Listo! Revisa tu correo para restablecer tu contraseña.');
 };
 
-// ── Tab switcher (login / register / reset) ───────────────────────────
+// ── Tab switcher ─────────────────────────────────────────────────────
 window.showAuthTab = (tab) => {
   ui.clearAuthMessages();
   const tabs  = document.getElementById('auth-tabs');
@@ -270,20 +322,17 @@ window.showAuthTab = (tab) => {
   const btnLogin = document.getElementById('at-login');
   const btnReg   = document.getElementById('at-register');
 
-  // Hide/show tabs bar
   if (tabs) tabs.style.display = tab === 'reset' ? 'none' : '';
 
-  // Activate button
   if (btnLogin) btnLogin.classList.toggle('active', tab === 'login');
   if (btnReg)   btnReg.classList.toggle('active',   tab === 'register');
 
-  // Show correct form
   Object.entries(forms).forEach(([key, el]) => {
     if (el) el.style.display = key === tab ? 'block' : 'none';
   });
 };
 
-// ── Password strength indicator ───────────────────────────────────────
+// ── Password strength ─────────────────────────────────────────────────
 window.checkPasswordStrength = (val) => {
   const bar  = document.getElementById('pw-bar');
   const hint = document.getElementById('pw-hint');
@@ -436,7 +485,7 @@ window.toggleFullscreen = () => {
     document.exitFullscreen();
   }
 };
-// Update fullscreen button state on change
+
 document.addEventListener('fullscreenchange', () => {
   const btn = document.getElementById('btn-fullscreen');
   if (btn) btn.textContent = document.fullscreenElement ? '⊠' : '⛶';
@@ -497,7 +546,6 @@ window.onTaskDrop = async (e, targetId) => {
   const [moved] = tasks.splice(srcIdx, 1);
   tasks.splice(tgtIdx, 0, moved);
   renderTasks();
-  // Persist positions
   if (currentUser) {
     ui.setSyncState('syncing');
     const updates = tasks.map((t, i) => db.tasks.update(t.id, { position: i }));
@@ -533,11 +581,10 @@ const taskHandlers = {
   onDelete: async (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    // Soft-remove from UI immediately
     tasks = tasks.filter(t => t.id !== id);
     if (activeTaskId === id) { activeTaskId = null; clearTask(); ui.setCurrentTaskBadge(null); }
     renderTasks();
-    // Show undo toast
+    
     let undone = false;
     _showToast(
       (task.done ? '✓ ' : '') + (task.name.length > 28 ? task.name.slice(0,28)+'…' : task.name) + ' eliminada',
@@ -549,7 +596,7 @@ const taskHandlers = {
         renderTasks();
       }
     );
-    // Persist after 4s unless undone
+    
     setTimeout(async () => {
       if (undone) return;
       if (currentUser) {
@@ -571,13 +618,13 @@ const taskHandlers = {
   },
 };
 
-// ── Presets ───────────────────────────────────────────────────────────
 const PRESETS = {
   standard:  { name: 'Estándar',     focus: 25, short: 5,  long: 15, sessions: 4 },
   deep:      { name: 'Foco profundo',focus: 50, short: 10, long: 20, sessions: 3 },
   sprint:    { name: 'Sprint',       focus: 15, short: 3,  long: 10, sessions: 6 },
   ultralong: { name: 'Ultra largo',  focus: 90, short: 15, long: 30, sessions: 2 },
 };
+
 window.applyPreset = (key) => {
   const p = PRESETS[key]; if (!p) return;
   cfg.focus = p.focus; cfg.short = p.short; cfg.long = p.long; cfg.sessions = p.sessions;
@@ -586,7 +633,6 @@ window.applyPreset = (key) => {
   setMode(getState().mode);
   ui.renderSessionDots(getState().sessionsDone);
   debounceSave();
-  // Highlight active preset button
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('preset-' + key);
   if (btn) btn.classList.add('active');
@@ -624,7 +670,7 @@ async function loadTodayCount() {
 
 function _checkStreakRisk(focusData) {
   const hour = new Date().getHours();
-  if (hour < 17 || todayCount > 0) return; // Only warn after 5pm with 0 today
+  if (hour < 17 || todayCount > 0) return;
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); yesterday.setHours(0,0,0,0);
   const today = new Date(); today.setHours(0,0,0,0);
   const hadYesterday = focusData.some(s => {
@@ -641,7 +687,6 @@ function _checkStreakRisk(focusData) {
   }
 }
 
-// ── Export CSV ───────────────────────────────────────────────────────
 window.exportCSV = () => {
   if (!currentUser) return;
   db.sessions.loadRecent(currentUser.id).then(({ data }) => {
@@ -661,7 +706,6 @@ window.exportCSV = () => {
   });
 };
 
-// ── Change password (inline, for logged-in users) ─────────────────────
 window.doChangePassword = async () => {
   const newPass  = (document.getElementById('cp-new')?.value  || '').trim();
   const confPass = (document.getElementById('cp-conf')?.value || '').trim();
@@ -688,9 +732,9 @@ function _cpMsg(msg, type) {
   setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-// ── History filter state ─────────────────────────────────────────────
 let _allHistoryItems = [];
 let _filteredTaskName = '';
+
 window.filterHistory = (val) => {
   _filteredTaskName = val.toLowerCase().trim();
   const filtered = _filteredTaskName
@@ -703,13 +747,13 @@ window.filterHistory = (val) => {
     if (!error) loadStats();
   });
 };
+
 function _resetHistoryFilter() {
   _filteredTaskName = '';
   const el = document.getElementById('history-filter');
   if (el) el.value = '';
 }
 
-// ── Quick notes (global, persisted in user_settings) ──────────────────
 let _notesTimer = null;
 window.onQuickNotesChange = (val) => {
   clearTimeout(_notesTimer);
@@ -721,12 +765,10 @@ window.onQuickNotesChange = (val) => {
 async function loadStats() {
   if (!currentUser) return;
 
-  // Show loading state
   ui.setSyncState('syncing');
   _setStatsLoading(true);
 
   try {
-    // Add timeout so it never hangs forever
     const timeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Tiempo de espera agotado')), 12000)
     );
@@ -781,7 +823,6 @@ async function loadStats() {
   });
   ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
 
-  // Weekly challenge
     _renderWeeklyChallenge(focusData);
     ui.setSyncState('ok');
   } catch (err) {
@@ -794,7 +835,6 @@ async function loadStats() {
 }
 
 function _setStatsLoading(loading) {
-  // Show/hide a skeleton loading state in each stat card
   const statIds = ['stat-total','stat-today','stat-streak','stat-hours'];
   statIds.forEach(id => {
     const el = document.getElementById(id);
@@ -808,7 +848,6 @@ function _setStatsLoading(loading) {
       el.style.animation = '';
     }
   });
-  // Show loading in history list
   const hist = document.getElementById('history-list');
   if (loading && hist && hist.children.length <= 1) {
     hist.innerHTML = '<div class="empty-msg" style="opacity:.5">Cargando historial…</div>';
@@ -822,7 +861,6 @@ function _showStatsError(msg) {
   }
 }
 
-// ── Command palette registration ─────────────────────────────────────
 function _registerCommands() {
   const T = (tab) => () => window.switchTab(tab, null);
   const themes = [
@@ -839,23 +877,23 @@ function _registerCommands() {
     swamp:'Ciénaga',cave:'Cueva',underarctic:'Ártico sub.',savanna:'Sabana',
     alps:'Alpes',festival:'Festival',jungle:'Selva',mars:'Marte',
   };
-  // Navigation
+  
   [['timer','⏱'],['tasks','✓'],['stats','📊'],['settings','⚙️'],['notes','📝']].forEach(([tab,icon]) => {
     registerCommand({ id:'tab_'+tab, label:'Ir a '+tab.charAt(0).toUpperCase()+tab.slice(1), icon, section:'Navegación', action: T(tab) });
   });
-  // Timer
+  
   registerCommand({ id:'start',  label:'Iniciar / Pausar timer', icon:'▶', section:'Timer', action: window.toggleTimer });
   registerCommand({ id:'reset',  label:'Reiniciar timer',        icon:'↺', section:'Timer', action: window.resetTimer });
   registerCommand({ id:'skip',   label:'Saltar sesión',          icon:'⏭', section:'Timer', action: window.skipSession });
-  // Themes
+  
   themes.forEach(([key, emoji]) => {
     registerCommand({ id:'theme_'+key, label:'Tema: '+THEME_NAMES[key], icon:emoji, section:'Temas', action: () => applyTheme(key) });
   });
-  // Presets
+  
   [['standard','Estándar 25/5'],['deep','Foco profundo 50/10'],['sprint','Sprint 15/3'],['ultralong','Ultra 90/15']].forEach(([k,l]) => {
     registerCommand({ id:'preset_'+k, label:'Preset: '+l, icon:'⚡', section:'Presets', action: () => window.applyPreset(k) });
   });
-  // Fullscreen
+  
   registerCommand({ id:'fullscreen', label:'Pantalla completa', icon:'⛶', section:'App', action: window.toggleFullscreen });
   registerCommand({ id:'deepfocus',  label:'Activar foco profundo', icon:'🎯', section:'App', action: window.toggleDeepFocus });
 }
@@ -863,7 +901,6 @@ function _registerCommands() {
 function _renderWeeklyChallenge(focusData) {
   const el = document.getElementById('weekly-challenge');
   if (!el) return;
-  // Find best day last week
   const now = new Date();
   const startOfLastWeek = new Date(now);
   startOfLastWeek.setDate(now.getDate() - now.getDay() - 7);
@@ -880,12 +917,11 @@ function _renderWeeklyChallenge(focusData) {
   });
   const bestDay = Math.max(0, ...Object.values(dayCount));
   const weekTotal = lastWeekSessions.length;
-  // This week
   const startOfWeek = new Date(now);
   startOfWeek.setDate(now.getDate() - now.getDay());
   startOfWeek.setHours(0,0,0,0);
   const thisWeek = focusData.filter(s => new Date(s.completed_at) >= startOfWeek);
-  // Generate challenge
+  
   let challenge, progress, target;
   const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
   const isMonday = now.getDay() === 1;
@@ -921,7 +957,6 @@ function applyTheme(name, persist = true) {
   currentTheme = name;
   ui.applyTheme(name);
   _updateThemePill(name);
-  // Re-apply custom accent AFTER theme (theme class would otherwise win)
   if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
   if (currentUser) spawnCreatures(name);
   if (cfg.ambient && currentUser) { switchAmbient(name); }
@@ -929,12 +964,10 @@ function applyTheme(name, persist = true) {
 }
 window.setTheme = applyTheme;
 
-// ── Theme picker dropdown ─────────────────────────────────────────────
 window.toggleThemePicker = () => {
   const grid = document.getElementById('theme-picker-grid');
   if (!grid) return;
   const open = grid.classList.toggle('open');
-  // Close when clicking outside
   if (open) {
     setTimeout(() => {
       document.addEventListener('click', _closePicker, { once: true });
@@ -950,7 +983,6 @@ window.pickTheme = (name) => {
   _closePicker();
 };
 
-// ── Update theme pill label ───────────────────────────────────────────
 const THEME_META = {
   ocean:    { emoji: '🌊', name: 'Mar'      },
   meadow:   { emoji: '🌿', name: 'Prado'    },
@@ -980,7 +1012,6 @@ function _updateThemePill(name) {
   const label = document.getElementById('theme-pill-name');
   if (emoji) emoji.textContent = meta.emoji;
   if (label) label.textContent = meta.name;
-  // Update active button
   document.querySelectorAll('.tpick').forEach(b => b.classList.remove('active'));
   const active = document.getElementById('tbtn-' + name);
   if (active) active.classList.add('active');
@@ -1024,7 +1055,6 @@ window.skipSession = () => skipSession();
 //  KEYBOARD SHORTCUTS
 // ══════════════════════════════════════════════════════════════════════
 document.addEventListener('keydown', e => {
-  // Cmd/Ctrl+K — command palette (works always, including in inputs)
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     if (isPaletteOpen()) closePalette();
@@ -1041,8 +1071,6 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────
-
-// ── Offline session queue ─────────────────────────────────────────────
 const SESSION_QUEUE_KEY = 'fn_session_queue';
 
 function _queueFailedSession(session) {
@@ -1080,7 +1108,6 @@ function _getQueuedCount() {
   } catch { return 0; }
 }
 
-// ── Manual sync button ────────────────────────────────────────────────
 window.manualSync = async () => {
   if (!currentUser) return;
   const btn = document.getElementById('btn-sync');
@@ -1099,7 +1126,6 @@ window.manualSync = async () => {
   }
 };
 
-// ── Cache clear on logout ─────────────────────────────────────────────
 function _clearSWCache() {
   if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
   const ch = new MessageChannel();
@@ -1107,7 +1133,6 @@ function _clearSWCache() {
   navigator.serviceWorker.controller.postMessage('CLEAR_CACHE', [ch.port2]);
 }
 
-// ── Sync badge ───────────────────────────────────────────────────────
 function _updateSyncBadge() {
   const badge = document.getElementById('sync-badge');
   const count = _getQueuedCount();
@@ -1119,7 +1144,6 @@ function _updateSyncBadge() {
   if (btn) btn.title = count > 0 ? count + ' sesiones pendientes de sincronizar' : 'Sincronizar ahora';
 }
 
-// Toast notification (bottom of screen)
 let _toastTimer = null;
 function _showToast(msg, actionLabel, actionFn) {
   let toast = document.getElementById('fn-toast');
@@ -1147,7 +1171,6 @@ function _getAccentColor() {
   return getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#4ecdc4';
 }
 
-// ── Task badge with estimate ─────────────────────────────────────────
 function _updateTaskBadge(task) {
   if (!task) { ui.setCurrentTaskBadge(null); return; }
   const remaining = Math.max(0, (task.estimate || 0) - (task.pomodoros || 0));
@@ -1158,27 +1181,25 @@ function _updateTaskBadge(task) {
   ui.setCurrentTaskBadge(task.name + suffix);
 }
 
-// ── Auto-theme by hour ───────────────────────────────────────────────
 function _applyAutoTheme() {
   const h = new Date().getHours();
   let theme;
-  if      (h >= 6  && h < 9)  theme = 'meadow';    // amanecer
-  else if (h >= 9  && h < 14) theme = 'mountain';   // mañana
-  else if (h >= 14 && h < 17) theme = 'ocean';      // tarde
-  else if (h >= 17 && h < 20) theme = 'savanna';    // atardecer
-  else if (h >= 20 && h < 23) theme = 'forest';     // noche
-  else                         theme = 'space';      // madrugada
-  applyTheme(theme, false);   // false = no guardar, solo visual
+  if      (h >= 6  && h < 9)  theme = 'meadow';
+  else if (h >= 9  && h < 14) theme = 'mountain';
+  else if (h >= 14 && h < 17) theme = 'ocean';
+  else if (h >= 17 && h < 20) theme = 'savanna';
+  else if (h >= 20 && h < 23) theme = 'forest';
+  else                         theme = 'space';
+  applyTheme(theme, false);
 }
 
-// ── Custom accent color ──────────────────────────────────────────────
 function _applyCustomAccent(hex) {
   if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return;
   cfg.customAccent = hex;
   const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
   const lighten = v => Math.min(255, v + 40);
   const accent2 = '#' + [lighten(r),lighten(g),lighten(b)].map(v => v.toString(16).padStart(2,'0')).join('');
-  // Apply on :root via injected <style> — beats any CSS class on body
+  
   let tag = document.getElementById('_custom-accent-style');
   if (!tag) {
     tag = document.createElement('style');
@@ -1186,7 +1207,7 @@ function _applyCustomAccent(hex) {
     document.head.appendChild(tag);
   }
   tag.textContent = `:root{--accent:${hex}!important;--accent2:${accent2}!important;}`;
-  // Mark active swatch
+  
   document.querySelectorAll('.ctheme-swatch').forEach(b => {
     b.classList.toggle('active', b.style.background === hex || b.style.backgroundColor === hex);
   });
@@ -1206,20 +1227,16 @@ window.clearCustomAccent = () => {
   applyTheme(currentTheme, false);
 };
 
-// ── Language switcher ─────────────────────────────────────────────────
 window.switchLang = (code) => {
   setLang(code);
   applyToDOM();
   debounceSave();
-  // Update active lang button
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === code));
 };
 
-// ── Notifications toggle ──────────────────────────────────────────────
 window.toggleNotifications = async () => {
   const perm = getNotificationPermission();
   if (perm === 'granted') {
-    // Can't revoke programmatically — show browser instructions
     alert('Para desactivar las notificaciones, usa la configuración de tu navegador.');
     return;
   }
@@ -1236,7 +1253,6 @@ function _updateNotifToggle(perm) {
 // ══════════════════════════════════════════════════════════════════════
 (async () => {
   try {
-    // Validate Supabase config
     if (!window.supabase) {
       throw new Error('Supabase no cargó. Comprueba tu conexión a internet.');
     }
@@ -1244,55 +1260,58 @@ function _updateNotifToggle(perm) {
       throw new Error('Faltan las credenciales de Supabase. Configura el archivo .env del servidor.');
     }
 
-    // Initialize Supabase
     const { createClient } = window.supabase;
     sb = createClient(window.__SUPABASE_URL__, window.__SUPABASE_ANON__);
     db.initDb(sb);
     initAmbient();
 
-    // Background visuals
     drawStars();
     window.addEventListener('resize', drawStars);
 
-    // Auto-theme by hour (if enabled and no saved theme preference)
     if (cfg.autoTheme) _applyAutoTheme();
     ui.applyTheme('ocean');
     spawnCreatures('ocean');
 
-    // Apply language
     applyToDOM();
 
-    // Register service worker (PWA)
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+      }
+      
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            if (confirm('Nueva versión disponible. ¿Recargar para actualizar?')) {
+              window.location.reload();
+            }
+          }
+        });
+      });
     }
 
-    // Check notification permission state on boot
     _updateNotifToggle(getNotificationPermission());
 
-    // Register command palette commands
     _registerCommands();
     ui.renderTimer(getState());
     ui.renderDailyGoalRing(0, cfg.dailyGoal);
 
-    // Open register tab if linked from guest page
     if (window.location.hash === '#register') {
       window.showAuthTab('register');
     }
 
-    // Auth state — this is the single source of truth
-    // SIGNED_IN fires when a user logs in (or already has a session on load)
-    // SIGNED_OUT fires on logout
     db.auth.onStateChange(async (event, session) => {
       if (event === 'SIGNED_IN'  && session?.user) await handleLogin(session.user);
       if (event === 'SIGNED_OUT')                  handleLogout();
     });
 
-    // Check for existing session — triggers onStateChange above if present
     await db.auth.getSession();
 
   } catch (err) {
-    // Show the error in the auth card (which is already visible)
     console.error('FocusNature boot error:', err);
     ui.showAuthError('⚠️ ' + err.message);
   }

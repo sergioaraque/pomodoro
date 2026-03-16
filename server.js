@@ -6,6 +6,7 @@
  *   /guest     → Pomodoro sin registro (guest.html)
  *   /app       → App completa con login (index.html, con inyección de Supabase)
  *   /assets    → CSS, JS, etc. (express.static)
+ *   /clean-cache → Página para limpiar caché manualmente
  *
  * Configuración — crea un .env en la raíz (copia de .env.example):
  *   SUPABASE_URL=https://TU-PROYECTO.supabase.co
@@ -75,7 +76,9 @@ function buildAppHtml() {
 function send(res, html) {
   res
     .setHeader('Content-Type', 'text/html; charset=utf-8')
-    .setHeader('Cache-Control', 'no-store')
+    .setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0')
+    .setHeader('Pragma', 'no-cache')
+    .setHeader('Expires', '0')
     .send(html);
 }
 
@@ -83,15 +86,37 @@ function send(res, html) {
 const express = require('express');
 const app     = express();
 
-// Sirve CSS/JS/assets — { index: false } para que index.html
-// nunca se sirva en crudo (siempre pasa por buildAppHtml).
-// Explicitly set JS MIME type — browsers reject ES modules without application/javascript
-const serveStatic = require('serve-static');
+// Middleware global anti-caché
+app.use((req, res, next) => {
+  // No cachear NUNCA las rutas de la app
+  if (req.path === '/app' || req.path === '/guest' || req.path === '/') {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    res.setHeader('Vary', '*');
+  }
+  
+  // Para assets, usar cache-control condicional
+  if (req.path.match(/\.(css|js|png|jpg|svg|ico)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 horas
+    res.setHeader('Vary', 'Accept-Encoding');
+  }
+  
+  next();
+});
+
+// Sirve CSS/JS/assets
 app.use(express.static(PUBLIC, {
   index: false,
+  immutable: true,
+  maxAge: '30d',
   setHeaders: (res, path) => {
     if (path.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    }
+    if (path.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store');
     }
   }
 }));
@@ -103,7 +128,7 @@ app.get('/', (_req, res) => {
   catch { res.status(500).send('Error cargando la landing'); }
 });
 
-// Pomodoro invitado — sin inyección de Supabase
+// Pomodoro invitado
 app.get('/guest', (_req, res) => {
   try   { send(res, readHtml('guest.html')); }
   catch { res.status(500).send('Error cargando el modo invitado'); }
@@ -118,6 +143,12 @@ app.get('/app', (_req, res) => {
   }
 });
 
+// Ruta para limpiar caché manualmente
+app.get('/clean-cache', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(PUBLIC, 'clean-cache.html'));
+});
+
 // Fallback: cualquier ruta desconocida → landing
 app.get('*', (_req, res) => {
   try   { send(res, readHtml('landing.html')); }
@@ -130,6 +161,7 @@ app.listen(PORT, () => {
   console.log(`   Landing:  http://localhost:${PORT}/`);
   console.log(`   Invitado: http://localhost:${PORT}/guest`);
   console.log(`   App:      http://localhost:${PORT}/app`);
+  console.log(`   Clean cache: http://localhost:${PORT}/clean-cache`);
   console.log(`   Supabase: ${SUPABASE_URL}`);
   console.log(`   Config:   ${fs.existsSync(envPath) ? '.env' : 'variables de entorno'}\n`);
 });

@@ -1,10 +1,8 @@
 /**
  * db.js — Capa de acceso a datos (Supabase)
  * Todas las operaciones con la base de datos están aquí.
- * El resto de módulos importan funciones de este archivo.
  */
 
-/** @type {import('@supabase/supabase-js').SupabaseClient} */
 let _sb = null;
 
 export function initDb(supabaseClient) {
@@ -68,7 +66,7 @@ export const tasks = {
   update: async (id, fields) => {
     const { error } = await _sb
       .from('tasks')
-      .update(fields)
+      .update({ ...fields, updated_at: new Date().toISOString() })
       .eq('id', id);
     return { error };
   },
@@ -84,14 +82,6 @@ export const tasks = {
 
 // ─── POMODORO SESSIONS ────────────────────────
 export const sessions = {
-  /**
-   * Registra una sesión completada.
-   * @param {string} userId
-   * @param {'focus'|'short'|'long'} mode
-   * @param {number} durationMin
-   * @param {string|null} taskId
-   * @param {string|null} taskName
-   */
   create: async (userId, mode, durationMin, taskId, taskName) => {
     const { error } = await _sb
       .from('pomodoro_sessions')
@@ -113,7 +103,6 @@ export const sessions = {
     return { error };
   },
 
-  /** Carga sesiones de enfoque para métricas (máx. 500) */
   loadFocus: async (userId) => {
     const { data, error } = await _sb
       .from('pomodoro_sessions')
@@ -125,7 +114,6 @@ export const sessions = {
     return { data: data || [], error };
   },
 
-  /** Carga las últimas 50 sesiones de todos los modos para el historial */
   loadRecent: async (userId) => {
     const { data, error } = await _sb
       .from('pomodoro_sessions')
@@ -135,4 +123,35 @@ export const sessions = {
       .limit(50);
     return { data: data || [], error };
   },
+};
+
+// ─── CACHE UTILITIES ──────────────────────────
+export const cache = {
+  clear: async () => {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      for (const key of keys) {
+        if (key.includes('supabase') || key.includes('focusnature')) {
+          await caches.delete(key);
+        }
+      }
+    }
+    
+    if ('indexedDB' in window) {
+      const databases = await indexedDB.databases?.() || [];
+      for (const db of databases) {
+        if (db.name?.includes('supabase') || db.name?.includes('focusnature')) {
+          indexedDB.deleteDatabase(db.name);
+        }
+      }
+    }
+  },
+  
+  hasData: async () => {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      return keys.some(k => k.includes('focusnature'));
+    }
+    return false;
+  }
 };

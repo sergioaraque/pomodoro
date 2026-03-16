@@ -1,107 +1,132 @@
 /**
- * sw.js — Service Worker de FocusNature
- *
- * Estrategia: Network-first con fallback a caché.
- * - JS/CSS: siempre intenta la red primero, actualiza la caché, usa fallback si offline
- * - Navegación: network-first, fallback a /app si offline
- * - Supabase/API: nunca interceptar
- *
- * Esto garantiza que los usuarios siempre reciben el código más reciente
- * cuando tienen conexión, y pueden usar la app offline si ya la visitaron.
+ * sw.js — Service Worker con estrategia de caché mejorada
+ * Versión: v5 (incrementar para forzar actualización global)
  */
 
-const CACHE = 'focusnature-v2';
-const STATIC = [
-  '/styles.css',
+const CACHE_NAME = 'focusnature-v5';
+const STATIC_ASSETS = [
+  '/',
+  '/guest',
   '/manifest.json',
+  '/styles.css',
   '/src/js/app.js',
   '/src/js/config.js',
-  '/src/js/ui.js',
   '/src/js/timer.js',
-  '/src/js/sound.js',
-  '/src/js/ambient.js',
-  '/src/js/creatures.js',
-  '/src/js/confetti.js',
   '/src/js/db.js',
-  '/src/js/notifications.js',
-  '/src/js/i18n.js',
+  '/src/js/ui.js',
+  '/src/js/sound.js',
+  '/src/js/creatures.js',
+  '/src/js/ambient.js',
+  '/src/js/confetti.js',
   '/src/js/commands.js',
+  '/src/js/i18n.js',
+  '/src/js/notifications.js',
+  'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@400;600&family=Nunito:wght@300;400;600&display=swap',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js'
 ];
 
-// ── Install: pre-cache static assets ─────────────────────────────────
-self.addEventListener('install', e => {
-  self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE).then(c => {
-      // addAll but don't fail install if one resource 404s
-      return Promise.allSettled(STATIC.map(url => c.add(url)));
-    })
+// Archivos que NUNCA deben cachearse (dinámicos)
+const NEVER_CACHE = [
+  '/app',
+  '/index.html',
+  /^.*\/app$/
+];
+
+// Instalación: cachear assets estáticos
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(STATIC_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
-// ── Activate: delete old caches ───────────────────────────────────────
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+// Activación: limpiar caches antiguos
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    Promise.all([
+      caches.keys().then(keys => 
+        Promise.all(
+          keys.filter(key => key !== CACHE_NAME)
+              .map(key => caches.delete(key))
+        )
+      ),
+      self.clients.claim() // Tomar control inmediato
+    ])
   );
 });
 
-// ── Message: force refresh cache on demand ────────────────────────────
-self.addEventListener('message', e => {
-  if (e.data === 'CLEAR_CACHE') {
-    caches.delete(CACHE).then(() => {
-      e.ports[0]?.postMessage('CACHE_CLEARED');
+// Estrategia: network-first para HTML, stale-while-revalidate para assets
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  
+  // No cachear solicitudes a Supabase
+  if (url.hostname.includes('supabase')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // No cachear archivos dinámicos
+  if (NEVER_CACHE.some(pattern => {
+    if (pattern instanceof RegExp) return pattern.test(url.pathname);
+    return url.pathname === pattern;
+  })) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          return response;
+        })
+        .catch(() => {
+          return caches.match('/offline.html');
+        })
+    );
+    return;
+  }
+
+  // Para assets estáticos: cache-first con revalidación en segundo plano
+  if (event.request.url.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?)$/)) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(async cache => {
+        const cachedResponse = await cache.match(event.request);
+        const fetchPromise = fetch(event.request)
+          .then(networkResponse => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        
+        return cachedResponse || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Para navegación (páginas HTML): network-first
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          return caches.match(event.request)
+            .then(cached => {
+              if (cached) return cached;
+              return caches.match('/');
+            });
+        })
+    );
+    return;
+  }
+
+  // Para todo lo demás: network-first
+  event.respondWith(
+    fetch(event.request)
+      .catch(() => caches.match(event.request))
+  );
+});
+
+// Mensajes para limpiar caché manualmente
+self.addEventListener('message', event => {
+  if (event.data === 'CLEAR_CACHE') {
+    caches.delete(CACHE_NAME).then(() => {
+      event.ports[0].postMessage('CACHE_CLEARED');
     });
   }
-  if (e.data === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
-// ── Fetch: network-first for everything except Supabase ───────────────
-self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-
-  // Never intercept Supabase, external fonts, or CDN calls
-  if (
-    url.hostname.includes('supabase') ||
-    url.hostname.includes('googleapis') ||
-    url.hostname.includes('gstatic') ||
-    url.hostname.includes('jsdelivr') ||
-    url.hostname.includes('cdnjs')
-  ) return;
-
-  // Navigation requests: network-first, fallback to /app
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request)
-        .then(res => {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-          return res;
-        })
-        .catch(() => caches.match('/app') || caches.match('/'))
-    );
-    return;
-  }
-
-  // Static assets: network-first, update cache, fallback to cache
-  if (STATIC.some(path => url.pathname === path || url.pathname.startsWith('/src/') || url.pathname.startsWith('/icons/'))) {
-    e.respondWith(
-      fetch(e.request)
-        .then(res => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
-          }
-          return res;
-        })
-        .catch(() => caches.match(e.request))
-    );
-    return;
-  }
-
-  // Everything else: network only (don't cache dynamic content)
 });

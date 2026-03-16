@@ -21,15 +21,17 @@ export function shakeAuthCard() {
   const card = document.querySelector('.auth-card');
   if (!card) return;
   card.classList.remove('auth-shake');
-  void card.offsetWidth; // force reflow
+  void card.offsetWidth;
   card.classList.add('auth-shake');
   card.addEventListener('animationend', () => card.classList.remove('auth-shake'), { once: true });
 }
+
 export function showAuthSuccess(msg) {
   $('auth-ok').textContent = msg;
   $('auth-ok').style.display  = 'block';
   $('auth-err').style.display = 'none';
 }
+
 export function clearAuthMessages() {
   $('auth-err').style.display = 'none';
   $('auth-ok').style.display  = 'none';
@@ -53,18 +55,15 @@ export function setAuthButtonLoading(btn, loading, defaultText) {
 //  APP SHELL
 // ══════════════════════════════════════════════
 export function showApp(user) {
-  // Hide auth screen
   const authEl = $('auth-screen');
   authEl.style.opacity = '0';
   authEl.style.transition = 'opacity 0.25s ease';
   setTimeout(() => { authEl.style.display = 'none'; }, 260);
 
-  // Show top bar with fade-in
   const topBar = $('top-bar');
   topBar.style.display = 'flex';
   requestAnimationFrame(() => { topBar.style.opacity = '1'; });
 
-  // Show app with fade-in
   const appEl = $('app-main');
   appEl.style.display = 'block';
   requestAnimationFrame(() => { appEl.style.opacity = '1'; });
@@ -74,7 +73,6 @@ export function showApp(user) {
 }
 
 export function hideApp() {
-  // Reset app opacity for next login fade-in
   const appEl = $('app-main');
   const topBar = $('top-bar');
   appEl.style.opacity  = '0';
@@ -82,7 +80,6 @@ export function hideApp() {
   appEl.style.display  = 'none';
   topBar.style.display = 'none';
 
-  // Show auth screen immediately
   const authEl = $('auth-screen');
   authEl.style.display  = 'flex';
   authEl.style.opacity  = '0';
@@ -90,10 +87,7 @@ export function hideApp() {
   requestAnimationFrame(() => { authEl.style.opacity = '1'; });
 }
 
-export function hideLoading() {
-  // No-op: loading screen removed. Login form is visible immediately.
-  // Auth state is handled by onAuthStateChange → showApp / hideApp.
-}
+export function hideLoading() {}
 
 // ══════════════════════════════════════════════
 //  SYNC DOT
@@ -113,13 +107,53 @@ export function setSyncState(state) {
 }
 
 // ══════════════════════════════════════════════
+//  RESET UI
+// ══════════════════════════════════════════════
+export function resetUI() {
+  const timerDisp = document.getElementById('timer-disp');
+  if (timerDisp) timerDisp.textContent = '25:00';
+  
+  const pbar = document.getElementById('pbar');
+  if (pbar) pbar.style.width = '100%';
+  
+  const modeLbl = document.getElementById('mode-lbl');
+  if (modeLbl) modeLbl.textContent = 'Sesión de enfoque';
+  
+  const startBtn = document.getElementById('start-btn');
+  if (startBtn) startBtn.textContent = 'Iniciar';
+  
+  const tasksList = document.getElementById('tasks-list');
+  if (tasksList) tasksList.innerHTML = '<div class="empty-msg">Cargando…</div>';
+  
+  const curTask = document.getElementById('cur-task-txt');
+  if (curTask) curTask.textContent = 'Sin tarea seleccionada';
+  
+  const sdots = document.getElementById('sdots');
+  if (sdots) sdots.innerHTML = '';
+  
+  const historyList = document.getElementById('history-list');
+  if (historyList) historyList.innerHTML = '<div class="empty-msg">Sin sesiones aún</div>';
+  
+  const statIds = ['stat-total', 'stat-today', 'stat-streak', 'stat-hours'];
+  statIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '0';
+  });
+  
+  const goalRing = document.getElementById('goal-ring');
+  if (goalRing) goalRing.innerHTML = '';
+  
+  hideDeepFocusOverlay();
+  applyTheme('ocean');
+}
+
+// ══════════════════════════════════════════════
 //  TABS
 // ══════════════════════════════════════════════
 export function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   $('tab-' + name).classList.add('active');
-  // Highlight the clicked button
   document.querySelectorAll('.tab-btn').forEach(b => {
     if (b.dataset.tab === name) b.classList.add('active');
   });
@@ -186,23 +220,16 @@ const MODE_LABELS = {
   long:  'Pausa larga — descansa bien',
 };
 
-/**
- * Actualiza toda la UI del temporizador a partir del estado del timer.
- * @param {{ mode, secondsLeft, totalSeconds, sessionsDone }} timerState
- */
 export function renderTimer(timerState) {
   const { mode, secondsLeft, totalSeconds, sessionsDone } = timerState;
 
-  // Display
   const m = Math.floor(secondsLeft / 60);
   const s = secondsLeft % 60;
   $('timer-disp').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
-  // Progress bar
   const pct = totalSeconds > 0 ? (secondsLeft / totalSeconds * 100) : 0;
   $('pbar').style.width = pct + '%';
 
-  // Mode classes
   const disp = $('timer-disp');
   const pbar = $('pbar');
   disp.className = 'timer-display';
@@ -218,7 +245,6 @@ export function renderTimer(timerState) {
     pbar.classList.add('lbreak');
   }
 
-  // Break notification banner
   const banner = $('break-banner');
   if (mode === 'short') {
     banner.textContent = '🌿 ¡Buen trabajo! Tómate una pausa corta.';
@@ -232,7 +258,6 @@ export function renderTimer(timerState) {
     banner.classList.remove('visible');
   }
 
-  // Session dots
   renderSessionDots(sessionsDone);
 }
 
@@ -263,11 +288,6 @@ function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/**
- * @param {Array}       tasks
- * @param {string|null} activeTaskId
- * @param {{ onFocus, onToggle, onDelete }} handlers
- */
 export function renderTasks(tasks, activeTaskId, handlers) {
   const list = $('tasks-list');
 
@@ -321,7 +341,6 @@ export function renderTasks(tasks, activeTaskId, handlers) {
     </div>`;
   }).join('');
 
-  // Delegated events — un solo listener para toda la lista
   list.onclick = e => {
     const el     = e.target.closest('[data-action]');
     if (!el) return;
@@ -339,7 +358,6 @@ export function renderTasks(tasks, activeTaskId, handlers) {
     }
   };
 
-  // Save notes on blur (debounced)
   let notesTimer = null;
   list.oninput = e => {
     const ta = e.target.closest('[data-action="notes-input"]');
@@ -359,10 +377,6 @@ export function clearTaskInput() {
 }
 
 // ══════════════════════════════════════════════
-//  SETTINGS UI (extendido — ver al final del archivo)
-// ══════════════════════════════════════════════
-
-// ══════════════════════════════════════════════
 //  STATS UI
 // ══════════════════════════════════════════════
 export function renderStats({ total, today, streak, hours, weekData, heatmapData, historyItems, dailyGoal, onDeleteHistory }) {
@@ -380,11 +394,10 @@ function _buildWeekChart(counts) {
   const wrap = $('week-chart');
   wrap.innerHTML = '';
   const labels  = ['L','M','X','J','V','S','D'];
-  const today   = new Date().getDay(); // 0=Sun
+  const today   = new Date().getDay();
   const maxC    = Math.max(...counts, 1);
 
   counts.forEach((count, i) => {
-    // i=0 → 6 days ago, i=6 → today
     const daysAgo   = 6 - i;
     const dayOfWeek = ((today - daysAgo) % 7 + 7) % 7;
     const col = document.createElement('div');
@@ -440,7 +453,6 @@ function _buildHistoryList(sessions, onDelete) {
   };
 }
 
-// Update history list only (for filter)
 export function updateHistoryList(items, onDelete) {
   _buildHistoryList(items, onDelete);
 }
@@ -510,7 +522,7 @@ export function hideDeepFocusOverlay() {
 }
 
 // ══════════════════════════════════════════════
-//  SETTINGS — new fields
+//  SETTINGS
 // ══════════════════════════════════════════════
 export function renderSettings() {
   const focusEl    = $('sv-focus');
@@ -524,11 +536,9 @@ export function renderSettings() {
   if (sessionsEl) sessionsEl.textContent = cfg.sessions;
   if (soundEl)    soundEl.className      = 'sw' + (cfg.sound ? ' on' : '');
 
-  // Daily goal
   const dgEl = $('sv-daily-goal');
   if (dgEl) dgEl.textContent = cfg.dailyGoal;
 
-  // Ambient
   const ambEl = $('sw-ambient');
   if (ambEl) ambEl.className = 'sw' + (cfg.ambient ? ' on' : '');
   const volWrap = $('ambient-vol-wrap');
@@ -536,15 +546,12 @@ export function renderSettings() {
   const volSlider = $('ambient-vol-slider');
   if (volSlider) volSlider.value = cfg.ambientVol;
 
-  // Deep focus
   const dfEl = $('sw-deepfocus');
   if (dfEl) dfEl.className = 'sw' + (cfg.deepFocus ? ' on' : '');
 
-  // Auto-break
   const abEl = $('sw-autobreak');
   if (abEl) abEl.className = 'sw' + (cfg.autoBreak ? ' on' : '');
 
-  // Sound style
   const ssEl = $('sound-style-sel');
   if (ssEl) ssEl.value = cfg.soundStyle || 'bells';
 }
