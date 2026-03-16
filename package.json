@@ -1,11 +1,12 @@
 {
   "name": "focusnature",
-  "version": "2.0.0",
+  "version": "5.0.0",
   "description": "Pomodoro app with nature themes and Supabase backend",
   "scripts": {
     "start": "node server.js",
-    "build": "echo 'No build step needed — pure static frontend'",
-    "dev": "node --watch server.js"
+    "build": "node build.js",
+    "dev": "node --watch server.js",
+    "clean-cache": "rm -rf node_modules/.cache"
   },
   "engines": {
     "node": ">=18.0.0"
