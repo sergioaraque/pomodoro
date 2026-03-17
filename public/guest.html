@@ -13,7 +13,6 @@
 <meta name="apple-mobile-web-app-title" content="FocusNature">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <style>
-/* ── GUEST BANNER ── */
 .guest-bar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
@@ -54,7 +53,6 @@
 }
 .btn-login:hover { color: var(--text); }
 
-/* ── UPSELL NUDGE (aparece al completar 2 pomodoros) ── */
 .upsell-nudge {
   display: none;
   background: rgba(78,205,196,0.08); border: 1px solid rgba(78,205,196,0.25);
@@ -73,6 +71,24 @@
 .upsell-nudge-close {
   background: none; border: none; color: var(--muted); cursor: pointer;
   font-size: 14px; padding: 2px 4px; flex-shrink: 0;
+}
+
+.toast-undo {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: rgba(20,30,40,0.95); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50px; padding: 12px 24px;
+  display: flex; gap: 16px; align-items: center;
+  z-index: 10000; animation: slideUp 0.3s ease;
+}
+.toast-undo button {
+  background: var(--accent); border: none;
+  color: #071020; font-weight: 600; padding: 6px 16px;
+  border-radius: 50px; cursor: pointer;
+}
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(100px); opacity: 0; }
+  to { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
 
 @media(max-width:520px) {
@@ -159,15 +175,14 @@
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" data-tab="timer"    onclick="switchTab('timer',event)">Temporizador</button>
-    <button class="tab-btn"        data-tab="tasks"    onclick="switchTab('tasks',event)">Tareas</button>
-    <button class="tab-btn"        data-tab="settings" onclick="switchTab('settings',event)">Ajustes</button>
+    <button class="tab-btn active" data-tab="timer"    onclick="window.switchTab('timer',event)">Temporizador</button>
+    <button class="tab-btn"        data-tab="tasks"    onclick="window.switchTab('tasks',event)">Tareas</button>
+    <button class="tab-btn"        data-tab="settings" onclick="window.switchTab('settings',event)">Ajustes</button>
   </div>
 
   <!-- TIMER -->
   <div id="tab-timer" class="tab-panel active">
     <div class="card">
-      <!-- Upsell nudge — aparece tras 2 pomodoros completados -->
       <div class="upsell-nudge" id="upsell-nudge">
         <div class="upsell-nudge-text">
           ¡Llevas <b id="upsell-count">2</b> pomodoros completados hoy!
@@ -249,11 +264,18 @@
 
 </div>
 
+<!-- Toast para deshacer eliminación -->
+<div id="toast-undo" style="display:none"></div>
+
 <script type="module">
 import { spawnCreatures, drawStars } from '/src/js/creatures.js';
 import { startAmbient, stopAmbient, setVolume } from '/src/js/ambient.js';
 
-// ── CONFIG (persisted in localStorage) ──────────────────────────────
+// Hacer funciones globales
+window.spawnCreatures = spawnCreatures;
+window.drawStars = drawStars;
+
+// ── CONFIG ──────────────────────────────
 const DEFAULTS = { focus:25, short:5, long:15, sessions:4, sound:true, ambient:false, ambientVol:0.4, theme:'ocean' };
 
 function loadCfg() {
@@ -266,14 +288,14 @@ function saveCfg() {
 
 const cfg = loadCfg();
 
-// ── TIMER STATE ──────────────────────────────────────────────────────
+// ── TIMER STATE ──────────────────────
 const st = {
   mode:         'focus',
   secondsLeft:  cfg.focus * 60,
   totalSeconds: cfg.focus * 60,
   running:      false,
   sessionsDone: 0,
-  pomodorosDone: 0,   // total this session (for upsell)
+  pomodorosDone: 0,
   currentTaskId: null,
 };
 
@@ -281,8 +303,43 @@ let tickInterval  = null;
 let currentTheme  = cfg.theme || 'ocean';
 let tasks         = [];
 let upsellDismissed = false;
+let deletedTask = null;
+let undoTimeout = null;
 
-// ── THEME ────────────────────────────────────────────────────────────
+// ── ESCAPE HTML (para XSS) ────────────
+function esc(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ── TOAST UNDO ─────────────────────────
+function showUndoToast(task, onUndo) {
+  const toast = document.getElementById('toast-undo');
+  if (!toast) return;
+  
+  const taskName = task.name.length > 30 ? task.name.slice(0,30) + '…' : task.name;
+  toast.innerHTML = `
+    <div class="toast-undo">
+      <span>✕ ${esc(taskName)} eliminada</span>
+      <button onclick="this.closest('.toast-undo').remove(); (${onUndo})()">Deshacer</button>
+    </div>
+  `;
+  toast.style.display = 'block';
+  
+  if (undoTimeout) clearTimeout(undoTimeout);
+  undoTimeout = setTimeout(() => {
+    toast.style.display = 'none';
+    toast.innerHTML = '';
+    deletedTask = null;
+  }, 5000);
+}
+
+// ── THEME ──────────────────────────────
 const THEMES = {
   ocean:       { title:'FocusSea',     subtitle:'Sumérgete en la concentración',  cls:'',                  info:'<b>🌊 Mar</b> — Peces, medusas y burbujas.' },
   meadow:      { title:'FocusMeadow',  subtitle:'Calma entre flores y brisa',     cls:'theme-meadow',      info:'<b>🌿 Prado</b> — Mariposas, abejas y flores.' },
@@ -335,7 +392,7 @@ window.setTheme = (name) => {
   if (cfg.ambient) { stopAmbient(); setTimeout(() => startAmbient(name), 600); }
 };
 
-// ── TIMER CORE ───────────────────────────────────────────────────────
+// ── TIMER CORE ─────────────────────────
 function durFor(mode) {
   return (mode==='focus' ? cfg.focus : mode==='short' ? cfg.short : cfg.long) * 60;
 }
@@ -348,13 +405,20 @@ function applyMode(mode) {
 }
 
 function tick() {
-  if (st.secondsLeft <= 0) {
-    clearInterval(tickInterval); tickInterval = null; st.running = false;
-    onSessionEnd();
-    return;
+  try {
+    if (st.secondsLeft <= 0) {
+      clearInterval(tickInterval); tickInterval = null; st.running = false;
+      onSessionEnd();
+      return;
+    }
+    st.secondsLeft--;
+    renderTimer();
+  } catch (error) {
+    console.error('Error en tick:', error);
+    clearInterval(tickInterval);
+    tickInterval = null;
+    st.running = false;
   }
-  st.secondsLeft--;
-  renderTimer();
 }
 
 function onSessionEnd() {
@@ -364,14 +428,12 @@ function onSessionEnd() {
   if (st.mode === 'focus') {
     st.sessionsDone++;
     st.pomodorosDone++;
-    // Increment task pomodoro count
     if (st.currentTaskId !== null) {
       const t = tasks.find(t => t.id === st.currentTaskId);
       if (t) { t.pomodoros++; renderTasks(); }
     }
-    // Show upsell after 2 focus sessions
     if (st.pomodorosDone >= 2 && !upsellDismissed) showUpsell();
-    // Next mode
+    
     const nextMode = st.sessionsDone % cfg.sessions === 0 ? 'long' : 'short';
     applyMode(nextMode);
     if (nextMode === 'short') {
@@ -411,7 +473,7 @@ window.doSkip = () => {
   onSessionEnd();
 };
 
-// ── TIMER UI ─────────────────────────────────────────────────────────
+// ── TIMER UI ───────────────────────────
 function renderTimer() {
   const m = Math.floor(st.secondsLeft/60), s = st.secondsLeft%60;
   document.getElementById('timer-disp').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
@@ -436,15 +498,19 @@ function renderDots() {
   }
 }
 
-// ── TASKS ────────────────────────────────────────────────────────────
-function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
+// ── TASKS ──────────────────────────────
 window.addGuestTask = () => {
   const inp = document.getElementById('task-inp');
   const name = inp.value.trim();
   if (!name) return;
   inp.value = '';
-  tasks.unshift({ id: Date.now(), name, done: false, pomodoros: 0 });
+  tasks.unshift({ 
+    id: Date.now() + Math.random(), 
+    name, 
+    done: false, 
+    pomodoros: 0,
+    notes: ''
+  });
   renderTasks();
 };
 
@@ -468,7 +534,7 @@ function renderTasks() {
   list.onclick = e => {
     const el = e.target.closest('[data-action]'); if (!el) return;
     const { action, id } = el.dataset;
-    const idN = parseInt(id);
+    const idN = id; // ya es string
     if (action==='focus') {
       st.currentTaskId = idN;
       const t = tasks.find(t=>t.id===idN);
@@ -485,17 +551,26 @@ function renderTasks() {
       renderTasks();
     }
     if (action==='delete') {
-      tasks = tasks.filter(t=>t.id!==idN);
-      if (st.currentTaskId===idN) {
-        st.currentTaskId=null;
+      const taskToDelete = tasks.find(t => t.id === idN);
+      if (!taskToDelete) return;
+      
+      tasks = tasks.filter(t => t.id !== idN);
+      if (st.currentTaskId === idN) {
+        st.currentTaskId = null;
         document.getElementById('cur-task-txt').textContent='Sin tarea seleccionada';
       }
       renderTasks();
+      
+      showUndoToast(taskToDelete, () => {
+        tasks.unshift(taskToDelete);
+        renderTasks();
+        document.getElementById('toast-undo').style.display = 'none';
+      });
     }
   };
 }
 
-// ── SETTINGS ─────────────────────────────────────────────────────────
+// ── SETTINGS ───────────────────────────
 const LIMITS = { focus:[5,90], short:[1,30], long:[5,60], sessions:[2,8] };
 
 window.adjG = (key, delta) => {
@@ -527,7 +602,7 @@ window.setGVol = (v) => {
   saveCfg();
 };
 
-// ── UPSELL ───────────────────────────────────────────────────────────
+// ── UPSELL ─────────────────────────────
 function showUpsell() {
   document.getElementById('upsell-count').textContent = st.pomodorosDone;
   document.getElementById('upsell-nudge').classList.add('visible');
@@ -537,7 +612,7 @@ window.dismissUpsell = () => {
   document.getElementById('upsell-nudge').classList.remove('visible');
 };
 
-// ── TABS ─────────────────────────────────────────────────────────────
+// ── TABS ───────────────────────────────
 window.switchTab = (name, event) => {
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   if (event?.currentTarget) event.currentTarget.classList.add('active');
@@ -545,7 +620,7 @@ window.switchTab = (name, event) => {
   document.getElementById('tab-'+name).classList.add('active');
 };
 
-// ── SOUND ────────────────────────────────────────────────────────────
+// ── SOUND ──────────────────────────────
 function playBeep() {
   try {
     const ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -562,11 +637,10 @@ function playBeep() {
   } catch {}
 }
 
-// ── INIT ─────────────────────────────────────────────────────────────
+// ── INIT ───────────────────────────────
 drawStars();
 window.addEventListener('resize', drawStars);
 
-// Apply saved settings UI
 document.getElementById('sv-focus').textContent    = cfg.focus;
 document.getElementById('sv-short').textContent    = cfg.short;
 document.getElementById('sv-long').textContent     = cfg.long;
@@ -577,32 +651,8 @@ document.getElementById('ambient-vol-wrap').style.display = cfg.ambient ? 'flex'
 if (cfg.ambientVol) document.getElementById('ambient-vol-slider').value = cfg.ambientVol;
 setVolume(cfg.ambientVol);
 
-// Apply theme and spawn creatures
-setTheme(currentTheme);
+window.setTheme(currentTheme);
 applyMode('focus');
-
-// Guest theme picker logic
-window.toggleGuestPicker = () => {
-  const grid = document.getElementById('guest-theme-grid');
-  if (!grid) return;
-  const open = grid.style.display !== 'grid';
-  grid.style.display = open ? 'grid' : 'none';
-  if (open) setTimeout(() => document.addEventListener('click', _closeGuestPicker, { once: true }), 10);
-};
-function _closeGuestPicker() {
-  const grid = document.getElementById('guest-theme-grid');
-  if (grid) grid.style.display = 'none';
-}
-const GUEST_EMOJI = { ocean:'🌊',meadow:'🌿',mountain:'🏔️',forest:'🌲',desert:'🏜️',city:'🌃',arctic:'❄️',space:'🚀',deep:'🌑',volcano:'🌋',rain:'🌧️',japan:'🏯',swamp:'🌿',cave:'🐉',underarctic:'🐋',savanna:'🌅',alps:'🏔',festival:'🎆',jungle:'🌺',mars:'🔭' };
-const GUEST_NAME  = { ocean:'Mar',meadow:'Prado',mountain:'Montaña',forest:'Bosque',desert:'Desierto',city:'Ciudad',arctic:'Ártico',space:'Espacio',deep:'Abisal',volcano:'Volcán',rain:'Lluvia',japan:'Japón',swamp:'Ciénaga',cave:'Cueva',underarctic:'Ártico sb.',savanna:'Sabana',alps:'Alpes',festival:'Festival',jungle:'Selva',mars:'Marte' };
-window.guestPickTheme = (name) => {
-  setTheme(name);
-  _closeGuestPicker();
-  const emoji = document.getElementById('guest-pill-emoji');
-  const label = document.getElementById('guest-pill-name');
-  if (emoji) emoji.textContent = GUEST_EMOJI[name] || '🌊';
-  if (label) label.textContent = GUEST_NAME[name]  || name;
-};
 
 // Guest theme picker
 window.toggleGuestPicker = () => {
@@ -610,34 +660,51 @@ window.toggleGuestPicker = () => {
   if (!grid) return;
   const open = grid.style.display !== 'grid';
   grid.style.display = open ? 'grid' : 'none';
-  if (open) setTimeout(() => document.addEventListener('click', closeGuestPicker, { once: true }), 10);
-};
-function closeGuestPicker() {
-  const grid = document.getElementById('guest-theme-grid');
-  if (grid) grid.style.display = 'none';
-}
-window.guestPickTheme = (name) => {
-  setTheme(name);
-  closeGuestPicker();
-  // Update pill
-  const emojis = { ocean:'🌊',meadow:'🌿',mountain:'🏔️',forest:'🌲',desert:'🏜️',city:'🌃',arctic:'❄️',space:'🚀',deep:'🌑',volcano:'🌋',rain:'🌧️',japan:'🏯',swamp:'🌿',cave:'🐉',underarctic:'🐋',savanna:'🌅',alps:'🏔',festival:'🎆',jungle:'🌺',mars:'🔭' };
-  const names  = { ocean:'Mar',meadow:'Prado',mountain:'Montaña',forest:'Bosque',desert:'Desierto',city:'Ciudad',arctic:'Ártico',space:'Espacio',deep:'Abisal',volcano:'Volcán',rain:'Lluvia',japan:'Japón',swamp:'Ciénaga',cave:'Cueva',underarctic:'Ártico sub.',savanna:'Sabana',alps:'Alpes',festival:'Festival',jungle:'Selva',mars:'Marte' };
-  const emoji = document.getElementById('guest-pill-emoji');
-  const nameEl = document.getElementById('guest-pill-name');
-  if (emoji) emoji.textContent = emojis[name] || '🌊';
-  if (nameEl) nameEl.textContent = names[name] || name;
+  if (open) setTimeout(() => {
+    document.addEventListener('click', function closePicker(e) {
+      if (!grid.contains(e.target) && e.target.id !== 'guest-theme-pill') {
+        grid.style.display = 'none';
+        document.removeEventListener('click', closePicker);
+      }
+    });
+  }, 10);
 };
 
-// ── Keyboard shortcuts ────────────────────────────────────────────
+const GUEST_EMOJI = {
+  ocean:'🌊', meadow:'🌿', mountain:'🏔️', forest:'🌲', desert:'🏜️',
+  city:'🌃', arctic:'❄️', space:'🚀', deep:'🌑', volcano:'🌋',
+  rain:'🌧️', japan:'🏯', swamp:'🌿', cave:'🐉', underarctic:'🐋',
+  savanna:'🌅', alps:'🏔', festival:'🎆', jungle:'🌺', mars:'🔭'
+};
+const GUEST_NAME = {
+  ocean:'Mar', meadow:'Prado', mountain:'Montaña', forest:'Bosque',
+  desert:'Desierto', city:'Ciudad', arctic:'Ártico', space:'Espacio',
+  deep:'Abisal', volcano:'Volcán', rain:'Lluvia', japan:'Japón',
+  swamp:'Ciénaga', cave:'Cueva', underarctic:'Ártico sb.',
+  savanna:'Sabana', alps:'Alpes', festival:'Festival',
+  jungle:'Selva', mars:'Marte'
+};
+
+window.guestPickTheme = (name) => {
+  window.setTheme(name);
+  const grid = document.getElementById('guest-theme-grid');
+  if (grid) grid.style.display = 'none';
+  const emoji = document.getElementById('guest-pill-emoji');
+  const label = document.getElementById('guest-pill-name');
+  if (emoji) emoji.textContent = GUEST_EMOJI[name] || '🌊';
+  if (label) label.textContent = GUEST_NAME[name] || name;
+};
+
+// Keyboard shortcuts
 document.addEventListener('keydown', e => {
   if (['INPUT','TEXTAREA','BUTTON'].includes(e.target.tagName)) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.key === ' ') { e.preventDefault(); doToggle(); }
-  if (e.key.toLowerCase() === 'r') { e.preventDefault(); doReset(); }
-  if (e.key.toLowerCase() === 's') { e.preventDefault(); doSkip(); }
+  if (e.key === ' ') { e.preventDefault(); window.doToggle(); }
+  if (e.key.toLowerCase() === 'r') { e.preventDefault(); window.doReset(); }
+  if (e.key.toLowerCase() === 's') { e.preventDefault(); window.doSkip(); }
 });
 
-// ── Live tab title ────────────────────────────────────────────────
+// Live tab title
 const _origRender = renderTimer;
 function renderTimerWithTitle() {
   _origRender();
@@ -650,8 +717,7 @@ function renderTimerWithTitle() {
     document.title = 'FocusNature — Invitado';
   }
 }
-// Patch tick to use our extended render
-const _tick = tick;
+renderTimer = renderTimerWithTitle;
 </script>
 </body>
 </html>

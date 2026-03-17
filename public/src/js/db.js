@@ -25,7 +25,7 @@ export const settings = {
       .from('user_settings')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
     return { data, error };
   },
 
@@ -37,7 +37,7 @@ export const settings = {
   },
   loadQuickNotes: async (userId) => {
     const { data } = await _sb
-      .from('user_settings').select('quick_notes').eq('user_id', userId).single();
+      .from('user_settings').select('quick_notes').eq('user_id', userId).maybeSingle();
     return data?.quick_notes || '';
   },
 };

@@ -86,39 +86,34 @@ function send(res, html) {
 const express = require('express');
 const app     = express();
 
-// Middleware global anti-caché
+// Middleware: las páginas dinámicas nunca se cachean
 app.use((req, res, next) => {
-  // No cachear NUNCA las rutas de la app
   if (req.path === '/app' || req.path === '/guest' || req.path === '/') {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Surrogate-Control', 'no-store');
-    res.setHeader('Vary', '*');
   }
-  
-  // Para assets, usar cache-control condicional
-  if (req.path.match(/\.(css|js|png|jpg|svg|ico)$/)) {
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 horas
-    res.setHeader('Vary', 'Accept-Encoding');
-  }
-  
   next();
 });
 
-// Sirve CSS/JS/assets
+// Sirve CSS/JS/assets con caché corta + revalidación por ETag
+// no-cache = "puedes cachear pero valida antes de usar" (rápido con 304, seguro con deploys)
 app.use(express.static(PUBLIC, {
   index: false,
-  immutable: true,
-  maxAge: '30d',
-  setHeaders: (res, path) => {
-    if (path.endsWith('.js')) {
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     }
-    if (path.endsWith('.html')) {
+    if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-store');
+    } else {
+      // Assets: permite caché de 1 hora pero siempre revalida con ETag
+      res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
     }
-  }
+  },
 }));
 
 // ── RUTAS ──────────────────────────────────────────────────────────────

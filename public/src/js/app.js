@@ -1,37 +1,32 @@
-/**
- * app.js — FocusNature v5
- * Punto de entrada principal. Conecta todos los módulos.
- */
+import { cfg } from './config.js';
+import * as db from './db.js';
+import { initTimer, toggleTimer, resetTimer, skipSession, setMode, setTask, clearTask, getState } from './timer.js';
+import * as ui from './ui.js';
+import { playSessionEnd, previewSound } from './sound.js';
+import { burstConfetti } from './confetti.js';
+import { spawnCreatures, drawStars } from './creatures.js';
+import { initAmbient, startAmbient, stopAmbient, switchAmbient, setVolume } from './ambient.js';
+import { notifySessionEnd, requestNotificationPermission, getNotificationPermission } from './notifications.js';
+import { t, setLang, getLang, getSupportedLangs, applyToDOM } from './i18n.js';
+import { registerCommand, openPalette, closePalette, isPaletteOpen } from './commands.js';
 
-import { cfg }                                         from './config.js';
-import * as db                                         from './db.js';
-import { initTimer, toggleTimer, resetTimer,
-         skipSession, setMode, setTask,
-         clearTask, getState }                         from './timer.js';
-import * as ui                                         from './ui.js';
-import { playSessionEnd, previewSound }                from './sound.js';
-import { burstConfetti }                                from './confetti.js';
-import { spawnCreatures, drawStars }                   from './creatures.js';
-import { initAmbient, startAmbient, stopAmbient,
-         switchAmbient, setVolume }                     from './ambient.js';
-import { notifySessionEnd,
-         requestNotificationPermission,
-         getNotificationPermission }                    from './notifications.js';
-import { t, setLang, getLang,
-         getSupportedLangs, applyToDOM }                from './i18n.js';
-import { registerCommand, openPalette,
-         closePalette, isPaletteOpen }                  from './commands.js';
+// Hacer funciones globales para scripts en línea
+window.spawnCreatures = spawnCreatures;
+window.drawStars = drawStars;
+window.toggleTimer = toggleTimer;
+window.resetTimer = resetTimer;
+window.skipSession = skipSession;
 
-// ─── Supabase client — initialized inside boot ────────────────────────
 let sb = null;
-
-// ─── App state ────────────────────────────────────────────────────────
-let currentUser  = null;
-let tasks        = [];
+let currentUser = null;
+let tasks = [];
 let activeTaskId = null;
 let currentTheme = 'ocean';
-let saveTimer    = null;
-let todayCount   = 0;
+let saveTimer = null;
+let todayCount = 0;
+
+// Cola de sesiones offline
+const SESSION_QUEUE_KEY = 'fn_session_queue';
 
 // ══════════════════════════════════════════════════════════════════════
 //  TIMER
@@ -40,10 +35,10 @@ initTimer({
   onTick: (state) => {
     ui.renderTimer(state);
     const running = state.running;
-    const sLeft   = state.secondsLeft;
-    const sTotal  = state.totalSeconds;
+    const sLeft = state.secondsLeft;
+    const sTotal = state.totalSeconds;
     ui.setStartButtonText(running ? 'Pausar' : (sLeft < sTotal ? 'Reanudar' : 'Iniciar'));
-    // Live tab title
+    
     const mm = String(Math.floor(sLeft / 60)).padStart(2, '0');
     const ss = String(sLeft % 60).padStart(2, '0');
     const emoji = state.mode === 'focus' ? '🍅' : state.mode === 'short' ? '🌿' : '🌊';
@@ -79,6 +74,8 @@ initTimer({
     if (finishedMode === 'focus') {
       todayCount++;
       ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
+      // Actualizar estadísticas inmediatamente
+      document.getElementById('stat-today').textContent = todayCount;
       if (todayCount === cfg.dailyGoal) ui.showGoalAchieved();
 
       if (taskId) {
@@ -105,45 +102,38 @@ async function handleLogin(user) {
   try {
     currentUser = user;
 
-    // Mostrar app inmediatamente
     document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('top-bar').style.display     = 'flex';
-    document.getElementById('app-main').style.display    = 'block';
-    document.getElementById('user-avatar').textContent   = user.email.charAt(0).toUpperCase();
+    document.getElementById('top-bar').style.display = 'flex';
+    document.getElementById('app-main').style.display = 'block';
+    document.getElementById('user-avatar').textContent = user.email.charAt(0).toUpperCase();
     document.getElementById('user-email-lbl').textContent = user.email;
 
-    // Resetear UI
     ui.resetUI();
     
-    // Esperar a que el DOM esté listo
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Cargar datos en paralelo con manejo de errores individual
     const [settingsResult, tasksResult, todayResult] = await Promise.allSettled([
       loadSettings().catch(e => { console.warn('Settings error:', e); return null; }),
       loadTasks().catch(e => { console.warn('Tasks error:', e); return null; }),
       loadTodayCount().catch(e => { console.warn('Today count error:', e); return null; })
     ]);
 
-    // Si settings fallaron, usar defaults
     if (settingsResult.status === 'rejected') {
       applyTheme('ocean', false);
     }
 
-    // Flush sesiones pendientes
     const queued = _getQueuedCount();
     if (queued > 0) {
       setTimeout(() => _flushSessionQueue(), 1500);
     }
 
-    // Cargar notas rápidas
-    try {
-      const notes = await db.settings.loadQuickNotes(user.id);
+    // Cargar notas rápidas desde settings ya cargados
+    if (settingsResult.status === 'fulfilled' && settingsResult.value) {
+      const notes = settingsResult.value.quick_notes || '';
       const el = document.getElementById('quick-notes-area');
-      if (el && notes) el.value = notes;
-    } catch(e) { /* ignore */ }
+      if (el) el.value = notes;
+    }
 
-    // Inicializar todo
     spawnCreatures(currentTheme);
     drawStars();
     ui.renderTimer(getState());
@@ -151,16 +141,13 @@ async function handleLogin(user) {
     ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
     ui.setStartButtonText('Iniciar');
     
-    // Actualizar UI de idioma y sonido
     _updateSoundBtns(cfg.soundStyle || 'bells');
     applyToDOM();
     _updateNotifToggle(getNotificationPermission());
     
-    // Highlight current language
     const curLang = getLang();
     document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === curLang));
     
-    // Highlight custom accent
     if (cfg.customAccent) {
       document.querySelectorAll('.ctheme-swatch').forEach(b => {
         const bg = b.style.backgroundColor || b.style.background;
@@ -170,7 +157,6 @@ async function handleLogin(user) {
       if (ci) ci.value = cfg.customAccent;
     }
 
-    // Mostrar mensaje de bienvenida
     _showWelcomeMessage(user.email);
 
   } catch (err) {
@@ -188,29 +174,27 @@ function _showWelcomeMessage(email) {
   
   const banner = document.getElementById('break-banner');
   if (banner) {
-    banner.textContent = `${msg} Bienvenido/a de nuevo, ${email.split('@')[0]}`;
+    const userName = email.split('@')[0];
+    // Crear nodo de texto para evitar XSS
+    const textNode = document.createTextNode(`${msg} Bienvenido/a de nuevo, ${userName}`);
+    banner.innerHTML = '';
+    banner.appendChild(textNode);
     banner.className = 'break-banner visible';
     setTimeout(() => banner.classList.remove('visible'), 4000);
   }
 }
 
-function handleLogout() {
-  currentUser  = null;
-  tasks        = [];
-  activeTaskId = null;
-  todayCount   = 0;
-  stopAmbient();
-  _exitDeepFocus();
-  document.getElementById('auth-screen').style.display = 'flex';
-  document.getElementById('top-bar').style.display     = 'none';
-  document.getElementById('app-main').style.display    = 'none';
-  ui.clearAuthMessages();
-  ui.setCurrentTaskBadge(null);
-  ui.renderTasks([], null, taskHandlers);
-}
-
 window.doLogout = async () => {
   try {
+    // Intentar sincronizar antes de salir
+    const queuedCount = _getQueuedCount();
+    if (queuedCount > 0) {
+      const shouldSync = confirm(`Tienes ${queuedCount} sesión(es) sin sincronizar. ¿Quieres intentar guardarlas antes de salir?`);
+      if (shouldSync) {
+        await _flushSessionQueue();
+      }
+    }
+
     stopAmbient();
     if (window.timerInterval) clearInterval(window.timerInterval);
     await db.auth.signOut();
@@ -223,27 +207,24 @@ window.doLogout = async () => {
     const guestCfg = localStorage.getItem('fn_guest_cfg');
     localStorage.clear();
     if (guestCfg) localStorage.setItem('fn_guest_cfg', guestCfg);
-    
     sessionStorage.clear();
-    
-    if ('indexedDB' in window) {
-      const databases = await indexedDB.databases?.() || [];
-      for (const db of databases) {
-        if (db.name?.includes('supabase') || db.name?.includes('focusnature')) {
-          indexedDB.deleteDatabase(db.name);
-        }
+
+    // Limpiar IndexedDB de Supabase de forma segura (no soportado en todos los navegadores)
+    try {
+      if (indexedDB.databases) {
+        const databases = await indexedDB.databases();
+        await Promise.all(
+          databases
+            .filter(d => d.name?.includes('supabase') || d.name?.includes('focusnature'))
+            .map(d => new Promise(resolve => {
+              const req = indexedDB.deleteDatabase(d.name);
+              req.onsuccess = resolve;
+              req.onerror   = resolve; // no bloquear en caso de error
+            }))
+        );
       }
-    }
-    
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      const channel = new MessageChannel();
-      navigator.serviceWorker.controller.postMessage('CLEAR_CACHE', [channel.port2]);
-      await new Promise(resolve => {
-        channel.port1.onmessage = resolve;
-        setTimeout(resolve, 500);
-      });
-    }
-    
+    } catch (_) { /* indexedDB.databases() no disponible en todos los navegadores */ }
+
     window.location.replace('/');
     
   } catch (e) {
@@ -384,10 +365,17 @@ async function loadSettings() {
     applyTheme(data.theme || 'ocean', false);
     if (cfg.ambient) startAmbient(currentTheme);
     setVolume(cfg.ambientVol);
+    
+    // Guardar notas rápidas para uso inmediato
+    if (data.quick_notes) {
+      const el = document.getElementById('quick-notes-area');
+      if (el) el.value = data.quick_notes;
+    }
   }
   setMode('focus');
   ui.renderSettings();
   ui.renderSessionDots(getState().sessionsDone);
+  return data;
 }
 
 async function saveSettings() {
@@ -410,6 +398,7 @@ async function saveSettings() {
     preset_name:  cfg.presetName,
     custom_accent: cfg.customAccent || '',
     lang:          getLang(),
+    quick_notes:   document.getElementById('quick-notes-area')?.value || '',
   });
   ui.setSyncState(error ? 'error' : 'ok');
 }
@@ -418,6 +407,22 @@ function debounceSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveSettings, 700);
 }
+
+// Guardar también en localStorage como respaldo
+function saveToLocalStorage() {
+  if (!currentUser) return;
+  try {
+    localStorage.setItem('fn_backup_settings_' + currentUser.id, JSON.stringify(cfg));
+  } catch (e) {}
+}
+
+window.addEventListener('beforeunload', () => {
+  if (currentUser && saveTimer) {
+    clearTimeout(saveTimer);
+    saveSettings(); // Guardado síncrono (fallará si no hay conexión, pero lo intentamos)
+    saveToLocalStorage();
+  }
+});
 
 const LIMITS = { focus:[5,90], short:[1,30], long:[5,60], sessions:[2,8], dailyGoal:[1,20] };
 
@@ -429,12 +434,14 @@ window.adjSetting = (key, delta) => {
   ui.renderSessionDots(getState().sessionsDone);
   ui.renderDailyGoalRing(todayCount, cfg.dailyGoal);
   debounceSave();
+  saveToLocalStorage();
 };
 
 window.toggleSound = () => {
   cfg.sound = !cfg.sound;
   ui.renderSettings();
   debounceSave();
+  saveToLocalStorage();
 };
 
 window.setSoundStyle = (style) => {
@@ -442,6 +449,7 @@ window.setSoundStyle = (style) => {
   ui.renderSettings();
   _updateSoundBtns(style);
   debounceSave();
+  saveToLocalStorage();
   previewSound(style, currentTheme);
 };
 
@@ -457,12 +465,14 @@ window.toggleAmbient = () => {
   else             stopAmbient();
   ui.renderSettings();
   debounceSave();
+  saveToLocalStorage();
 };
 
 window.setAmbientVolume = (v) => {
   cfg.ambientVol = parseFloat(v);
   setVolume(cfg.ambientVol);
   debounceSave();
+  saveToLocalStorage();
 };
 
 window.toggleAutoTheme = () => {
@@ -470,12 +480,14 @@ window.toggleAutoTheme = () => {
   if (cfg.autoTheme) _applyAutoTheme();
   ui.renderSettings();
   debounceSave();
+  saveToLocalStorage();
 };
 
 window.toggleAutoBreak = () => {
   cfg.autoBreak = !cfg.autoBreak;
   ui.renderSettings();
   debounceSave();
+  saveToLocalStorage();
 };
 
 window.toggleFullscreen = () => {
@@ -497,6 +509,7 @@ window.toggleDeepFocus = () => {
   else               _exitDeepFocus();
   ui.renderSettings();
   debounceSave();
+  saveToLocalStorage();
 };
 
 function _enterDeepFocus() {
@@ -506,6 +519,7 @@ function _enterDeepFocus() {
     _exitDeepFocus();
     ui.renderSettings();
     debounceSave();
+    saveToLocalStorage();
   });
 }
 
@@ -633,6 +647,7 @@ window.applyPreset = (key) => {
   setMode(getState().mode);
   ui.renderSessionDots(getState().sessionsDone);
   debounceSave();
+  saveToLocalStorage();
   document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('preset-' + key);
   if (btn) btn.classList.add('active');
@@ -666,6 +681,7 @@ async function loadTodayCount() {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   todayCount = data.filter(s => new Date(s.completed_at) >= today).length;
   _checkStreakRisk(data);
+  return todayCount;
 }
 
 function _checkStreakRisk(focusData) {
@@ -758,7 +774,10 @@ let _notesTimer = null;
 window.onQuickNotesChange = (val) => {
   clearTimeout(_notesTimer);
   _notesTimer = setTimeout(() => {
-    if (currentUser) db.settings.save(currentUser.id, { quick_notes: val });
+    if (currentUser) {
+      // Guardar en settings
+      debounceSave();
+    }
   }, 1000);
 };
 
@@ -1035,23 +1054,6 @@ window.switchTab = (name, event) => {
 };
 
 // ══════════════════════════════════════════════════════════════════════
-//  TIMER CONTROLS
-// ══════════════════════════════════════════════════════════════════════
-window.toggleTimer = () => {
-  const running = toggleTimer();
-  ui.setStartButtonText(running ? 'Pausar' : 'Reanudar');
-  if (running && cfg.deepFocus) _enterDeepFocus();
-  if (!running && cfg.deepFocus) _exitDeepFocus();
-};
-window.resetTimer = () => {
-  resetTimer();
-  _exitDeepFocus();
-  ui.setStartButtonText('Iniciar');
-  ui.renderTimer(getState());
-};
-window.skipSession = () => skipSession();
-
-// ══════════════════════════════════════════════════════════════════════
 //  KEYBOARD SHORTCUTS
 // ══════════════════════════════════════════════════════════════════════
 document.addEventListener('keydown', e => {
@@ -1071,13 +1073,12 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────
-const SESSION_QUEUE_KEY = 'fn_session_queue';
-
 function _queueFailedSession(session) {
   try {
     const q = JSON.parse(localStorage.getItem(SESSION_QUEUE_KEY) || '[]');
     q.push({ ...session, queuedAt: Date.now() });
     localStorage.setItem(SESSION_QUEUE_KEY, JSON.stringify(q));
+    _updateSyncBadge();
   } catch(e) { console.warn('Queue error:', e); }
 }
 
@@ -1099,6 +1100,7 @@ async function _flushSessionQueue() {
       ui.setSyncState('ok');
     }
     if (remaining.length > 0) ui.setSyncState('error');
+    _updateSyncBadge();
   } catch(e) { console.warn('Flush error:', e); }
 }
 
@@ -1217,6 +1219,7 @@ function _applyCustomAccent(hex) {
 window.applyCustomAccent = (hex) => {
   _applyCustomAccent(hex);
   debounceSave();
+  saveToLocalStorage();
 };
 window.clearCustomAccent = () => {
   cfg.customAccent = '';
@@ -1224,6 +1227,7 @@ window.clearCustomAccent = () => {
   if (tag) tag.remove();
   document.querySelectorAll('.ctheme-swatch').forEach(b => b.classList.remove('active'));
   debounceSave();
+  saveToLocalStorage();
   applyTheme(currentTheme, false);
 };
 
@@ -1231,6 +1235,7 @@ window.switchLang = (code) => {
   setLang(code);
   applyToDOM();
   debounceSave();
+  saveToLocalStorage();
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === code));
 };
 
@@ -1256,6 +1261,8 @@ function _updateNotifToggle(perm) {
     if (!window.supabase) {
       throw new Error('Supabase no cargó. Comprueba tu conexión a internet.');
     }
+    
+    // Verificar credenciales (Error 6)
     if (!window.__SUPABASE_URL__ || window.__SUPABASE_URL__.includes('TU-PROYECTO')) {
       throw new Error('Faltan las credenciales de Supabase. Configura el archivo .env del servidor.');
     }
@@ -1275,23 +1282,23 @@ function _updateNotifToggle(perm) {
     applyToDOM();
 
     if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.unregister();
-      }
-      
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            if (confirm('Nueva versión disponible. ¿Recargar para actualizar?')) {
-              window.location.reload();
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            // Solo mostrar aviso si hay un SW anterior activo (no en primera instalación)
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              _showToast('Nueva versión disponible', 'Recargar', () => {
+                newWorker.postMessage('SKIP_WAITING');
+                window.location.reload();
+              });
             }
-          }
+          });
         });
-      });
+      } catch (swErr) {
+        console.warn('[SW] Registro fallido (no crítico):', swErr);
+      }
     }
 
     _updateNotifToggle(getNotificationPermission());

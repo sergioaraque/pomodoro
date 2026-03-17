@@ -92,7 +92,7 @@ export function stopAmbient() {
 
 function _ensureContext() {
   if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
-  if (_ctx.state === 'suspended') _ctx.resume();
+  if (_ctx.state === 'suspended') _ctx.resume().catch(() => {});
 }
 
 function _makeNoise(ctx, duration = 2) {
