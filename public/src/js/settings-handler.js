@@ -393,7 +393,7 @@ window.switchLang = (code) => {
 
 // ── Guardar ajustes manualmente ────────────────────────────────────────
 
-window.saveSettingsNow = async () => {
+export async function saveSettingsNow() {
   if (!state.user) return;
   const btn = document.getElementById('btn-save-settings');
   clearTimeout(state.saveTimer);

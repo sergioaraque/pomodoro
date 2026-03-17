@@ -22,7 +22,8 @@ import { applyToDOM }                     from './i18n.js';
 import { registerCommand, openPalette,
          closePalette, isPaletteOpen }    from './commands.js';
 import { handleLogin, handleLogout }      from './auth.js';
-import { applyTheme, THEME_META }         from './settings-handler.js';
+import { applyTheme, THEME_META,
+         saveSettingsNow }               from './settings-handler.js';
 import { renderTasks, updateTaskBadge }   from './tasks-handler.js';
 import { loadTodayCount, loadStats }       from './stats-handler.js';
 import { queueSession, flushQueue,
@@ -38,8 +39,9 @@ window.toggleTimer = () => {
   const s = getState();
   if (!s.running) updateFavicon(s.secondsLeft, s.totalSeconds, s.mode, false);
 };
-window.resetTimer     = resetTimer;
-window.skipSession    = skipSession;
+window.resetTimer       = resetTimer;
+window.skipSession      = skipSession;
+window.saveSettingsNow  = saveSettingsNow;
 
 // ── Timer ─────────────────────────────────────────────────────────────
 initTimer({

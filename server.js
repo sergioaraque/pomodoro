@@ -107,7 +107,9 @@ app.use(express.static(PUBLIC, {
     if (filePath.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     }
-    if (filePath.endsWith('.html')) {
+    if (filePath.endsWith('.html') || filePath.endsWith('sw.js')) {
+      // sw.js nunca debe cachearse — el navegador debe poder detectar
+      // nuevas versiones en cada visita para activar el SW actualizado
       res.setHeader('Cache-Control', 'no-store');
     } else {
       // Assets: permite caché de 1 hora pero siempre revalida con ETag
