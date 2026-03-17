@@ -76,6 +76,12 @@ export async function loadSettings() {
     cfg.presetName  = data.preset_name  ?? '';
     cfg.customAccent = data.custom_accent || '';
 
+    // autoPause no tiene columna en DB — se recupera del backup local
+    try {
+      const bak = JSON.parse(localStorage.getItem('fn_backup_settings_' + state.user.id) || '{}');
+      if (bak.autoPause !== undefined) cfg.autoPause = bak.autoPause;
+    } catch (_) {}
+
     if (data.lang) setLang(data.lang);
     if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
     applyTheme(data.theme || 'ocean', false);
@@ -271,6 +277,12 @@ window.toggleAutoBreak = () => {
   cfg.autoBreak = !cfg.autoBreak;
   ui.renderSettings();
   debounceSave();
+  saveToLocalStorage();
+};
+
+window.toggleAutoPause = () => {
+  cfg.autoPause = !cfg.autoPause;
+  ui.renderSettings();
   saveToLocalStorage();
 };
 

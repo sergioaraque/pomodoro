@@ -12,6 +12,8 @@ import { setTask, clearTask }        from './timer.js';
 
 // ── Load / Render ─────────────────────────────────────────────────────
 
+let _sortMode = 'manual';
+
 export async function loadTasks() {
   const { data } = await db.tasks.loadAll(state.user.id);
   if (data) state.tasks = data;
@@ -19,7 +21,12 @@ export async function loadTasks() {
 }
 
 export function renderTasks() {
-  ui.renderTasks(state.tasks, state.activeTaskId, taskHandlers);
+  let tasks = [...state.tasks];
+  if      (_sortMode === 'name')      tasks.sort((a, b) => a.name.localeCompare(b.name));
+  else if (_sortMode === 'label')     tasks.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+  else if (_sortMode === 'estimate')  tasks.sort((a, b) => (b.estimate || 0) - (a.estimate || 0));
+  else if (_sortMode === 'pomodoros') tasks.sort((a, b) => (b.pomodoros || 0) - (a.pomodoros || 0));
+  ui.renderTasks(tasks, state.activeTaskId, taskHandlers);
   const clearRow = document.getElementById('clear-done-row');
   if (clearRow) clearRow.style.display = state.tasks.some(t => t.done) ? '' : 'none';
 }
@@ -130,6 +137,31 @@ window.onTaskDrop = async (e, targetId) => {
     await Promise.all(state.tasks.map((t, i) => db.tasks.update(t.id, { position: i })));
     ui.setSyncState('ok');
   }
+};
+
+window.setSortMode = (mode) => {
+  _sortMode = mode;
+  renderTasks();
+};
+
+window.loadTaskHistory = async (taskId, btn) => {
+  if (!state.user) return;
+  const container = document.getElementById('task-hist-' + taskId);
+  if (!container) return;
+  const isOpen = container.classList.toggle('open');
+  if (!isOpen) return;
+  container.innerHTML = '<div style="padding:6px 8px;font-size:11px;color:var(--muted)">Cargando…</div>';
+  const { data } = await db.sessions.loadForTask(state.user.id, taskId);
+  if (!data.length) {
+    container.innerHTML = '<div style="padding:6px 8px;font-size:11px;color:var(--muted)">Sin sesiones registradas aún.</div>';
+    return;
+  }
+  container.innerHTML = data.map(s => {
+    const dt = new Date(s.completed_at);
+    const ds = dt.toLocaleDateString('es-ES', { day:'numeric', month:'short' })
+             + ' ' + dt.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+    return `<div style="font-size:11px;color:var(--muted);padding:2px 8px">🍅 ${s.duration}min · ${ds}</div>`;
+  }).join('');
 };
 
 window.clearDoneTasks = async () => {

@@ -115,6 +115,14 @@ function _buildStats(fd, recent) {
     heatmap[k] = (heatmap[k] || 0) + 1;
   });
 
+  // Label breakdown — from sessions matched to current tasks
+  const labelData = {};
+  focusData.forEach(s => {
+    if (!s.task_id) return;
+    const task = state.tasks.find(t => t.id === s.task_id);
+    if (task?.label) labelData[task.label] = (labelData[task.label] || 0) + 1;
+  });
+
   _allHistoryItems  = recent || [];
   _filteredTaskName = '';
 
@@ -127,6 +135,7 @@ function _buildStats(fd, recent) {
     heatmapData: heatmap,
     history:     recent || [],
     focusData,
+    labelData,
   };
 }
 
@@ -153,6 +162,7 @@ function _renderStats(built) {
   });
 
   ui.renderDailyGoalRing(built.today, cfg.dailyGoal);
+  ui.renderLabelStats(built.labelData);
   _renderWeeklyChallenge(built.focusData);
   _checkStreakRisk(built.focusData);
 }

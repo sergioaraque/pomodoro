@@ -125,6 +125,18 @@ export const sessions = {
       .limit(50);
     return { data: data || [], error };
   },
+
+  loadForTask: async (userId, taskId) => {
+    const { data, error } = await _sb
+      .from('pomodoro_sessions')
+      .select('completed_at, duration')
+      .eq('user_id', userId)
+      .eq('task_id', taskId)
+      .eq('mode', 'focus')
+      .order('completed_at', { ascending: false })
+      .limit(20);
+    return { data: data || [], error };
+  },
 };
 
 // ─── CACHE UTILITIES ──────────────────────────

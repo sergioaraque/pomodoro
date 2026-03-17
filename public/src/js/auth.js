@@ -70,6 +70,16 @@ export function handleLogout() {
 // ── Window functions ───────────────────────────────────────────────────
 
 window.doLogout = async () => {
+  // Resumen diario antes de cerrar sesión
+  if (state.todayCount > 0) {
+    const mins     = state.todayCount * cfg.focus;
+    const hrs      = (mins / 60).toFixed(1);
+    const goal     = state.todayCount >= cfg.dailyGoal
+      ? `🎯 ¡Objetivo del día conseguido! (${state.todayCount}/${cfg.dailyGoal})`
+      : `🎯 ${state.todayCount} de ${cfg.dailyGoal} del objetivo diario`;
+    const msg = `📊 Resumen del día\n\n🍅 Pomodoros: ${state.todayCount}\n⏱ Tiempo enfocado: ~${hrs}h\n${goal}\n\n¿Confirmas que quieres salir?`;
+    if (!confirm(msg)) return;
+  }
   try {
     const queuedCount = getQueuedCount();
     if (queuedCount > 0) {

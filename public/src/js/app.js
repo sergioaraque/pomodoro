@@ -32,7 +32,12 @@ import { updateFavicon, resetFavicon }  from './favicon.js';
 // ── Globals para onclick inline ────────────────────────────────────────
 window.spawnCreatures = spawnCreatures;
 window.drawStars      = drawStars;
-window.toggleTimer    = toggleTimer;
+// Wrapper que actualiza el favicon al pausar (onTick no se llama cuando está parado)
+window.toggleTimer = () => {
+  toggleTimer();
+  const s = getState();
+  if (!s.running) updateFavicon(s.secondsLeft, s.totalSeconds, s.mode, false);
+};
 window.resetTimer     = resetTimer;
 window.skipSession    = skipSession;
 
@@ -51,6 +56,17 @@ initTimer({
       resetFavicon();
     } else {
       updateFavicon(s.secondsLeft, s.totalSeconds, s.mode, false);
+    }
+    // Subtítulo de modo (sesión X de Y · Z🍅 hoy / próxima tarea durante pausa)
+    const subEl = document.getElementById('mode-subtitle');
+    if (subEl) {
+      if (s.mode === 'focus') {
+        const sessNum = (s.sessionsDone % cfg.sessions) + 1;
+        subEl.textContent = `Sesión ${sessNum} de ${cfg.sessions} · ${state.todayCount} 🍅 hoy`;
+      } else {
+        const activeTask = state.tasks.find(t => t.id === state.activeTaskId);
+        subEl.textContent = activeTask ? `↩ Retomar: ${activeTask.name}` : '';
+      }
     }
   },
 
@@ -153,7 +169,7 @@ document.addEventListener('keydown', e => {
   if (['INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (!state.user) return;
-  if (e.key === ' ')               { e.preventDefault(); toggleTimer(); }
+  if (e.key === ' ')               { e.preventDefault(); window.toggleTimer(); }
   if (e.key.toLowerCase() === 'r') { e.preventDefault(); resetTimer(); }
   if (e.key.toLowerCase() === 's') { e.preventDefault(); skipSession(); }
   if (e.key === 'Escape')          { closePalette(); }
@@ -229,6 +245,16 @@ function _registerCommands() {
         });
       } catch (e) { console.warn('[SW] Registro fallido (no crítico):', e); }
     }
+
+    // Indicador de conexión
+    window.addEventListener('offline', () => {
+      ui.showToast('📵 Sin conexión — las sesiones se guardarán localmente');
+      ui.setSyncState('error');
+    });
+    window.addEventListener('online', () => {
+      ui.showToast('🌐 Conexión restaurada');
+      if (state.user) setTimeout(() => flushQueue(state.user.id), 500);
+    });
 
     _registerCommands();
     ui.renderTimer(getState());

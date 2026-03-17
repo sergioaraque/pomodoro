@@ -264,6 +264,7 @@
         <div class="goal-ring-label">Objetivo diario</div>
       </div>
       <div class="mode-lbl" id="mode-lbl">Sesión de enfoque</div>
+      <div class="mode-subtitle" id="mode-subtitle"></div>
       <div class="timer-display" id="timer-disp">25:00</div>
       <div class="pbar-wrap"><div class="pbar" id="pbar" style="width:100%"></div></div>
       <div style="text-align:center;margin-bottom:8px;font-size:11px;color:var(--muted);opacity:.6">
@@ -290,6 +291,17 @@
         <input class="task-inp" id="task-inp" type="text" placeholder="¿Qué vas a hacer hoy?" data-i18n="task_placeholder" maxlength="60"
           onkeydown="if(event.key==='Enter') addTask()">
         <button class="btn-add" onclick="addTask()" data-i18n="task_add">+ Añadir</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:8px">
+        <span style="font-size:11px;color:var(--muted)">Ordenar:</span>
+        <select id="task-sort-sel" onchange="setSortMode(this.value)"
+          style="background:var(--glass);border:1px solid var(--glass-b);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit">
+          <option value="manual">Manual</option>
+          <option value="name">Nombre</option>
+          <option value="label">Etiqueta</option>
+          <option value="estimate">Estimación</option>
+          <option value="pomodoros">Pomodoros</option>
+        </select>
       </div>
       <div class="task-meta-row">
         <select class="task-meta-sel" id="task-label-sel">
@@ -343,6 +355,13 @@
     </div>
     <div class="card" style="padding:16px" id="weekly-challenge">
       <!-- filled by JS -->
+    </div>
+
+    <div class="card" style="padding:16px">
+      <div class="section-title" style="margin-bottom:12px">Por etiqueta</div>
+      <div id="label-stats">
+        <div class="empty-msg" style="font-size:12px">Cargando…</div>
+      </div>
     </div>
 
     <div class="card" style="padding:16px">
@@ -428,6 +447,10 @@
       <div class="stoggle-row" onclick="toggleAutoBreak()" style="margin-bottom:10px">
         <div><div style="font-size:14px" data-i18n="settings_autobreak">Auto-iniciar pausa</div><div style="font-size:12px;color:var(--muted);margin-top:2px">La pausa arranca sola al terminar una sesión</div></div>
         <div class="sw" id="sw-autobreak"></div>
+      </div>
+      <div class="stoggle-row" onclick="toggleAutoPause()" style="margin-bottom:10px">
+        <div><div style="font-size:14px">Auto-pausar al cambiar de pestaña</div><div style="font-size:12px;color:var(--muted);margin-top:2px">El timer se pausa al ocultar esta ventana</div></div>
+        <div class="sw" id="sw-autopause"></div>
       </div>
       <div class="stoggle-row" onclick="toggleAutoTheme()" style="margin-bottom:10px">
         <div><div style="font-size:14px" data-i18n="settings_autotheme">Tema automático por hora</div><div style="font-size:12px;color:var(--muted);margin-top:2px">El tema cambia según el momento del día</div></div>

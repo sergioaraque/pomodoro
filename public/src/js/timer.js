@@ -140,6 +140,14 @@ function _durationForMode(mode) {
 // Cuando el tab vuelve a estar activo, recalculamos el tiempo real
 // en caso de que el browser haya throttleado el setInterval.
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    // Auto-pausa al ocultar tab si está activada
+    if (cfg.autoPause && state.running) {
+      _pause();
+      _onTickCallback?.(getState());
+    }
+    return;
+  }
   if (document.visibilityState === 'visible' && state.running && _targetEndTime) {
     const remaining = Math.ceil((_targetEndTime - Date.now()) / 1000);
     state.secondsLeft = Math.max(0, remaining);

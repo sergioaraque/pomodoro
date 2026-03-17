@@ -361,12 +361,14 @@ export function renderTasks(tasks, activeTaskId, handlers) {
         <button class="task-notes-toggle ${hasNotes ? 'has-notes' : ''}"
                 data-action="toggle-notes" data-id="${t.id}"
                 title="${hasNotes ? 'Ver/editar notas' : 'Añadir notas'}">📝</button>
+        ${poms > 0 ? `<button class="task-hist-btn" onclick="loadTaskHistory('${t.id}',this)" title="Historial de sesiones">🕐</button>` : ''}
         ${!t.done ? `
           <button class="tfocus" data-action="focus" data-id="${t.id}">
             ${t.id === activeTaskId ? '✓ Activa' : 'Enfocar'}
           </button>` : ''}
         <button class="tdel" data-action="delete" data-id="${t.id}">✕</button>
       </div>
+      <div class="task-hist-list" id="task-hist-${t.id}"></div>
       <div class="task-notes-area" id="notes-area-${t.id}">
         <textarea class="task-notes-input"
           data-action="notes-input" data-id="${t.id}"
@@ -620,6 +622,37 @@ export function renderSettings() {
   const abEl = $('sw-autobreak');
   if (abEl) abEl.className = 'sw' + (cfg.autoBreak ? ' on' : '');
 
+  const atEl = $('sw-autotheme');
+  if (atEl) atEl.className = 'sw' + (cfg.autoTheme ? ' on' : '');
+
+  const apEl = $('sw-autopause');
+  if (apEl) apEl.className = 'sw' + (cfg.autoPause ? ' on' : '');
+
   const ssEl = $('sound-style-sel');
   if (ssEl) ssEl.value = cfg.soundStyle || 'bells';
+}
+
+export function renderLabelStats(data) {
+  const el = $('label-stats');
+  if (!el) return;
+  if (!data || !Object.keys(data).length) {
+    el.innerHTML = '<div class="empty-msg" style="font-size:12px">Sin datos de etiquetas por tarea activa aún.</div>';
+    return;
+  }
+  const COLORS = { trabajo:'#60a8f0', personal:'#f093fb', estudio:'#7ecf3e', salud:'#ff6b9d', otro:'#ffa552' };
+  const NAMES  = { trabajo:'Trabajo', personal:'Personal', estudio:'Estudio', salud:'Salud', otro:'Otro' };
+  const total  = Object.values(data).reduce((a, b) => a + b, 0);
+  el.innerHTML = Object.entries(data).sort((a, b) => b[1] - a[1]).map(([k, v]) => {
+    const pct   = Math.round(v / total * 100);
+    const color = COLORS[k] || 'var(--accent)';
+    return `<div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+        <span style="color:${color}">${NAMES[k] || k}</span>
+        <span style="color:var(--muted)">${v} 🍅 · ${pct}%</span>
+      </div>
+      <div style="height:4px;border-radius:2px;background:rgba(255,255,255,.08)">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:width .6s ease"></div>
+      </div>
+    </div>`;
+  }).join('');
 }
