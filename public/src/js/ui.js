@@ -338,9 +338,11 @@ export function renderTasks(tasks, activeTaskId, handlers) {
     const est      = t.estimate || 0;
     const poms     = t.pomodoros || 0;
     const labelC   = t.label && LABEL_COLORS[t.label] ? LABEL_COLORS[t.label] : null;
+    const timeMin  = poms * cfg.focus;
+    const timeStr  = timeMin >= 60 ? `${(timeMin / 60).toFixed(1)}h` : `${timeMin}min`;
     const pomStr   = est > 0
-      ? `<div class="tpoms ${poms >= est ? 'done-est' : ''}" title="Progreso">🍅 ${poms}/${est}</div>`
-      : poms > 0 ? `<div class="tpoms">🍅 ×${poms}</div>` : '';
+      ? `<div class="tpoms ${poms >= est ? 'done-est' : ''}" title="${timeStr} dedicados">🍅 ${poms}/${est}</div>`
+      : poms > 0 ? `<div class="tpoms">🍅 ×${poms} <span class="tpoms-time">${timeStr}</span></div>` : '';
     return `
     <div class="task-item ${t.id === activeTaskId ? 'active-t' : ''} ${t.done ? 'done-t' : ''}"
          draggable="true"
@@ -630,6 +632,24 @@ export function renderSettings() {
 
   const ssEl = $('sound-style-sel');
   if (ssEl) ssEl.value = cfg.soundStyle || 'bells';
+}
+
+export function renderHourChart(hourData) {
+  const wrap = $('hour-chart');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const maxC = Math.max(...hourData, 1);
+  hourData.forEach((count, h) => {
+    const col = document.createElement('div');
+    col.className = 'cbar-col';
+    const height = Math.max(2, Math.round((count / maxC) * 74));
+    const lbl = h % 6 === 0 ? `${h}h` : '';
+    col.innerHTML =
+      `<div style="font-size:9px;color:var(--accent);min-height:13px">${count || ''}</div>` +
+      `<div class="cbar" style="height:${height}px;opacity:${count ? 0.85 : 0.15}"></div>` +
+      `<div class="cbar-lbl">${lbl}</div>`;
+    wrap.appendChild(col);
+  });
 }
 
 export function renderLabelStats(data) {

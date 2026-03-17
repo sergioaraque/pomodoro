@@ -12,6 +12,7 @@ import { debounceSave } from './settings-handler.js';
 
 let _allHistoryItems  = [];
 let _filteredTaskName = '';
+let _dateRange        = 'all';
 
 // Caché de stats: se muestra inmediatamente en cada visita al tab
 let _cachedStats = null;
@@ -115,6 +116,10 @@ function _buildStats(fd, recent) {
     heatmap[k] = (heatmap[k] || 0) + 1;
   });
 
+  // Productividad por hora del día
+  const hourData = new Array(24).fill(0);
+  focusData.forEach(s => { hourData[new Date(s.completed_at).getHours()]++; });
+
   // Label breakdown — from sessions matched to current tasks
   const labelData = {};
   focusData.forEach(s => {
@@ -136,6 +141,7 @@ function _buildStats(fd, recent) {
     history:     recent || [],
     focusData,
     labelData,
+    hourData,
   };
 }
 
@@ -162,7 +168,10 @@ function _renderStats(built) {
   });
 
   ui.renderDailyGoalRing(built.today, cfg.dailyGoal);
+  ui.renderHourChart(built.hourData);
   ui.renderLabelStats(built.labelData);
+  // Re-aplicar filtros de historial si hay activos
+  if (_filteredTaskName || _dateRange !== 'all') _applyHistoryFilters();
   _renderWeeklyChallenge(built.focusData);
   _checkStreakRisk(built.focusData);
 }
@@ -179,12 +188,15 @@ function _checkStreakRisk(focusData) {
     return d >= yesterday && d < today;
   });
   if (hadYesterday) {
-    const banner = document.getElementById('break-banner');
-    if (banner) {
-      banner.textContent = '🔥 Tu racha está en riesgo — ¡haz al menos 1 pomodoro hoy!';
-      banner.className   = 'break-banner lbreak visible';
-      setTimeout(() => banner.classList.remove('visible'), 10000);
-    }
+    // Delay para no solaparse con el banner de bienvenida (4s) al hacer login
+    setTimeout(() => {
+      const banner = document.getElementById('break-banner');
+      if (banner && !banner.classList.contains('visible')) {
+        banner.textContent = '🔥 Tu racha está en riesgo — ¡haz al menos 1 pomodoro hoy!';
+        banner.className   = 'break-banner lbreak visible';
+        setTimeout(() => banner.classList.remove('visible'), 10000);
+      }
+    }, 4500);
   }
 }
 
@@ -303,20 +315,37 @@ window.exportCSV = () => {
   });
 };
 
-window.filterHistory = (val) => {
-  _filteredTaskName = val.toLowerCase().trim();
-  const filtered = _filteredTaskName
-    ? _allHistoryItems.filter(s => (s.task_name || '').toLowerCase().includes(_filteredTaskName))
-    : _allHistoryItems;
+function _applyHistoryFilters() {
+  let filtered = _allHistoryItems;
+  if (_dateRange !== 'all') {
+    const cutoff = new Date();
+    if (_dateRange === 'today') cutoff.setHours(0, 0, 0, 0);
+    else if (_dateRange === 'week')  cutoff.setDate(cutoff.getDate() - 7);
+    else if (_dateRange === 'month') cutoff.setDate(cutoff.getDate() - 30);
+    filtered = filtered.filter(s => new Date(s.completed_at) >= cutoff);
+  }
+  if (_filteredTaskName) {
+    filtered = filtered.filter(s => (s.task_name || '').toLowerCase().includes(_filteredTaskName));
+  }
   ui.updateHistoryList(filtered, async (id) => {
     ui.setSyncState('syncing');
     const { error } = await db.sessions.remove(id);
     ui.setSyncState(error ? 'error' : 'ok');
-    if (!error) {
-      _cachedStats = null;
-      await _fetchAndRender();
-    }
+    if (!error) { _cachedStats = null; await _fetchAndRender(); }
   });
+}
+
+window.filterHistory = (val) => {
+  _filteredTaskName = val.toLowerCase().trim();
+  _applyHistoryFilters();
+};
+
+window.setHistoryRange = (range) => {
+  _dateRange = range;
+  document.querySelectorAll('.hist-range-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.range === range)
+  );
+  _applyHistoryFilters();
 };
 
 let _notesTimer = null;

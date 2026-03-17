@@ -90,6 +90,32 @@ export async function loadSettings() {
 
     const el = document.getElementById('quick-notes-area');
     if (el && data.quick_notes) el.value = data.quick_notes;
+  } else {
+    // Sin datos de DB — restaurar desde backup local para no quedarse con defaults
+    try {
+      const bak = JSON.parse(localStorage.getItem('fn_backup_settings_' + state.user.id) || 'null');
+      if (bak) {
+        if (bak.focus        != null) cfg.focus        = bak.focus;
+        if (bak.short        != null) cfg.short        = bak.short;
+        if (bak.long         != null) cfg.long         = bak.long;
+        if (bak.sessions     != null) cfg.sessions     = bak.sessions;
+        if (bak.sound        != null) cfg.sound        = bak.sound;
+        if (bak.soundStyle)           cfg.soundStyle   = bak.soundStyle;
+        if (bak.dailyGoal    != null) cfg.dailyGoal    = bak.dailyGoal;
+        if (bak.ambient      != null) cfg.ambient      = bak.ambient;
+        if (bak.ambientVol   != null) cfg.ambientVol   = bak.ambientVol;
+        if (bak.deepFocus    != null) cfg.deepFocus    = bak.deepFocus;
+        if (bak.autoBreak    != null) cfg.autoBreak    = bak.autoBreak;
+        if (bak.autoTheme    != null) cfg.autoTheme    = bak.autoTheme;
+        if (bak.autoPause    != null) cfg.autoPause    = bak.autoPause;
+        if (bak.customAccent)         cfg.customAccent = bak.customAccent;
+        if (bak.presetName)           cfg.presetName   = bak.presetName;
+        console.info('[settings] Restaurado desde backup local');
+        if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
+        if (cfg.ambient) startAmbient(state.theme);
+        setVolume(cfg.ambientVol);
+      }
+    } catch (_) {}
   }
   setMode('focus');
   ui.renderSettings();

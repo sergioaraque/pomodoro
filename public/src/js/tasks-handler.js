@@ -29,6 +29,8 @@ export function renderTasks() {
   ui.renderTasks(tasks, state.activeTaskId, taskHandlers);
   const clearRow = document.getElementById('clear-done-row');
   if (clearRow) clearRow.style.display = state.tasks.some(t => t.done) ? '' : 'none';
+  const sortSel = document.getElementById('task-sort-sel');
+  if (sortSel) sortSel.value = _sortMode;
 }
 
 export function updateTaskBadge(task) {
