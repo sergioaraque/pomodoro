@@ -264,7 +264,8 @@ body.theme-forest   .stars-layer { opacity: 1; }
 .timer-display {
   text-align: center; font-family: var(--font-display); font-size: 84px;
   font-weight: 600; color: var(--timer-color); line-height: 1;
-  margin: 5px 0 18px; letter-spacing: -2px; transition: color 0.8s;
+  margin: 5px 0 18px; letter-spacing: -1px; transition: color 0.8s;
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum";
 }
 .timer-display.break  { color: #6bcf8a; }
 .timer-display.lbreak { color: #ffa552; }
@@ -1030,3 +1031,81 @@ body.theme-mars {
 
 /* ── Sync button spin ─────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ════════════════════════════════════════════════
+   v6 — Diseño mejorado: anillo SVG, transiciones,
+        tipografía monoespaciada, tarjetas de tarea
+   ════════════════════════════════════════════════ */
+
+/* ── Tab transitions ──────────────────────────── */
+.tab-panel.active {
+  animation: tabFadeIn 0.22s ease forwards;
+}
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* ── Timer ring SVG ───────────────────────────── */
+.timer-ring-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 4px;
+  width: 244px;
+  height: 244px;
+}
+.timer-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.timer-ring-bg {
+  fill: none;
+  stroke: rgba(255,255,255,0.07);
+  stroke-width: 5;
+}
+.timer-ring-prog {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 628.3;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1s linear, stroke 0.8s ease;
+}
+.timer-ring-wrap .mode-lbl {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 2px;
+}
+.timer-ring-wrap .timer-display {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+}
+/* Hide the old linear progress bar (ring replaces it) */
+#pbar-wrap { display: none; }
+
+/* ── Task cards mejoradas ─────────────────────── */
+/* Inset box-shadow adds a left accent stripe without affecting the existing border */
+.task-item:hover {
+  transform: translateX(1px);
+}
+.task-item.active-t {
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.tname {
+  font-weight: 500;
+  line-height: 1.35;
+}
+.tname.done {
+  opacity: 0.5;
+}
+
+/* ── Favicon timer (no visual styles needed) ─── */

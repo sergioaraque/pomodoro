@@ -27,6 +27,9 @@ import { renderTasks, updateTaskBadge }   from './tasks-handler.js';
 import { loadTodayCount, loadStats }       from './stats-handler.js';
 import { queueSession, flushQueue,
          updateSyncBadge }               from './sync.js';
+import { updateFavicon, resetFavicon }  from './favicon.js';
+import { openPiP, closePiP, isPiPOpen,
+         isPiPSupported }              from './pip.js';
 
 // ── Globals para onclick inline ────────────────────────────────────────
 window.spawnCreatures = spawnCreatures;
@@ -34,6 +37,22 @@ window.drawStars      = drawStars;
 window.toggleTimer    = toggleTimer;
 window.resetTimer     = resetTimer;
 window.skipSession    = skipSession;
+
+window.togglePiP = async () => {
+  const btn = document.getElementById('btn-pip');
+  if (isPiPOpen()) {
+    closePiP();
+    if (btn) btn.style.opacity = '';
+  } else {
+    if (!isPiPSupported()) {
+      ui.showToast('Tu navegador no soporta ventanas flotantes (requiere Chrome 116+)');
+      return;
+    }
+    const ok = await openPiP(getState);
+    if (btn) btn.style.opacity = ok ? '1' : '';
+    if (!ok) ui.showToast('No se pudo abrir la mini ventana');
+  }
+};
 
 // ── Timer ─────────────────────────────────────────────────────────────
 initTimer({
@@ -44,6 +63,13 @@ initTimer({
     const ss    = String(s.secondsLeft % 60).padStart(2, '0');
     const emoji = s.mode === 'focus' ? '🍅' : s.mode === 'short' ? '🌿' : '🌊';
     document.title = s.running ? `${emoji} ${mm}:${ss} — FocusNature` : 'FocusNature — Pomodoro';
+    if (s.running) {
+      updateFavicon(s.secondsLeft, s.totalSeconds, s.mode, true);
+    } else if (s.secondsLeft === s.totalSeconds) {
+      resetFavicon();
+    } else {
+      updateFavicon(s.secondsLeft, s.totalSeconds, s.mode, false);
+    }
   },
 
   onEnd: async (finishedMode, durationMin, taskId, taskName) => {
@@ -176,6 +202,9 @@ function _registerCommands() {
 
   registerCommand({ id: 'fullscreen', label: 'Pantalla completa',    icon: '⛶', section: 'App', action: window.toggleFullscreen });
   registerCommand({ id: 'deepfocus',  label: 'Activar foco profundo', icon: '🎯', section: 'App', action: window.toggleDeepFocus });
+  if (isPiPSupported()) {
+    registerCommand({ id: 'pip', label: 'Mini ventana flotante', icon: '⊞', section: 'App', action: window.togglePiP });
+  }
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────
@@ -221,27 +250,30 @@ function _registerCommands() {
 
     if (window.location.hash === '#register') window.showAuthTab('register');
 
-    // Supabase v2.10+ dispara INITIAL_SESSION (no SIGNED_IN) al cargar la página
-    // con una sesión guardada. Manejamos ambos eventos para compatibilidad.
+    // ── PASO 1: Leer la sesión guardada primero ────────────────────────
+    // Usamos getSession() antes de registrar el listener para no depender
+    // de qué evento inicial dispara Supabase (INITIAL_SESSION vs SIGNED_IN).
+    // Esto garantiza que un F5 con sesión válida siempre funcione.
+    const { data: { session } } = await db.auth.getSession();
+    if (session?.user) {
+      await handleLogin(session.user);
+    }
+
+    // ── PASO 2: Escuchar cambios futuros de auth ───────────────────────
     db.auth.onStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // Solo actuar si cambia el usuario (p. ej., login en otra pestaña)
         if (session?.user && state.user?.id !== session.user.id) {
           await handleLogin(session.user);
         }
-      }
-      if (event === 'SIGNED_OUT') handleLogout();
-      // El usuario llegó desde el enlace de recuperación de contraseña
-      if (event === 'PASSWORD_RECOVERY') {
+      } else if (event === 'SIGNED_OUT') {
+        // Solo desloguear si realmente estábamos autenticados
+        if (state.user) handleLogout();
+      } else if (event === 'PASSWORD_RECOVERY') {
         window.showAuthTab('newpass');
       }
+      // INITIAL_SESSION no se maneja aquí; se gestiona con getSession() arriba.
     });
-
-    // Fallback: si onAuthStateChange no dispara (entorno extraño o CDN viejo),
-    // leemos la sesión directamente y hacemos login manualmente.
-    const { data: { session } } = await db.auth.getSession();
-    if (session?.user && !state.user) {
-      await handleLogin(session.user);
-    }
 
   } catch (err) {
     console.error('[app] Boot error:', err);

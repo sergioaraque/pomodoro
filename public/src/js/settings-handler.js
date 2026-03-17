@@ -185,7 +185,7 @@ function _applyCustomAccent(hex) {
   }
   tag.textContent = `:root{--accent:${hex}!important;--accent2:${accent2}!important;}`;
   document.querySelectorAll('.ctheme-swatch').forEach(b =>
-    b.classList.toggle('active', b.style.background === hex || b.style.backgroundColor === hex)
+    b.classList.toggle('active', b.dataset.color?.toLowerCase() === hex.toLowerCase())
   );
   const colorInput = document.getElementById('custom-color-input');
   if (colorInput) colorInput.value = hex;

@@ -171,6 +171,11 @@
       <div id="np-msg" class="cp-msg" style="display:none"></div>
       <button class="auth-btn" id="np-btn" onclick="doSetNewPassword()">Guardar contraseña</button>
     </div>
+
+    <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.07)">
+      <a href="/" style="color:#8ab4cc;font-size:12px;text-decoration:none;opacity:0.65;transition:opacity .2s"
+         onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.65'">← Volver a la página principal</a>
+    </div>
   </div>
 </div>
 
@@ -258,9 +263,17 @@
         <div id="goal-ring"></div>
         <div class="goal-ring-label">Objetivo diario</div>
       </div>
-      <div class="mode-lbl" id="mode-lbl">Sesión de enfoque</div>
-      <div class="timer-display" id="timer-disp">25:00</div>
-      <div class="pbar-wrap"><div class="pbar" id="pbar" style="width:100%"></div></div>
+      <div class="timer-ring-wrap">
+        <svg class="timer-ring-svg" viewBox="0 0 220 220" aria-hidden="true">
+          <circle class="timer-ring-bg"   cx="110" cy="110" r="100"/>
+          <circle class="timer-ring-prog" id="timer-ring-prog" cx="110" cy="110" r="100"
+            transform="rotate(-90 110 110)"
+            stroke-dasharray="628.3" stroke-dashoffset="0"/>
+        </svg>
+        <div class="mode-lbl" id="mode-lbl">Sesión de enfoque</div>
+        <div class="timer-display" id="timer-disp">25:00</div>
+      </div>
+      <div class="pbar-wrap" id="pbar-wrap"><div class="pbar" id="pbar" style="width:100%"></div></div>
       <div style="text-align:center;margin-bottom:8px;font-size:11px;color:var(--muted);opacity:.6">
         <kbd style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:1px 6px;font-size:10px">Espacio</kbd> iniciar &nbsp;·&nbsp;
         <kbd style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:1px 6px;font-size:10px">R</kbd> reiniciar &nbsp;·&nbsp;
@@ -270,6 +283,7 @@
         <button class="btn-icon" onclick="resetTimer()"  title="Reiniciar">↺</button>
         <button class="btn-primary" id="start-btn" onclick="toggleTimer()">Iniciar</button>
         <button class="btn-icon" onclick="skipSession()" title="Saltar">→</button>
+        <button class="btn-icon" id="btn-pip" onclick="togglePiP()" title="Mini ventana flotante" style="font-size:14px">⊞</button>
       </div>
       <div class="session-dots" id="sdots"></div>
     </div>
@@ -455,14 +469,14 @@
           Elige tu color de acento. Sobreescribe el color del tema activo.
         </div>
         <div class="custom-theme-colors" id="custom-theme-colors">
-          <button class="ctheme-swatch" style="background:#4ecdc4" onclick="applyCustomAccent('#4ecdc4')" title="Teal"></button>
-          <button class="ctheme-swatch" style="background:#ff6b9d" onclick="applyCustomAccent('#ff6b9d')" title="Rosa"></button>
-          <button class="ctheme-swatch" style="background:#ffa552" onclick="applyCustomAccent('#ffa552')" title="Naranja"></button>
-          <button class="ctheme-swatch" style="background:#7ecf3e" onclick="applyCustomAccent('#7ecf3e')" title="Verde"></button>
-          <button class="ctheme-swatch" style="background:#a78bfa" onclick="applyCustomAccent('#a78bfa')" title="Violeta"></button>
-          <button class="ctheme-swatch" style="background:#38bdf8" onclick="applyCustomAccent('#38bdf8')" title="Azul cielo"></button>
-          <button class="ctheme-swatch" style="background:#fb7185" onclick="applyCustomAccent('#fb7185')" title="Coral"></button>
-          <button class="ctheme-swatch" style="background:#facc15" onclick="applyCustomAccent('#facc15')" title="Amarillo"></button>
+          <button class="ctheme-swatch" data-color="#4ecdc4" style="background:#4ecdc4" onclick="applyCustomAccent('#4ecdc4')" title="Teal"></button>
+          <button class="ctheme-swatch" data-color="#ff6b9d" style="background:#ff6b9d" onclick="applyCustomAccent('#ff6b9d')" title="Rosa"></button>
+          <button class="ctheme-swatch" data-color="#ffa552" style="background:#ffa552" onclick="applyCustomAccent('#ffa552')" title="Naranja"></button>
+          <button class="ctheme-swatch" data-color="#7ecf3e" style="background:#7ecf3e" onclick="applyCustomAccent('#7ecf3e')" title="Verde"></button>
+          <button class="ctheme-swatch" data-color="#a78bfa" style="background:#a78bfa" onclick="applyCustomAccent('#a78bfa')" title="Violeta"></button>
+          <button class="ctheme-swatch" data-color="#38bdf8" style="background:#38bdf8" onclick="applyCustomAccent('#38bdf8')" title="Azul cielo"></button>
+          <button class="ctheme-swatch" data-color="#fb7185" style="background:#fb7185" onclick="applyCustomAccent('#fb7185')" title="Coral"></button>
+          <button class="ctheme-swatch" data-color="#facc15" style="background:#facc15" onclick="applyCustomAccent('#facc15')" title="Amarillo"></button>
           <div class="ctheme-custom">
             <input type="color" id="custom-color-input" value="#4ecdc4"
               oninput="applyCustomAccent(this.value)"
