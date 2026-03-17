@@ -9,23 +9,30 @@
  *  - Navegación → network-first
  */
 
-const CACHE_NAME = 'focusnature-v6';
+const CACHE_NAME = 'focusnature-v7';
 
 // Solo assets locales ligeros que sabemos que existen
 const STATIC_ASSETS = [
   '/manifest.json',
   '/styles.css',
   '/src/js/config.js',
+  '/src/js/state.js',
   '/src/js/timer.js',
   '/src/js/db.js',
   '/src/js/ui.js',
   '/src/js/sound.js',
   '/src/js/creatures.js',
   '/src/js/ambient.js',
+  '/src/js/ambient-scenes.js',
   '/src/js/confetti.js',
   '/src/js/commands.js',
   '/src/js/i18n.js',
   '/src/js/notifications.js',
+  '/src/js/sync.js',
+  '/src/js/auth.js',
+  '/src/js/settings-handler.js',
+  '/src/js/tasks-handler.js',
+  '/src/js/stats-handler.js',
 ];
 
 // Rutas que NUNCA deben cachearse (contienen credenciales inyectadas o son dinámicas)

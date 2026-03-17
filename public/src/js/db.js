@@ -11,11 +11,13 @@ export function initDb(supabaseClient) {
 
 // ─── AUTH ─────────────────────────────────────
 export const auth = {
-  onStateChange: (cb) => _sb.auth.onAuthStateChange(cb),
-  getSession:    ()   => _sb.auth.getSession(),
-  signIn:  (email, password) => _sb.auth.signInWithPassword({ email, password }),
-  signUp:  (email, password) => _sb.auth.signUp({ email, password }),
-  signOut: ()               => _sb.auth.signOut(),
+  onStateChange:  (cb)               => _sb.auth.onAuthStateChange(cb),
+  getSession:     ()                 => _sb.auth.getSession(),
+  signIn:         (email, password)  => _sb.auth.signInWithPassword({ email, password }),
+  signUp:         (email, password)  => _sb.auth.signUp({ email, password }),
+  signOut:        ()                 => _sb.auth.signOut(),
+  resetPassword:  (email, redirectTo)=> _sb.auth.resetPasswordForEmail(email, { redirectTo }),
+  updatePassword: (newPass)          => _sb.auth.updateUser({ password: newPass }),
 };
 
 // ─── SETTINGS ─────────────────────────────────

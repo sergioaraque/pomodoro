@@ -8,6 +8,9 @@ import { cfg } from './config.js';
 
 const $ = id => document.getElementById(id);
 
+let _bannerMode  = null;
+let _bannerTimer = null;
+
 // ══════════════════════════════════════════════
 //  AUTH UI
 // ══════════════════════════════════════════════
@@ -143,8 +146,12 @@ export function resetUI() {
   const goalRing = document.getElementById('goal-ring');
   if (goalRing) goalRing.innerHTML = '';
   
+  // Resetear estado del banner para el próximo modo
+  _bannerMode = null;
+  clearTimeout(_bannerTimer);
   hideDeepFocusOverlay();
-  applyTheme('ocean');
+  // No aplicamos tema aquí; lo hará loadSettings() con el tema guardado del usuario.
+  // El tema actual simplemente se mantiene hasta que cargue.
 }
 
 // ══════════════════════════════════════════════
@@ -245,17 +252,22 @@ export function renderTimer(timerState) {
     pbar.classList.add('lbreak');
   }
 
-  const banner = $('break-banner');
-  if (mode === 'short') {
-    banner.textContent = '🌿 ¡Buen trabajo! Tómate una pausa corta.';
-    banner.className   = 'break-banner visible';
-    setTimeout(() => banner.classList.remove('visible'), 6000);
-  } else if (mode === 'long') {
-    banner.textContent = '🌊 ¡Ciclo completado! Disfruta tu descanso largo.';
-    banner.className   = 'break-banner lbreak visible';
-    setTimeout(() => banner.classList.remove('visible'), 8000);
-  } else {
-    banner.classList.remove('visible');
+  // Actualizar banner solo en cambio de modo, no en cada tick
+  if (mode !== _bannerMode) {
+    _bannerMode = mode;
+    const banner = $('break-banner');
+    clearTimeout(_bannerTimer);
+    if (mode === 'short') {
+      banner.textContent = '🌿 ¡Buen trabajo! Tómate una pausa corta.';
+      banner.className   = 'break-banner visible';
+      _bannerTimer = setTimeout(() => banner.classList.remove('visible'), 6000);
+    } else if (mode === 'long') {
+      banner.textContent = '🌊 ¡Ciclo completado! Disfruta tu descanso largo.';
+      banner.className   = 'break-banner lbreak visible';
+      _bannerTimer = setTimeout(() => banner.classList.remove('visible'), 8000);
+    } else {
+      banner.classList.remove('visible');
+    }
   }
 
   renderSessionDots(sessionsDone);
@@ -524,6 +536,39 @@ export function hideDeepFocusOverlay() {
 // ══════════════════════════════════════════════
 //  SETTINGS
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+let _toastTimer = null;
+
+/**
+ * Muestra un toast con mensaje y opcionalmente un botón de acción.
+ * @param {string} msg
+ * @param {string} [actionLabel]
+ * @param {Function} [actionFn]
+ */
+export function showToast(msg, actionLabel, actionFn) {
+  let toast = $('fn-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'fn-toast';
+    toast.className = 'fn-toast';
+    document.body.appendChild(toast);
+  }
+  clearTimeout(_toastTimer);
+  toast.innerHTML = '<span class="fn-toast-msg"></span>' +
+    (actionLabel ? `<button class="fn-toast-btn">${actionLabel}</button>` : '');
+  toast.querySelector('.fn-toast-msg').textContent = msg;
+  if (actionLabel && actionFn) {
+    toast.querySelector('.fn-toast-btn').onclick = () => {
+      actionFn();
+      toast.classList.remove('fn-toast-show');
+    };
+  }
+  toast.classList.add('fn-toast-show');
+  _toastTimer = setTimeout(() => toast.classList.remove('fn-toast-show'), 4000);
+}
+
 export function renderSettings() {
   const focusEl    = $('sv-focus');
   const shortEl    = $('sv-short');

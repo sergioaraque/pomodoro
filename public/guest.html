@@ -286,6 +286,14 @@ function saveCfg() {
   try { localStorage.setItem('fn_guest_cfg', JSON.stringify(cfg)); } catch {}
 }
 
+function loadTasks() {
+  try { return JSON.parse(localStorage.getItem('fn_guest_tasks') || '[]'); }
+  catch { return []; }
+}
+function saveTasks() {
+  try { localStorage.setItem('fn_guest_tasks', JSON.stringify(tasks)); } catch {}
+}
+
 const cfg = loadCfg();
 
 // ── TIMER STATE ──────────────────────
@@ -301,7 +309,7 @@ const st = {
 
 let tickInterval  = null;
 let currentTheme  = cfg.theme || 'ocean';
-let tasks         = [];
+let tasks         = loadTasks();
 let upsellDismissed = false;
 let deletedTask = null;
 let undoTimeout = null;
@@ -430,7 +438,7 @@ function onSessionEnd() {
     st.pomodorosDone++;
     if (st.currentTaskId !== null) {
       const t = tasks.find(t => t.id === st.currentTaskId);
-      if (t) { t.pomodoros++; renderTasks(); }
+      if (t) { t.pomodoros++; renderTasks(); saveTasks(); }
     }
     if (st.pomodorosDone >= 2 && !upsellDismissed) showUpsell();
     
@@ -505,13 +513,14 @@ window.addGuestTask = () => {
   if (!name) return;
   inp.value = '';
   tasks.unshift({ 
-    id: Date.now() + Math.random(), 
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
     name, 
     done: false, 
     pomodoros: 0,
     notes: ''
   });
   renderTasks();
+  saveTasks();
 };
 
 function renderTasks() {
@@ -548,22 +557,22 @@ function renderTasks() {
         st.currentTaskId=null;
         document.getElementById('cur-task-txt').textContent='Sin tarea seleccionada';
       }
-      renderTasks();
+      renderTasks(); saveTasks();
     }
     if (action==='delete') {
       const taskToDelete = tasks.find(t => t.id === idN);
       if (!taskToDelete) return;
-      
+
       tasks = tasks.filter(t => t.id !== idN);
       if (st.currentTaskId === idN) {
         st.currentTaskId = null;
         document.getElementById('cur-task-txt').textContent='Sin tarea seleccionada';
       }
-      renderTasks();
-      
+      renderTasks(); saveTasks();
+
       showUndoToast(taskToDelete, () => {
         tasks.unshift(taskToDelete);
-        renderTasks();
+        renderTasks(); saveTasks();
         document.getElementById('toast-undo').style.display = 'none';
       });
     }
