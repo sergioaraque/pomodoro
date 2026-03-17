@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Limpiando caché...</title>
+  <style>
+    body { 
+      background: #060e18; 
+      color: #e8f4f8; 
+      font-family: system-ui; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      height: 100vh; 
+      margin: 0; 
+    }
+    .card { 
+      background: rgba(255,255,255,0.05); 
+      padding: 2rem; 
+      border-radius: 16px; 
+      text-align: center; 
+    }
+    .loader { 
+      width: 40px; 
+      height: 40px; 
+      border: 3px solid rgba(78,205,196,0.3); 
+      border-top-color: #4ecdc4; 
+      border-radius: 50%; 
+      margin: 20px auto; 
+      animation: spin 1s linear infinite; 
+    }
+    @keyframes spin { 
+      to { transform: rotate(360deg); } 
+    }
+    .success { color: #4ecdc4; }
+    .error { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>🧹 Limpiando caché...</h2>
+    <div class="loader"></div>
+    <p id="status">Eliminando datos antiguos...</p>
+  </div>
+
+  <script>
+    (async function() {
+      const status = document.getElementById('status');
+      
+      try {
+        // Limpiar caches de Service Worker
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          for (const key of keys) {
+            if (key.includes('focusnature')) {
+              await caches.delete(key);
+            }
+          }
+        }
+        
+        // Limpiar localStorage (preservar guest)
+        const guestCfg = localStorage.getItem('fn_guest_cfg');
+        localStorage.clear();
+        if (guestCfg) localStorage.setItem('fn_guest_cfg', guestCfg);
+        
+        // Limpiar sessionStorage
+        sessionStorage.clear();
+        
+        // Limpiar IndexedDB
+        if ('indexedDB' in window) {
+          const databases = await indexedDB.databases?.() || [];
+          for (const db of databases) {
+            if (db.name?.includes('supabase') || db.name?.includes('focusnature')) {
+              indexedDB.deleteDatabase(db.name);
+            }
+          }
+        }
+        
+        // Desregistrar Service Workers
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            await registration.unregister();
+          }
+        }
+        
+        status.innerHTML = '<span class="success">✅ Caché limpiado correctamente</span>';
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1500);
+        
+      } catch (error) {
+        status.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      }
+    })();
+  </script>
+</body>
+</html>
