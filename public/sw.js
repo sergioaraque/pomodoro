@@ -9,7 +9,7 @@
  *  - Navegación → network-first
  */
 
-const CACHE_NAME = 'focusnature-v8';
+const CACHE_NAME = 'focusnature-v9';
 
 // Solo assets locales ligeros que sabemos que existen
 const STATIC_ASSETS = [
@@ -34,7 +34,6 @@ const STATIC_ASSETS = [
   '/src/js/tasks-handler.js',
   '/src/js/stats-handler.js',
   '/src/js/favicon.js',
-  '/src/js/pip.js',
 ];
 
 // Rutas que NUNCA deben cachearse (contienen credenciales inyectadas o son dinámicas)
@@ -54,7 +53,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activación: limpiar caches de versiones anteriores
+// Activación: limpiar caches de versiones anteriores y notificar a los clientes
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
@@ -62,6 +61,11 @@ self.addEventListener('activate', event => {
         keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       ))
       .then(() => self.clients.claim())
+      .then(async () => {
+        // Notificar a todas las pestañas que hay una nueva versión activa
+        const clients = await self.clients.matchAll({ type: 'window' });
+        clients.forEach(client => client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME }));
+      })
   );
 });
 

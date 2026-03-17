@@ -94,7 +94,7 @@ export async function loadSettings() {
 // ── saveSettings ──────────────────────────────────────────────────────
 
 export async function saveSettings() {
-  if (!state.user) return;
+  if (!state.user) return { error: null };
   ui.setSyncState('syncing');
   const { error } = await db.settings.save(state.user.id, {
     focus_min:    cfg.focus,
@@ -116,6 +116,7 @@ export async function saveSettings() {
     quick_notes:  document.getElementById('quick-notes-area')?.value || '',
   });
   ui.setSyncState(error ? 'error' : 'ok');
+  return { error };
 }
 
 export function debounceSave() {
@@ -350,6 +351,29 @@ window.switchLang = (code) => {
   document.querySelectorAll('.lang-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.lang === code)
   );
+};
+
+// ── Guardar ajustes manualmente ────────────────────────────────────────
+
+window.saveSettingsNow = async () => {
+  if (!state.user) return;
+  const btn = document.getElementById('btn-save-settings');
+  clearTimeout(state.saveTimer);
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+  const { error } = await saveSettings();
+  saveToLocalStorage();
+  if (btn) {
+    btn.disabled = false;
+    if (error) {
+      btn.textContent = '⚠ Error — reintentar';
+      btn.style.setProperty('color', '#ff6b9d');
+      setTimeout(() => { btn.textContent = 'Guardar ajustes'; btn.style.removeProperty('color'); }, 3500);
+    } else {
+      btn.textContent = '✓ Guardado';
+      btn.style.setProperty('color', 'var(--accent)');
+      setTimeout(() => { btn.textContent = 'Guardar ajustes'; btn.style.removeProperty('color'); }, 2000);
+    }
+  }
 };
 
 window.addEventListener('beforeunload', () => {

@@ -13,6 +13,9 @@ import { debounceSave } from './settings-handler.js';
 let _allHistoryItems  = [];
 let _filteredTaskName = '';
 
+// Caché de stats: se muestra inmediatamente en cada visita al tab
+let _cachedStats = null;
+
 // ── loadTodayCount ────────────────────────────────────────────────────
 
 export async function loadTodayCount() {
@@ -29,68 +32,50 @@ export async function loadTodayCount() {
 
 export async function loadStats() {
   if (!state.user) return;
-  ui.setSyncState('syncing');
+
+  // Si hay caché, mostrar inmediatamente mientras recargamos en fondo
+  if (_cachedStats) {
+    _renderStats(_cachedStats);
+    _refreshStatsBackground();
+    return;
+  }
+
+  // Primera carga: mostrar estado de carga y esperar
   _setStatsLoading(true);
+  ui.setSyncState('syncing');
+  await _fetchAndRender();
+}
 
+async function _refreshStatsBackground() {
+  // Recarga silenciosa sin bloquear la UI
   try {
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Tiempo de espera agotado')), 12000)
-    );
-    const [{ data: fd }, { data: recent }] = await Promise.race([
-      Promise.all([
-        db.sessions.loadFocus(state.user.id),
-        db.sessions.loadRecent(state.user.id),
-      ]),
-      timeout,
+    const [{ data: fd }, { data: recent }] = await Promise.all([
+      db.sessions.loadFocus(state.user.id),
+      db.sessions.loadRecent(state.user.id),
     ]);
-
-    const focusData = fd || [];
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    state.todayCount = focusData.filter(s => new Date(s.completed_at) >= today).length;
-    const totalMins  = focusData.reduce((a, s) => a + s.duration, 0);
-
-    const daySet = new Set(focusData.map(s => new Date(s.completed_at).toDateString()));
-    let streak = 0;
-    const chk = new Date();
-    while (daySet.has(chk.toDateString())) { streak++; chk.setDate(chk.getDate() - 1); }
-
-    const weekCounts = [];
-    for (let i = 6; i >= 0; i--) {
-      const d  = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
-      const nx = new Date(d); nx.setDate(nx.getDate() + 1);
-      weekCounts.push(
-        focusData.filter(s => { const sd = new Date(s.completed_at); return sd >= d && sd < nx; }).length
-      );
+    const built = _buildStats(fd, recent);
+    if (built) {
+      _cachedStats = built;
+      _renderStats(built);
+      ui.setSyncState('ok');
     }
+  } catch (_) {
+    // Fallo silencioso — ya hay datos de caché visibles
+    ui.setSyncState('error');
+  }
+}
 
-    const heatmap = {};
-    focusData.forEach(s => {
-      const k = new Date(s.completed_at).toDateString();
-      heatmap[k] = (heatmap[k] || 0) + 1;
-    });
-
-    _allHistoryItems  = recent || [];
-    _filteredTaskName = '';
-
-    ui.renderStats({
-      total:        focusData.length,
-      today:        state.todayCount,
-      streak,
-      hours:        (totalMins / 60).toFixed(1) + 'h',
-      weekData:     weekCounts,
-      heatmapData:  heatmap,
-      historyItems: recent || [],
-      dailyGoal:    cfg.dailyGoal,
-      onDeleteHistory: async (id) => {
-        ui.setSyncState('syncing');
-        const { error } = await db.sessions.remove(id);
-        ui.setSyncState(error ? 'error' : 'ok');
-        if (!error) loadStats();
-      },
-    });
-
-    ui.renderDailyGoalRing(state.todayCount, cfg.dailyGoal);
-    _renderWeeklyChallenge(focusData);
+async function _fetchAndRender() {
+  try {
+    const [{ data: fd }, { data: recent }] = await Promise.all([
+      db.sessions.loadFocus(state.user.id),
+      db.sessions.loadRecent(state.user.id),
+    ]);
+    const built = _buildStats(fd, recent);
+    if (built) {
+      _cachedStats = built;
+      _renderStats(built);
+    }
     ui.setSyncState('ok');
   } catch (err) {
     console.error('[stats] loadStats error:', err);
@@ -99,6 +84,77 @@ export async function loadStats() {
   } finally {
     _setStatsLoading(false);
   }
+}
+
+function _buildStats(fd, recent) {
+  const focusData = fd || [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  const todayCount = focusData.filter(s => new Date(s.completed_at) >= today).length;
+  state.todayCount = todayCount;
+
+  const totalMins = focusData.reduce((a, s) => a + s.duration, 0);
+
+  const daySet = new Set(focusData.map(s => new Date(s.completed_at).toDateString()));
+  let streak = 0;
+  const chk = new Date();
+  while (daySet.has(chk.toDateString())) { streak++; chk.setDate(chk.getDate() - 1); }
+
+  const weekCounts = [];
+  for (let i = 6; i >= 0; i--) {
+    const d  = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
+    const nx = new Date(d); nx.setDate(nx.getDate() + 1);
+    weekCounts.push(
+      focusData.filter(s => { const sd = new Date(s.completed_at); return sd >= d && sd < nx; }).length
+    );
+  }
+
+  const heatmap = {};
+  focusData.forEach(s => {
+    const k = new Date(s.completed_at).toDateString();
+    heatmap[k] = (heatmap[k] || 0) + 1;
+  });
+
+  _allHistoryItems  = recent || [];
+  _filteredTaskName = '';
+
+  return {
+    total:       focusData.length,
+    today:       todayCount,
+    streak,
+    hours:       (totalMins / 60).toFixed(1) + 'h',
+    weekData:    weekCounts,
+    heatmapData: heatmap,
+    history:     recent || [],
+    focusData,
+  };
+}
+
+function _renderStats(built) {
+  ui.renderStats({
+    total:        built.total,
+    today:        built.today,
+    streak:       built.streak,
+    hours:        built.hours,
+    weekData:     built.weekData,
+    heatmapData:  built.heatmapData,
+    historyItems: built.history,
+    dailyGoal:    cfg.dailyGoal,
+    onDeleteHistory: async (id) => {
+      ui.setSyncState('syncing');
+      const { error } = await db.sessions.remove(id);
+      ui.setSyncState(error ? 'error' : 'ok');
+      if (!error) {
+        // Invalida caché y recarga
+        _cachedStats = null;
+        await _fetchAndRender();
+      }
+    },
+  });
+
+  ui.renderDailyGoalRing(built.today, cfg.dailyGoal);
+  _renderWeeklyChallenge(built.focusData);
+  _checkStreakRisk(built.focusData);
 }
 
 // ── Privados ──────────────────────────────────────────────────────────
@@ -127,7 +183,6 @@ function _setStatsLoading(loading) {
     const el = document.getElementById(id);
     if (!el) return;
     if (loading) {
-      el.dataset.orig    = el.textContent;
       el.style.opacity   = '0.4';
       el.style.animation = 'statPulse 1s ease-in-out infinite';
     } else {
@@ -144,10 +199,20 @@ function _setStatsLoading(loading) {
 function _showStatsError(msg) {
   const hist = document.getElementById('history-list');
   if (hist) {
-    hist.innerHTML = '<div class="empty-msg" style="color:var(--muted)">⚠️ Error al cargar: ' +
-      (msg || 'inténtalo de nuevo') + '</div>';
+    hist.innerHTML =
+      '<div class="empty-msg" style="color:var(--muted)">' +
+      '⚠️ ' + (msg || 'Error al cargar') +
+      ' <button onclick="window._retryStats()" style="margin-left:8px;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:3px 10px;font-size:12px;cursor:pointer">Reintentar</button>' +
+      '</div>';
   }
 }
+
+window._retryStats = async () => {
+  _cachedStats = null;
+  _setStatsLoading(true);
+  ui.setSyncState('syncing');
+  await _fetchAndRender();
+};
 
 function _renderWeeklyChallenge(focusData) {
   const el = document.getElementById('weekly-challenge');
@@ -169,7 +234,7 @@ function _renderWeeklyChallenge(focusData) {
     dayCount[day] = (dayCount[day] || 0) + 1;
   });
 
-  const bestDay  = Math.max(0, ...Object.values(dayCount));
+  const bestDay   = Math.max(0, ...Object.values(dayCount));
   const weekTotal = lastWeekSessions.length;
 
   const startOfWeek = new Date(now);
@@ -237,7 +302,10 @@ window.filterHistory = (val) => {
     ui.setSyncState('syncing');
     const { error } = await db.sessions.remove(id);
     ui.setSyncState(error ? 'error' : 'ok');
-    if (!error) loadStats();
+    if (!error) {
+      _cachedStats = null;
+      await _fetchAndRender();
+    }
   });
 };
 

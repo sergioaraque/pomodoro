@@ -263,17 +263,9 @@
         <div id="goal-ring"></div>
         <div class="goal-ring-label">Objetivo diario</div>
       </div>
-      <div class="timer-ring-wrap">
-        <svg class="timer-ring-svg" viewBox="0 0 220 220" aria-hidden="true">
-          <circle class="timer-ring-bg"   cx="110" cy="110" r="100"/>
-          <circle class="timer-ring-prog" id="timer-ring-prog" cx="110" cy="110" r="100"
-            transform="rotate(-90 110 110)"
-            stroke-dasharray="628.3" stroke-dashoffset="0"/>
-        </svg>
-        <div class="mode-lbl" id="mode-lbl">Sesión de enfoque</div>
-        <div class="timer-display" id="timer-disp">25:00</div>
-      </div>
-      <div class="pbar-wrap" id="pbar-wrap"><div class="pbar" id="pbar" style="width:100%"></div></div>
+      <div class="mode-lbl" id="mode-lbl">Sesión de enfoque</div>
+      <div class="timer-display" id="timer-disp">25:00</div>
+      <div class="pbar-wrap"><div class="pbar" id="pbar" style="width:100%"></div></div>
       <div style="text-align:center;margin-bottom:8px;font-size:11px;color:var(--muted);opacity:.6">
         <kbd style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:1px 6px;font-size:10px">Espacio</kbd> iniciar &nbsp;·&nbsp;
         <kbd style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:1px 6px;font-size:10px">R</kbd> reiniciar &nbsp;·&nbsp;
@@ -283,7 +275,6 @@
         <button class="btn-icon" onclick="resetTimer()"  title="Reiniciar">↺</button>
         <button class="btn-primary" id="start-btn" onclick="toggleTimer()">Iniciar</button>
         <button class="btn-icon" onclick="skipSession()" title="Saltar">→</button>
-        <button class="btn-icon" id="btn-pip" onclick="togglePiP()" title="Mini ventana flotante" style="font-size:14px">⊞</button>
       </div>
       <div class="session-dots" id="sdots"></div>
     </div>
@@ -371,7 +362,15 @@
   <!-- SETTINGS TAB -->
   <div id="tab-settings" class="tab-panel">
     <div class="card">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:15px;font-style:italic">Los cambios se guardan automáticamente en tu cuenta.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;gap:12px">
+        <div style="font-size:12px;color:var(--muted);font-style:italic">Los cambios se auto-guardan. Usa el botón si ves el indicador en rojo.</div>
+        <button id="btn-save-settings" onclick="saveSettingsNow()"
+          style="flex-shrink:0;background:none;border:1px solid rgba(255,255,255,.18);color:var(--muted);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;transition:all .2s;font-family:inherit;white-space:nowrap"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+          onmouseout="this.style.borderColor='rgba(255,255,255,.18)';this.style.color='var(--muted)'">
+          Guardar ajustes
+        </button>
+      </div>
 
       <div class="settings-section-title" style="margin-top:0;padding-top:0;border-top:none">Presets rápidos</div>
       <div class="preset-grid" style="margin-bottom:14px">

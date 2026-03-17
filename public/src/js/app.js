@@ -28,8 +28,6 @@ import { loadTodayCount, loadStats }       from './stats-handler.js';
 import { queueSession, flushQueue,
          updateSyncBadge }               from './sync.js';
 import { updateFavicon, resetFavicon }  from './favicon.js';
-import { openPiP, closePiP, isPiPOpen,
-         isPiPSupported }              from './pip.js';
 
 // ── Globals para onclick inline ────────────────────────────────────────
 window.spawnCreatures = spawnCreatures;
@@ -37,22 +35,6 @@ window.drawStars      = drawStars;
 window.toggleTimer    = toggleTimer;
 window.resetTimer     = resetTimer;
 window.skipSession    = skipSession;
-
-window.togglePiP = async () => {
-  const btn = document.getElementById('btn-pip');
-  if (isPiPOpen()) {
-    closePiP();
-    if (btn) btn.style.opacity = '';
-  } else {
-    if (!isPiPSupported()) {
-      ui.showToast('Tu navegador no soporta ventanas flotantes (requiere Chrome 116+)');
-      return;
-    }
-    const ok = await openPiP(getState);
-    if (btn) btn.style.opacity = ok ? '1' : '';
-    if (!ok) ui.showToast('No se pudo abrir la mini ventana');
-  }
-};
 
 // ── Timer ─────────────────────────────────────────────────────────────
 initTimer({
@@ -202,9 +184,6 @@ function _registerCommands() {
 
   registerCommand({ id: 'fullscreen', label: 'Pantalla completa',    icon: '⛶', section: 'App', action: window.toggleFullscreen });
   registerCommand({ id: 'deepfocus',  label: 'Activar foco profundo', icon: '🎯', section: 'App', action: window.toggleDeepFocus });
-  if (isPiPSupported()) {
-    registerCommand({ id: 'pip', label: 'Mini ventana flotante', icon: '⊞', section: 'App', action: window.togglePiP });
-  }
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────
@@ -240,6 +219,13 @@ function _registerCommands() {
               });
             }
           });
+        });
+        // Cuando el SW nuevo toma el control, avisar para recargar
+        // (evita errores de funciones eliminadas que siguen en memoria)
+        navigator.serviceWorker.addEventListener('message', (evt) => {
+          if (evt.data?.type === 'SW_UPDATED') {
+            ui.showToast('App actualizada — recarga para aplicar cambios', 'Recargar', () => window.location.reload());
+          }
         });
       } catch (e) { console.warn('[SW] Registro fallido (no crítico):', e); }
     }

@@ -142,9 +142,6 @@ export function resetUI() {
   const pbar = document.getElementById('pbar');
   if (pbar) pbar.style.width = '100%';
 
-  const ring = document.getElementById('timer-ring-prog');
-  if (ring) { ring.style.strokeDashoffset = '0'; ring.style.stroke = 'var(--accent)'; }
-  
   const modeLbl = document.getElementById('mode-lbl');
   if (modeLbl) modeLbl.textContent = 'Sesión de enfoque';
   
@@ -262,16 +259,6 @@ export function renderTimer(timerState) {
 
   const pct = totalSeconds > 0 ? (secondsLeft / totalSeconds) : 1;
   $('pbar').style.width = (pct * 100) + '%';
-
-  // SVG timer ring
-  const ring = $('timer-ring-prog');
-  if (ring) {
-    const circum = 628.3; // 2 * PI * 100
-    ring.style.strokeDashoffset = circum * (1 - pct);
-    ring.style.stroke = mode === 'short' ? '#6bcf8a'
-                      : mode === 'long'  ? '#ffa552'
-                      : 'var(--accent)';
-  }
 
   const disp = $('timer-disp');
   const pbar = $('pbar');
