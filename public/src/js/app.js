@@ -128,10 +128,18 @@ window.manualSync = async () => {
 };
 
 // ── Keyboard shortcuts ─────────────────────────────────────────────────
+const _TABS = ['timer', 'tasks', 'stats', 'settings', 'notes'];
+
 document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     isPaletteOpen() ? closePalette() : openPalette();
+    return;
+  }
+  // Ctrl/Cmd + 1-5 → cambiar pestaña
+  if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '5') {
+    const tab = _TABS[parseInt(e.key) - 1];
+    if (tab) { e.preventDefault(); window.switchTab(tab, null); }
     return;
   }
   if (['INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
@@ -154,9 +162,9 @@ function _registerCommands() {
     });
   });
 
-  registerCommand({ id: 'start',  label: 'Iniciar / Pausar timer', icon: '▶', section: 'Timer',  action: toggleTimer });
-  registerCommand({ id: 'reset',  label: 'Reiniciar timer',        icon: '↺', section: 'Timer',  action: resetTimer });
-  registerCommand({ id: 'skip',   label: 'Saltar sesión',          icon: '⏭', section: 'Timer',  action: skipSession });
+  registerCommand({ id: 'start',  label: 'Iniciar / Pausar timer [Espacio]', icon: '▶', section: 'Timer',  action: toggleTimer });
+  registerCommand({ id: 'reset',  label: 'Reiniciar timer [R]',              icon: '↺', section: 'Timer',  action: resetTimer });
+  registerCommand({ id: 'skip',   label: 'Saltar sesión [S]',                icon: '⏭', section: 'Timer',  action: skipSession });
 
   Object.entries(THEME_META).forEach(([key, m]) => {
     registerCommand({ id: 'theme_' + key, label: 'Tema: ' + m.name, icon: m.emoji, section: 'Temas', action: () => applyTheme(key) });
@@ -213,12 +221,27 @@ function _registerCommands() {
 
     if (window.location.hash === '#register') window.showAuthTab('register');
 
+    // Supabase v2.10+ dispara INITIAL_SESSION (no SIGNED_IN) al cargar la página
+    // con una sesión guardada. Manejamos ambos eventos para compatibilidad.
     db.auth.onStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN'  && session?.user) await handleLogin(session.user);
-      if (event === 'SIGNED_OUT')                  handleLogout();
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        if (session?.user && state.user?.id !== session.user.id) {
+          await handleLogin(session.user);
+        }
+      }
+      if (event === 'SIGNED_OUT') handleLogout();
+      // El usuario llegó desde el enlace de recuperación de contraseña
+      if (event === 'PASSWORD_RECOVERY') {
+        window.showAuthTab('newpass');
+      }
     });
 
-    await db.auth.getSession();
+    // Fallback: si onAuthStateChange no dispara (entorno extraño o CDN viejo),
+    // leemos la sesión directamente y hacemos login manualmente.
+    const { data: { session } } = await db.auth.getSession();
+    if (session?.user && !state.user) {
+      await handleLogin(session.user);
+    }
 
   } catch (err) {
     console.error('[app] Boot error:', err);

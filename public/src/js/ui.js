@@ -11,6 +11,29 @@ const $ = id => document.getElementById(id);
 let _bannerMode  = null;
 let _bannerTimer = null;
 
+// Sugerencias de actividad para las pausas
+const _SHORT_TIPS = [
+  '☕ Levántate y sirve agua o un café.',
+  '🧘 Cierra los ojos 60 segundos y respira hondo.',
+  '👀 Mira por la ventana — descansa la vista.',
+  '🤸 Estira cuello y hombros.',
+  '💧 Bebe un vaso de agua.',
+  '🚶 Date una vuelta corta por la habitación.',
+  '🙆 Haz 10 rotaciones de hombros.',
+  '📵 Aleja el teléfono — esto es un descanso de verdad.',
+];
+const _LONG_TIPS = [
+  '🚶 Sal a caminar 10 minutos — activa el cuerpo.',
+  '🍎 Come algo saludable — el cerebro necesita energía.',
+  '🛁 Date un respiro completo: estira, hidratate y muévete.',
+  '🎵 Pon tu canción favorita y desconecta.',
+  '☀️ Sal fuera si puedes — la luz natural recarga.',
+  '🗣️ Habla con alguien — salir del modo foco es sano.',
+  '📖 Lee algo que no sea trabajo durante unos minutos.',
+  '🧹 Ordena un rincón pequeño — despeja mente y espacio.',
+];
+function _randomTip(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
 // ══════════════════════════════════════════════
 //  AUTH UI
 // ══════════════════════════════════════════════
@@ -258,13 +281,13 @@ export function renderTimer(timerState) {
     const banner = $('break-banner');
     clearTimeout(_bannerTimer);
     if (mode === 'short') {
-      banner.textContent = '🌿 ¡Buen trabajo! Tómate una pausa corta.';
+      banner.textContent = `🌿 ¡Buen trabajo! ${_randomTip(_SHORT_TIPS)}`;
       banner.className   = 'break-banner visible';
-      _bannerTimer = setTimeout(() => banner.classList.remove('visible'), 6000);
+      _bannerTimer = setTimeout(() => banner.classList.remove('visible'), 7000);
     } else if (mode === 'long') {
-      banner.textContent = '🌊 ¡Ciclo completado! Disfruta tu descanso largo.';
+      banner.textContent = `🌊 ¡Ciclo completado! ${_randomTip(_LONG_TIPS)}`;
       banner.className   = 'break-banner lbreak visible';
-      _bannerTimer = setTimeout(() => banner.classList.remove('visible'), 8000);
+      _bannerTimer = setTimeout(() => banner.classList.remove('visible'), 9000);
     } else {
       banner.classList.remove('visible');
     }

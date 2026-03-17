@@ -132,7 +132,7 @@
       </p>
     </div>
 
-    <!-- RESET PASSWORD -->
+    <!-- RESET PASSWORD (solicitar enlace) -->
     <div id="auth-reset-form" style="display:none">
       <p style="font-size:13px;color:#8ab4cc;margin-bottom:16px;line-height:1.55">
         Escribe tu correo y te enviaremos un enlace para restablecer tu contraseña.
@@ -146,6 +146,30 @@
       <p style="text-align:center;margin-top:12px">
         <button class="text-link" onclick="showAuthTab('login')">← Volver</button>
       </p>
+    </div>
+
+    <!-- SET NEW PASSWORD (llega desde el enlace del email) -->
+    <div id="auth-newpass-form" style="display:none">
+      <p style="font-size:13px;color:#8ab4cc;margin-bottom:16px;line-height:1.55">
+        Elige tu nueva contraseña.
+      </p>
+      <div class="auth-field">
+        <label>Nueva contraseña</label>
+        <input class="auth-inp" id="np-new" type="password" placeholder="mínimo 6 caracteres"
+          autocomplete="new-password"
+          oninput="checkPasswordStrength(this.value)"
+          onkeydown="if(event.key==='Enter') doSetNewPassword()">
+        <div class="pw-bar-wrap"><div class="pw-bar" id="pw-bar2"></div></div>
+        <div class="pw-hint" id="pw-hint2"></div>
+      </div>
+      <div class="auth-field">
+        <label>Repetir contraseña</label>
+        <input class="auth-inp" id="np-conf" type="password" placeholder="••••••••"
+          autocomplete="new-password"
+          onkeydown="if(event.key==='Enter') doSetNewPassword()">
+      </div>
+      <div id="np-msg" class="cp-msg" style="display:none"></div>
+      <button class="auth-btn" id="np-btn" onclick="doSetNewPassword()">Guardar contraseña</button>
     </div>
   </div>
 </div>
@@ -278,6 +302,9 @@
       </div>
       <div class="tasks-list" id="tasks-list">
         <div class="empty-msg">Cargando…</div>
+      </div>
+      <div id="clear-done-row" style="display:none;text-align:right;margin-top:6px">
+        <button class="btn-clear-done" onclick="clearDoneTasks()" data-i18n="tasks_clear_done">Limpiar completadas ✓</button>
       </div>
     </div>
   </div>

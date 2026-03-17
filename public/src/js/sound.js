@@ -80,15 +80,26 @@ function playDing(c) {
 function playTheme(c, currentTheme) {
   // Cada tema tiene su propio carácter tonal
   const themeNotes = {
-    ocean:    [440, 554, 659],  // La-Do#-Mi (mayor brillante)
-    meadow:   [392, 494, 587],  // Sol-Si-Re (mayor luminoso)
-    mountain: [349, 440, 523],  // Fa-La-Do (mayor suave)
-    forest:   [330, 415, 494],  // Mi-Sol#-Si (mayor místico)
-    desert:   [370, 466, 554],  // Fa#-Si♭-Do# (suspensión)
-    city:     [466, 587, 698],  // Si♭-Re-Fa (jazzy)
-    arctic:   [523, 659, 784],  // Do-Mi-Sol (claro y cristalino)
-    space:    [220, 277, 330],  // La-Do#-Mi grave (épico)
-    deep:     [196, 247, 294],  // Sol-Si-Re muy grave (abismal)
+    ocean:       [440, 554, 659],  // La-Do#-Mi   (mayor brillante)
+    meadow:      [392, 494, 587],  // Sol-Si-Re   (mayor luminoso)
+    mountain:    [349, 440, 523],  // Fa-La-Do    (mayor suave)
+    forest:      [330, 415, 494],  // Mi-Sol#-Si  (mayor místico)
+    desert:      [370, 466, 554],  // Fa#-Si♭-Do# (suspensión)
+    city:        [466, 587, 698],  // Si♭-Re-Fa   (jazzy)
+    arctic:      [523, 659, 784],  // Do-Mi-Sol   (claro y cristalino)
+    space:       [220, 277, 330],  // La-Do#-Mi   grave (épico)
+    deep:        [196, 247, 294],  // Sol-Si-Re   muy grave (abismal)
+    volcano:     [174, 220, 277],  // Fa-La-Do#   muy grave (poderoso)
+    rain:        [659, 831, 988],  // Mi-Sol#-Si  agudo (fresco)
+    japan:       [294, 370, 494],  // Re-Fa#-Si   pentatónica japonesa
+    swamp:       [233, 293, 370],  // Si♭-Re-Fa#  misterioso
+    cave:        [196, 247, 311],  // Sol-Si-Mi♭  resonante
+    underarctic: [698, 880, 1047], // Fa-La-Do    cristalino (hielo)
+    savanna:     [440, 523, 659],  // La-Do-Mi    abierto y cálido
+    alps:        [523, 659, 784],  // Do-Mi-Sol   limpio (montaña)
+    festival:    [523, 659, 880],  // Do-Mi-La    brillante y festivo
+    jungle:      [370, 466, 587],  // Fa#-Si♭-Re  exótico
+    mars:        [311, 392, 494],  // Mi♭-Sol-Si♭ alienígena
   };
   const notes = themeNotes[currentTheme] || themeNotes.ocean;
   notes.forEach((f, i) => {

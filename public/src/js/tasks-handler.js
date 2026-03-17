@@ -20,6 +20,8 @@ export async function loadTasks() {
 
 export function renderTasks() {
   ui.renderTasks(state.tasks, state.activeTaskId, taskHandlers);
+  const clearRow = document.getElementById('clear-done-row');
+  if (clearRow) clearRow.style.display = state.tasks.some(t => t.done) ? '' : 'none';
 }
 
 export function updateTaskBadge(task) {
@@ -128,6 +130,24 @@ window.onTaskDrop = async (e, targetId) => {
     await Promise.all(state.tasks.map((t, i) => db.tasks.update(t.id, { position: i })));
     ui.setSyncState('ok');
   }
+};
+
+window.clearDoneTasks = async () => {
+  const done = state.tasks.filter(t => t.done);
+  if (!done.length) return;
+  state.tasks = state.tasks.filter(t => !t.done);
+  if (done.some(t => t.id === state.activeTaskId)) {
+    state.activeTaskId = null;
+    clearTask();
+    ui.setCurrentTaskBadge(null);
+  }
+  renderTasks();
+  if (state.user) {
+    ui.setSyncState('syncing');
+    await Promise.all(done.map(t => db.tasks.remove(t.id)));
+    ui.setSyncState('ok');
+  }
+  ui.showToast(`${done.length} tarea${done.length > 1 ? 's' : ''} completada${done.length > 1 ? 's' : ''} eliminada${done.length > 1 ? 's' : ''}`);
 };
 
 window.addTask = async () => {

@@ -187,8 +187,10 @@ window.showAuthTab = (tab) => {
     login:    document.getElementById('auth-login-form'),
     register: document.getElementById('auth-register-form'),
     reset:    document.getElementById('auth-reset-form'),
+    newpass:  document.getElementById('auth-newpass-form'),
   };
-  if (tabs)     tabs.style.display = tab === 'reset' ? 'none' : '';
+  const hideTabs = tab === 'reset' || tab === 'newpass';
+  if (tabs)     tabs.style.display = hideTabs ? 'none' : '';
   if (btnLogin) btnLogin.classList.toggle('active', tab === 'login');
   if (btnReg)   btnReg.classList.toggle('active',   tab === 'register');
   Object.entries(forms).forEach(([key, el]) => {
@@ -196,10 +198,35 @@ window.showAuthTab = (tab) => {
   });
 };
 
+window.doSetNewPassword = async () => {
+  const newPass  = (document.getElementById('np-new')?.value  || '').trim();
+  const confPass = (document.getElementById('np-conf')?.value || '').trim();
+  const msgEl    = document.getElementById('np-msg');
+  const showMsg  = (txt, type) => {
+    if (!msgEl) return;
+    msgEl.textContent   = txt;
+    msgEl.className     = 'cp-msg ' + type;
+    msgEl.style.display = 'block';
+    setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
+  };
+  if (!newPass || !confPass) return showMsg('Rellena los dos campos.', 'err');
+  if (newPass.length < 6)    return showMsg('Mínimo 6 caracteres.', 'err');
+  if (newPass !== confPass)  return showMsg('Las contraseñas no coinciden.', 'err');
+
+  const btn = document.getElementById('np-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+  const { error } = await db.auth.updatePassword(newPass);
+  if (btn) { btn.disabled = false; btn.textContent = 'Guardar contraseña'; }
+
+  if (error) {
+    showMsg(error.message, 'err');
+  } else {
+    showMsg('¡Contraseña actualizada! Redirigiendo…', 'ok');
+    setTimeout(() => window.location.replace('/'), 2000);
+  }
+};
+
 window.checkPasswordStrength = (val) => {
-  const bar  = document.getElementById('pw-bar');
-  const hint = document.getElementById('pw-hint');
-  if (!bar) return;
   let score = 0;
   if (val.length >= 6)           score++;
   if (val.length >= 10)          score++;
@@ -215,9 +242,15 @@ window.checkPasswordStrength = (val) => {
     { w: '100%', c: '#4ecdc4',     t: 'Muy fuerte' },
   ];
   const lvl = levels[Math.min(score, 5)];
-  bar.style.width      = lvl.w;
-  bar.style.background = lvl.c;
-  if (hint) { hint.textContent = lvl.t; hint.style.color = lvl.c; }
+  // Aplica a todas las barras de contraseña presentes (registro y recovery)
+  ['pw-bar', 'pw-bar2'].forEach(id => {
+    const bar = document.getElementById(id);
+    if (bar) { bar.style.width = lvl.w; bar.style.background = lvl.c; }
+  });
+  ['pw-hint', 'pw-hint2'].forEach(id => {
+    const hint = document.getElementById(id);
+    if (hint) { hint.textContent = lvl.t; hint.style.color = lvl.c; }
+  });
 };
 
 window.toggleNotifications = async () => {
