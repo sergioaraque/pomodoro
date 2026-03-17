@@ -226,7 +226,7 @@ function _registerCommands() {
 
     if ('serviceWorker' in navigator) {
       try {
-        const reg = await navigator.serviceWorker.register('/sw.js');
+        const reg = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
         reg.addEventListener('updatefound', () => {
           const w = reg.installing;
           w.addEventListener('statechange', () => {
