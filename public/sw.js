@@ -9,7 +9,7 @@
  *  - Navegación → network-first
  */
 
-const CACHE_NAME = 'focusnature-v11';
+const CACHE_NAME = 'focusnature-v12';
 
 // Solo assets locales ligeros que sabemos que existen
 const STATIC_ASSETS = [
@@ -82,9 +82,8 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 3. Rutas dinámicas que nunca deben cachearse
+  // 3. Rutas dinámicas: no interceptar, el navegador las gestiona directamente
   if (NEVER_CACHE_PATHS.includes(url.pathname) || url.pathname.startsWith('/app')) {
-    event.respondWith(fetch(event.request));
     return;
   }
 

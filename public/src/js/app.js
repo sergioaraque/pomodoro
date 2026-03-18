@@ -25,9 +25,8 @@ import { handleLogin, handleLogout }      from './auth.js';
 import { applyTheme, THEME_META,
          saveSettingsNow }               from './settings-handler.js';
 import { renderTasks, updateTaskBadge }   from './tasks-handler.js';
-import { loadTodayCount, loadStats }       from './stats-handler.js';
-import { queueSession, flushQueue,
-         updateSyncBadge }               from './sync.js';
+import { loadTodayCount, loadStats,
+         invalidateStatsCache }            from './stats-handler.js';
 import { updateFavicon, resetFavicon }  from './favicon.js';
 
 // ── Globals para onclick inline ────────────────────────────────────────
@@ -88,13 +87,11 @@ initTimer({
       ui.setSyncState('syncing');
       const { error } = await db.sessions.create(state.user.id, finishedMode, durationMin, taskId, taskName);
       if (error) {
-        queueSession({ userId: state.user.id, mode: finishedMode, duration: durationMin, taskId, taskName });
-        updateSyncBadge();
         ui.setSyncState('error');
-        ui.showToast('Sin conexión — sesión guardada localmente');
+        ui.showToast('⚠ Sesión no guardada — sin conexión');
       } else {
         ui.setSyncState('ok');
-        flushQueue(state.user.id);
+        invalidateStatsCache();
       }
     }
 
@@ -141,13 +138,13 @@ window.manualSync = async () => {
   if (btn) btn.style.animation = 'spin 1s linear infinite';
   ui.setSyncState('syncing');
   try {
-    await flushQueue(state.user.id);
     await loadTodayCount();
+    await loadStats();
     ui.setSyncState('ok');
-    ui.showToast('Sincronizado ✓');
+    ui.showToast('Actualizado ✓');
   } catch {
     ui.setSyncState('error');
-    ui.showToast('Error de sincronización');
+    ui.showToast('Error al cargar datos');
   } finally {
     if (btn) btn.style.animation = '';
   }
@@ -217,6 +214,8 @@ function _registerCommands() {
     const { createClient } = window.supabase;
     db.initDb(createClient(window.__SUPABASE_URL__, window.__SUPABASE_ANON__));
     initAmbient();
+    // Migración: limpiar cola offline de versiones anteriores
+    try { localStorage.removeItem('fn_session_queue'); } catch (_) {}
 
     drawStars();
     window.addEventListener('resize', drawStars);
@@ -247,16 +246,6 @@ function _registerCommands() {
         });
       } catch (e) { console.warn('[SW] Registro fallido (no crítico):', e); }
     }
-
-    // Indicador de conexión
-    window.addEventListener('offline', () => {
-      ui.showToast('📵 Sin conexión — las sesiones se guardarán localmente');
-      ui.setSyncState('error');
-    });
-    window.addEventListener('online', () => {
-      ui.showToast('🌐 Conexión restaurada');
-      if (state.user) setTimeout(() => flushQueue(state.user.id), 500);
-    });
 
     _registerCommands();
     ui.renderTimer(getState());

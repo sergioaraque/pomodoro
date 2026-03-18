@@ -8,6 +8,16 @@ import { cfg } from './config.js';
 
 const $ = id => document.getElementById(id);
 
+// Nombres cortos para el mixer ambiental (evita importar settings-handler → circular)
+const _MIX_LABELS = {
+  ocean:'🌊 Mar', meadow:'🌿 Prado', mountain:'🏔️ Montaña', forest:'🌲 Bosque',
+  desert:'🏜️ Desierto', city:'🌃 Ciudad', arctic:'❄️ Ártico', space:'🚀 Espacio',
+  deep:'🌑 Abisal', volcano:'🌋 Volcán', rain:'🌧️ Lluvia', japan:'🏯 Japón',
+  swamp:'🌿 Ciénaga', cave:'🐉 Cueva', underarctic:'🐋 Ártico sub.',
+  savanna:'🌅 Sabana', alps:'🏔 Alpes', festival:'🎆 Festival', jungle:'🌺 Selva', mars:'🔭 Marte',
+};
+const _MIX_ALL_THEMES = Object.keys(_MIX_LABELS);
+
 let _bannerMode  = null;
 let _bannerTimer = null;
 
@@ -632,6 +642,42 @@ export function renderSettings() {
 
   const ssEl = $('sound-style-sel');
   if (ssEl) ssEl.value = cfg.soundStyle || 'bells';
+
+  // Re-sincronizar swatch del color personalizado
+  if (cfg.customAccent) {
+    document.querySelectorAll('.ctheme-swatch').forEach(b =>
+      b.classList.toggle('active', b.dataset.color?.toLowerCase() === cfg.customAccent.toLowerCase())
+    );
+    const colorInput = $('custom-color-input');
+    if (colorInput) colorInput.value = cfg.customAccent;
+  } else {
+    document.querySelectorAll('.ctheme-swatch').forEach(b => b.classList.remove('active'));
+  }
+
+  // Renderizar mixer ambiental
+  const mixWrap = $('ambient-mix-container');
+  if (!mixWrap) return;
+  if (!cfg.ambient) { mixWrap.innerHTML = ''; return; }
+
+  const entries   = Object.entries(cfg.ambientMix || {});
+  const usedThemes = entries.map(([t]) => t);
+  const available  = _MIX_ALL_THEMES.filter(t => !usedThemes.includes(t));
+
+  const rows = entries.map(([theme, vol]) => `
+    <div class="mix-scene-row">
+      <span class="mix-scene-name">${_MIX_LABELS[theme] || theme}</span>
+      <input type="range" class="mix-vol-slider" min="0" max="1" step="0.05" value="${vol}"
+        oninput="setMixSceneVol('${theme}', this.value)">
+      <button class="mix-remove-btn" onclick="removeSceneFromMix('${theme}')" title="Quitar">×</button>
+    </div>`).join('');
+
+  const addRow = entries.length < 3 ? `
+    <select class="mix-add-sel" onchange="addSceneToMix(this.value);this.value=''">
+      <option value="">＋ Añadir escena…</option>
+      ${available.map(t => `<option value="${t}">${_MIX_LABELS[t]}</option>`).join('')}
+    </select>` : '';
+
+  mixWrap.innerHTML = `<div class="mix-ambient-section">${rows}${addRow}</div>`;
 }
 
 export function renderHourChart(hourData) {

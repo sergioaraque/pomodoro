@@ -15,7 +15,6 @@ import { getState, setMode }                         from './timer.js';
 import { loadSettings, applyTheme }                  from './settings-handler.js';
 import { loadTasks }                                 from './tasks-handler.js';
 import { loadTodayCount }                            from './stats-handler.js';
-import { getQueuedCount, flushQueue, updateSyncBadge } from './sync.js';
 
 // ── handleLogin ────────────────────────────────────────────────────────
 export async function handleLogin(user) {
@@ -32,10 +31,6 @@ export async function handleLogin(user) {
       loadTodayCount().catch(e => { console.warn('[auth] Today count:', e); }),
     ]);
 
-    const queued = getQueuedCount();
-    if (queued > 0) setTimeout(() => flushQueue(user.id), 1500);
-
-    updateSyncBadge();
     spawnCreatures(state.theme);
     drawStars();
     ui.renderTimer(getState());
@@ -81,14 +76,6 @@ window.doLogout = async () => {
     if (!confirm(msg)) return;
   }
   try {
-    const queuedCount = getQueuedCount();
-    if (queuedCount > 0) {
-      const shouldSync = confirm(
-        `Tienes ${queuedCount} sesión(es) sin sincronizar. ¿Quieres intentar guardarlas antes de salir?`
-      );
-      if (shouldSync) await flushQueue(state.user?.id);
-    }
-
     stopAmbient();
     await db.auth.signOut();
 

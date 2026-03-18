@@ -1,7 +1,7 @@
 /**
  * stats-handler.js — Estadísticas, historial y reto semanal.
  *
- * Exporta: loadTodayCount, loadStats
+ * Exporta: loadTodayCount, loadStats, invalidateStatsCache
  */
 
 import { cfg }          from './config.js';
@@ -16,6 +16,9 @@ let _dateRange        = 'all';
 
 // Caché de stats: se muestra inmediatamente en cada visita al tab
 let _cachedStats = null;
+
+/** Fuerza recarga completa en la próxima visita al tab de stats. */
+export function invalidateStatsCache() { _cachedStats = null; }
 
 // ── loadTodayCount ────────────────────────────────────────────────────
 

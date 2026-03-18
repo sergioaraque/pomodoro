@@ -185,9 +185,9 @@
     <div class="user-avatar" id="user-avatar">?</div>
     <div class="user-email"  id="user-email-lbl"></div>
     <div class="sync-dot"    id="sync-dot" title="Sincronizado"></div>
-    <button id="btn-sync" onclick="manualSync()" title="Sincronizar ahora"
-      style="position:relative;background:none;border:none;cursor:pointer;padding:3px 5px;border-radius:6px;color:var(--muted);font-size:15px;transition:color .2s;line-height:1"
-      onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">↻<span id="sync-badge" style="display:none;position:absolute;top:-3px;right:-3px;background:#ff6b6b;color:#fff;font-size:9px;font-weight:700;width:14px;height:14px;border-radius:50%;align-items:center;justify-content:center"></span></button>
+    <button id="btn-sync" onclick="manualSync()" title="Actualizar datos"
+      style="background:none;border:none;cursor:pointer;padding:3px 5px;border-radius:6px;color:var(--muted);font-size:15px;transition:color .2s;line-height:1"
+      onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">↻</button>
   </div>
   <!-- Theme picker — compact button that opens a grid -->
   <div class="theme-picker-wrap" id="theme-picker-wrap">
@@ -453,6 +453,7 @@
         <input class="ambient-vol-slider" id="ambient-vol-slider" type="range" min="0" max="1" step="0.05" value="0.4" oninput="setAmbientVolume(this.value)">
         <span class="ambient-icon">🔊</span>
       </div>
+      <div id="ambient-mix-container"></div>
 
       <div class="settings-section-title">Concentración</div>
       <div class="stoggle-row" onclick="toggleAutoBreak()" style="margin-bottom:10px">

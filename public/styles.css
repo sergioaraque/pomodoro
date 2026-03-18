@@ -947,6 +947,26 @@ body.theme-mars {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
 }
 
+/* ── Ambient mix ──────────────────────────────── */
+.mix-ambient-section { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
+.mix-scene-row {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.05); border-radius: 8px; padding: 6px 10px;
+}
+.mix-scene-name { font-size: 12px; color: var(--accent); min-width: 100px; flex-shrink: 0; }
+.mix-vol-slider  { flex: 1; height: 3px; accent-color: var(--accent); cursor: pointer; }
+.mix-remove-btn {
+  background: none; border: none; color: var(--muted); font-size: 16px;
+  cursor: pointer; padding: 0 2px; line-height: 1; transition: color .15s;
+}
+.mix-remove-btn:hover { color: #ff6b9d; }
+.mix-add-sel {
+  width: 100%; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+  color: var(--fg); border-radius: 8px; padding: 7px 10px; font-size: 12px;
+  cursor: pointer; outline: none; transition: border-color .2s;
+}
+.mix-add-sel:hover { border-color: var(--accent); }
+
 /* ── Command palette ──────────────────────────── */
 .cp-overlay {
   position: fixed; inset: 0; z-index: 9999;

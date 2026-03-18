@@ -9,8 +9,9 @@ import { cfg }                          from './config.js';
 import { state }                        from './state.js';
 import * as db                          from './db.js';
 import * as ui                          from './ui.js';
-import { startAmbient, stopAmbient,
-         switchAmbient, setVolume }     from './ambient.js';
+import { startAmbient, stopAmbient, startMix,
+         switchAmbient, switchMix,
+         setSceneVolume, setVolume }    from './ambient.js';
 import { setLang, getLang, applyToDOM } from './i18n.js';
 import { setMode, getState }            from './timer.js';
 import { previewSound }                 from './sound.js';
@@ -85,7 +86,11 @@ export async function loadSettings() {
     if (data.lang) setLang(data.lang);
     if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
     applyTheme(data.theme || 'ocean', false);
-    if (cfg.ambient) startAmbient(state.theme);
+    if (cfg.ambient) {
+      const mixKeys = Object.keys(cfg.ambientMix || {});
+      if (mixKeys.length > 0) startMix(cfg.ambientMix);
+      else startAmbient(state.theme);
+    }
     setVolume(cfg.ambientVol);
 
     const el = document.getElementById('quick-notes-area');
@@ -110,9 +115,14 @@ export async function loadSettings() {
         if (bak.autoPause    != null) cfg.autoPause    = bak.autoPause;
         if (bak.customAccent)         cfg.customAccent = bak.customAccent;
         if (bak.presetName)           cfg.presetName   = bak.presetName;
+        if (bak.ambientMix   != null) cfg.ambientMix   = bak.ambientMix;
         console.info('[settings] Restaurado desde backup local');
         if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
-        if (cfg.ambient) startAmbient(state.theme);
+        if (cfg.ambient) {
+          const mixKeys = Object.keys(cfg.ambientMix || {});
+          if (mixKeys.length > 0) startMix(cfg.ambientMix);
+          else startAmbient(state.theme);
+        }
         setVolume(cfg.ambientVol);
       }
     } catch (_) {}
@@ -277,8 +287,13 @@ window.setSoundStyle = (style) => {
 
 window.toggleAmbient = () => {
   cfg.ambient = !cfg.ambient;
-  if (cfg.ambient) startAmbient(state.theme);
-  else             stopAmbient();
+  if (cfg.ambient) {
+    const mixKeys = Object.keys(cfg.ambientMix || {});
+    if (mixKeys.length > 0) startMix(cfg.ambientMix);
+    else startAmbient(state.theme);
+  } else {
+    stopAmbient();
+  }
   ui.renderSettings();
   debounceSave();
   saveToLocalStorage();
@@ -412,6 +427,37 @@ export async function saveSettingsNow() {
       setTimeout(() => { btn.textContent = 'Guardar ajustes'; btn.style.removeProperty('color'); }, 2000);
     }
   }
+};
+
+// ── Mix ambiental ──────────────────────────────────────────────────────
+
+window.addSceneToMix = (theme) => {
+  if (!theme || cfg.ambientMix[theme] !== undefined) return;
+  if (Object.keys(cfg.ambientMix).length >= 3) {
+    ui.showToast('Máximo 3 escenas en el mix');
+    return;
+  }
+  cfg.ambientMix[theme] = 0.7;
+  if (cfg.ambient) switchMix(cfg.ambientMix);
+  ui.renderSettings();
+  saveToLocalStorage();
+};
+
+window.removeSceneFromMix = (theme) => {
+  delete cfg.ambientMix[theme];
+  if (cfg.ambient) {
+    const keys = Object.keys(cfg.ambientMix);
+    if (keys.length > 0) switchMix(cfg.ambientMix);
+    else startAmbient(state.theme);
+  }
+  ui.renderSettings();
+  saveToLocalStorage();
+};
+
+window.setMixSceneVol = (theme, vol) => {
+  cfg.ambientMix[theme] = parseFloat(vol);
+  setSceneVolume(theme, parseFloat(vol));
+  saveToLocalStorage();
 };
 
 window.addEventListener('beforeunload', () => {
