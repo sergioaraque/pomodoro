@@ -16,6 +16,5 @@ export const cfg = {
   autoTheme:   false,   // cambio automático de tema según hora
   autoPause:   false,   // pausar al ocultar la pestaña
   presetName:   '',      // nombre del preset activo (vacío = custom)
-  customAccent: '',      // color hex personalizado (#rrggbb) o '' para usar el del tema
   ambientMix:  {},       // mix de escenas { theme: relativeVol } — vacío = escena del tema activo
 };

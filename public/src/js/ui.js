@@ -643,17 +643,6 @@ export function renderSettings() {
   const ssEl = $('sound-style-sel');
   if (ssEl) ssEl.value = cfg.soundStyle || 'bells';
 
-  // Re-sincronizar swatch del color personalizado
-  if (cfg.customAccent) {
-    document.querySelectorAll('.ctheme-swatch').forEach(b =>
-      b.classList.toggle('active', b.dataset.color?.toLowerCase() === cfg.customAccent.toLowerCase())
-    );
-    const colorInput = $('custom-color-input');
-    if (colorInput) colorInput.value = cfg.customAccent;
-  } else {
-    document.querySelectorAll('.ctheme-swatch').forEach(b => b.classList.remove('active'));
-  }
-
   // Renderizar mixer ambiental
   const mixWrap = $('ambient-mix-container');
   if (!mixWrap) return;

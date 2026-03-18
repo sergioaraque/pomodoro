@@ -75,8 +75,6 @@ export async function loadSettings() {
     cfg.soundStyle  = data.sound_style  ?? 'bells';
     cfg.autoTheme   = data.auto_theme   ?? false;
     cfg.presetName  = data.preset_name  ?? '';
-    cfg.customAccent = data.custom_accent || '';
-
     // autoPause no tiene columna en DB — se recupera del backup local
     try {
       const bak = JSON.parse(localStorage.getItem('fn_backup_settings_' + state.user.id) || '{}');
@@ -84,7 +82,6 @@ export async function loadSettings() {
     } catch (_) {}
 
     if (data.lang) setLang(data.lang);
-    if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
     applyTheme(data.theme || 'ocean', false);
     if (cfg.ambient) {
       const mixKeys = Object.keys(cfg.ambientMix || {});
@@ -113,11 +110,9 @@ export async function loadSettings() {
         if (bak.autoBreak    != null) cfg.autoBreak    = bak.autoBreak;
         if (bak.autoTheme    != null) cfg.autoTheme    = bak.autoTheme;
         if (bak.autoPause    != null) cfg.autoPause    = bak.autoPause;
-        if (bak.customAccent)         cfg.customAccent = bak.customAccent;
         if (bak.presetName)           cfg.presetName   = bak.presetName;
         if (bak.ambientMix   != null) cfg.ambientMix   = bak.ambientMix;
         console.info('[settings] Restaurado desde backup local');
-        if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
         if (cfg.ambient) {
           const mixKeys = Object.keys(cfg.ambientMix || {});
           if (mixKeys.length > 0) startMix(cfg.ambientMix);
@@ -153,7 +148,6 @@ export async function saveSettings() {
     sound_style:  cfg.soundStyle,
     auto_theme:   cfg.autoTheme,
     preset_name:  cfg.presetName,
-    custom_accent: cfg.customAccent || '',
     lang:         getLang(),
     quick_notes:  document.getElementById('quick-notes-area')?.value || '',
   });
@@ -179,7 +173,6 @@ export function applyTheme(name, persist = true) {
   state.theme = name;
   ui.applyTheme(name);
   _updateThemePill(name);
-  if (cfg.customAccent) _applyCustomAccent(cfg.customAccent);
   if (state.user) spawnCreatures(name);
   if (cfg.ambient && state.user) switchAmbient(name);
   if (persist && state.user) debounceSave();
@@ -209,29 +202,6 @@ function _applyAutoTheme() {
   else if (h >= 20 && h < 23) theme = 'forest';
   else                         theme = 'space';
   applyTheme(theme, false);
-}
-
-function _applyCustomAccent(hex) {
-  if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return;
-  cfg.customAccent = hex;
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const lighten = v => Math.min(255, v + 40);
-  const accent2 = '#' + [lighten(r), lighten(g), lighten(b)]
-    .map(v => v.toString(16).padStart(2, '0')).join('');
-  let tag = document.getElementById('_custom-accent-style');
-  if (!tag) {
-    tag = document.createElement('style');
-    tag.id = '_custom-accent-style';
-    document.head.appendChild(tag);
-  }
-  tag.textContent = `:root{--accent:${hex}!important;--accent2:${accent2}!important;}`;
-  document.querySelectorAll('.ctheme-swatch').forEach(b =>
-    b.classList.toggle('active', b.dataset.color?.toLowerCase() === hex.toLowerCase())
-  );
-  const colorInput = document.getElementById('custom-color-input');
-  if (colorInput) colorInput.value = hex;
 }
 
 function _updateSoundBtns(style) {
@@ -378,22 +348,6 @@ window.pickTheme = (name) => {
   applyTheme(name);
   const grid = document.getElementById('theme-picker-grid');
   if (grid) grid.classList.remove('open');
-};
-
-window.applyCustomAccent = (hex) => {
-  _applyCustomAccent(hex);
-  debounceSave();
-  saveToLocalStorage();
-};
-
-window.clearCustomAccent = () => {
-  cfg.customAccent = '';
-  const tag = document.getElementById('_custom-accent-style');
-  if (tag) tag.remove();
-  document.querySelectorAll('.ctheme-swatch').forEach(b => b.classList.remove('active'));
-  debounceSave();
-  saveToLocalStorage();
-  applyTheme(state.theme, false);
 };
 
 window.switchLang = (code) => {

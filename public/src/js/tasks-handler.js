@@ -154,7 +154,7 @@ window.loadTaskHistory = async (taskId, btn) => {
   if (!isOpen) return;
   container.innerHTML = '<div style="padding:6px 8px;font-size:11px;color:var(--muted)">Cargando…</div>';
   const { data } = await db.sessions.loadForTask(state.user.id, taskId);
-  if (!data.length) {
+  if (!data?.length) {
     container.innerHTML = '<div style="padding:6px 8px;font-size:11px;color:var(--muted)">Sin sesiones registradas aún.</div>';
     return;
   }
@@ -178,8 +178,8 @@ window.clearDoneTasks = async () => {
   renderTasks();
   if (state.user) {
     ui.setSyncState('syncing');
-    await Promise.all(done.map(t => db.tasks.remove(t.id)));
-    ui.setSyncState('ok');
+    const results = await Promise.all(done.map(t => db.tasks.remove(t.id)));
+    ui.setSyncState(results.some(r => r.error) ? 'error' : 'ok');
   }
   ui.showToast(`${done.length} tarea${done.length > 1 ? 's' : ''} completada${done.length > 1 ? 's' : ''} eliminada${done.length > 1 ? 's' : ''}`);
 };

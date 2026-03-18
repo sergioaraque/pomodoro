@@ -496,36 +496,6 @@
         <button class="lang-btn"        data-lang="pt" onclick="switchLang('pt')">🇧🇷 PT</button>
       </div>
 
-      <!-- Custom theme accent -->
-      <div class="settings-section-title">Tema personalizado</div>
-      <div class="custom-theme-wrap">
-        <div style="font-size:13px;color:var(--muted);margin-bottom:10px">
-          Elige tu color de acento. Sobreescribe el color del tema activo.
-        </div>
-        <div class="custom-theme-colors" id="custom-theme-colors">
-          <button class="ctheme-swatch" data-color="#4ecdc4" style="background:#4ecdc4" onclick="applyCustomAccent('#4ecdc4')" title="Teal"></button>
-          <button class="ctheme-swatch" data-color="#ff6b9d" style="background:#ff6b9d" onclick="applyCustomAccent('#ff6b9d')" title="Rosa"></button>
-          <button class="ctheme-swatch" data-color="#ffa552" style="background:#ffa552" onclick="applyCustomAccent('#ffa552')" title="Naranja"></button>
-          <button class="ctheme-swatch" data-color="#7ecf3e" style="background:#7ecf3e" onclick="applyCustomAccent('#7ecf3e')" title="Verde"></button>
-          <button class="ctheme-swatch" data-color="#a78bfa" style="background:#a78bfa" onclick="applyCustomAccent('#a78bfa')" title="Violeta"></button>
-          <button class="ctheme-swatch" data-color="#38bdf8" style="background:#38bdf8" onclick="applyCustomAccent('#38bdf8')" title="Azul cielo"></button>
-          <button class="ctheme-swatch" data-color="#fb7185" style="background:#fb7185" onclick="applyCustomAccent('#fb7185')" title="Coral"></button>
-          <button class="ctheme-swatch" data-color="#facc15" style="background:#facc15" onclick="applyCustomAccent('#facc15')" title="Amarillo"></button>
-          <div class="ctheme-custom">
-            <input type="color" id="custom-color-input" value="#4ecdc4"
-              oninput="applyCustomAccent(this.value)"
-              style="width:32px;height:32px;border:none;border-radius:50%;cursor:pointer;padding:0;background:none">
-            <span style="font-size:11px;color:var(--muted)">Custom</span>
-          </div>
-        </div>
-        <button onclick="clearCustomAccent()"
-          style="margin-top:8px;background:none;border:1px solid rgba(255,255,255,.12);color:var(--muted);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .2s"
-          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
-          onmouseout="this.style.borderColor='rgba(255,255,255,.12)';this.style.color='var(--muted)'">
-          Restaurar color del tema
-        </button>
-      </div>
-
       <div class="settings-section-title" data-i18n="settings_security">Seguridad</div>
       <div id="cp-msg" class="cp-msg" style="display:none"></div>
       <div class="auth-field">

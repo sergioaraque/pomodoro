@@ -6,10 +6,11 @@
 import { t } from './i18n.js';
 
 const _commands = [];
-let _overlay = null;
-let _input   = null;
-let _list    = null;
-let _active  = -1;
+let _overlay      = null;
+let _input        = null;
+let _list         = null;
+let _active       = -1;
+let _filteredCache = [];
 
 /** Registra un comando en la paleta. */
 export function registerCommand({ id, label, icon = '', section = '', action }) {
@@ -114,8 +115,6 @@ function _render(query) {
 
   _filteredCache = filtered;
 }
-
-let _filteredCache = [];
 
 function _highlight() {
   _list.querySelectorAll('.cp-item').forEach((b, i) => {

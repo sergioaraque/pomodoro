@@ -56,7 +56,8 @@ export function resetTimer() {
 
 export function skipSession() {
   _pause();
-  _handleSessionEnd();
+  // Avanza el modo sin disparar onEnd: no guarda en DB ni cuenta el pomodoro
+  _advanceMode(state.mode);
 }
 
 export function setMode(mode) {
@@ -101,21 +102,22 @@ function _tick() {
   _onTickCallback?.(getState());
 }
 
+function _advanceMode(finished) {
+  if (finished === 'focus') {
+    state.sessionsDone++;
+    _applyMode(state.sessionsDone % cfg.sessions === 0 ? 'long' : 'short');
+  } else {
+    _applyMode('focus');
+  }
+}
+
 function _handleSessionEnd() {
   const finishedMode = state.mode;
   const durationMin  = _durationForMode(finishedMode);
   const taskId       = state.currentTaskId;
   const taskName     = state.currentTaskName;
 
-  let nextMode;
-  if (finishedMode === 'focus') {
-    state.sessionsDone++;
-    nextMode = (state.sessionsDone % cfg.sessions === 0) ? 'long' : 'short';
-  } else {
-    nextMode = 'focus';
-  }
-
-  _applyMode(nextMode);
+  _advanceMode(finishedMode);
 
   if (_onEndCallback) {
     _onEndCallback(finishedMode, durationMin, taskId, taskName).catch(console.error);
