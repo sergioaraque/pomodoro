@@ -428,15 +428,31 @@ export function clearTaskInput() {
 // ══════════════════════════════════════════════
 //  STATS UI
 // ══════════════════════════════════════════════
-export function renderStats({ total, today, streak, hours, weekData, heatmapData, historyItems, dailyGoal, onDeleteHistory }) {
+export function renderStats({ total, today, streak, hours, bestStreak, bestDay, weekData, heatmapData, historyItems, dailyGoal, onDeleteHistory }) {
   $('stat-total').textContent  = total;
   $('stat-today').textContent  = today;
   $('stat-streak').textContent = streak;
   $('stat-hours').textContent  = hours;
+  const bsEl = $('stat-best-streak'); if (bsEl) bsEl.textContent = bestStreak ?? 0;
+  const bdEl = $('stat-best-day');    if (bdEl) bdEl.textContent = bestDay    ?? 0;
 
   _buildWeekChart(weekData);
   _buildHeatmap(heatmapData);
   _buildHistoryList(historyItems, onDeleteHistory);
+}
+
+export function renderAchievements(achievements, unlockedIds, newlyUnlocked = []) {
+  const grid = $('achievements-grid');
+  if (!grid) return;
+  grid.innerHTML = achievements.map(a => {
+    const isNew = newlyUnlocked.some(n => n.id === a.id);
+    const cls   = `ach-badge${unlockedIds.has(a.id) ? ' unlocked' : ''}${isNew ? ' ach-new' : ''}`;
+    return `<div class="${cls}" title="${a.desc}">
+      <div class="ach-icon">${a.icon}</div>
+      <div class="ach-name">${a.name}</div>
+      <div class="ach-desc">${a.desc}</div>
+    </div>`;
+  }).join('');
 }
 
 function _buildWeekChart(counts) {
@@ -463,17 +479,58 @@ function _buildWeekChart(counts) {
 function _buildHeatmap(dayMap) {
   const wrap = $('heatmap');
   wrap.innerHTML = '';
-  for (let i = 83; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
-    const k = d.toDateString();
-    const v = dayMap[k] || 0;
-    const lvl = v === 0 ? '' : v <= 1 ? 'l1' : v <= 3 ? 'l2' : v <= 5 ? 'l3' : 'l4';
-    const el  = document.createElement('div');
-    el.className = 'hday ' + lvl;
-    const ds = d.toLocaleDateString('es-ES', { day:'numeric', month:'short' });
-    el.setAttribute('data-tip', `${ds}: ${v} pomodoro${v !== 1 ? 's' : ''}`);
-    wrap.appendChild(el);
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const rangeStart = new Date(today); rangeStart.setDate(rangeStart.getDate() - 83);
+
+  // Align to Monday of the week containing rangeStart
+  const cur = new Date(rangeStart);
+  cur.setDate(cur.getDate() - ((cur.getDay() + 6) % 7));
+
+  // Day labels column
+  const labelsCol = document.createElement('div');
+  labelsCol.className = 'hmap-day-labels';
+  ['L','M','X','J','V','S','D'].forEach((d, i) => {
+    const sp = document.createElement('span');
+    sp.textContent = i % 2 === 1 ? d : '';
+    labelsCol.appendChild(sp);
+  });
+  wrap.appendChild(labelsCol);
+
+  // Weeks
+  const weeksWrap = document.createElement('div');
+  weeksWrap.className = 'hmap-weeks';
+  const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let lastMonth = -1;
+
+  while (cur <= today) {
+    const weekCol = document.createElement('div');
+    weekCol.className = 'hmap-week-col';
+
+    const mDiv = document.createElement('div');
+    mDiv.className = 'hmap-month';
+    const mo = cur.getMonth();
+    if (mo !== lastMonth) { mDiv.textContent = MONTHS[mo]; lastMonth = mo; }
+    weekCol.appendChild(mDiv);
+
+    for (let d = 0; d < 7; d++) {
+      const cell = document.createElement('div');
+      if (cur < rangeStart || cur > today) {
+        cell.className = 'hday hday-out';
+      } else {
+        const k = cur.toDateString();
+        const v = dayMap[k] || 0;
+        const lvl = v === 0 ? '' : v <= 1 ? 'l1' : v <= 3 ? 'l2' : v <= 5 ? 'l3' : 'l4';
+        cell.className = ('hday ' + lvl).trim();
+        const ds = cur.toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+        cell.setAttribute('data-tip', `${ds}: ${v} 🍅`);
+      }
+      weekCol.appendChild(cell);
+      cur.setDate(cur.getDate() + 1);
+    }
+    weeksWrap.appendChild(weekCol);
   }
+  wrap.appendChild(weeksWrap);
 }
 
 function _buildHistoryList(sessions, onDelete) {

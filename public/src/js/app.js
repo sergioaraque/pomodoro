@@ -27,12 +27,50 @@ import { applyTheme, THEME_META,
 import { renderTasks, updateTaskBadge, createTask } from './tasks-handler.js';
 import { loadTodayCount, loadStats,
          invalidateStatsCache }            from './stats-handler.js';
+import { ACHIEVEMENTS, loadAchievements,
+         checkNewAchievements }            from './achievements.js';
 import { updateFavicon, resetFavicon }  from './favicon.js';
 
 // ── Stuck-task tracking ────────────────────────────────────────────────
 let _stuckTaskId = null;
 let _stuckCount  = 0;
 const _STUCK_THRESHOLD = 3;
+
+// ── Keybindings ────────────────────────────────────────────────────────
+function _loadKeybindings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('fn_keybindings') || '{}');
+    return { timer: s.timer ?? ' ', reset: s.reset ?? 'r', skip: s.skip ?? 's' };
+  } catch { return { timer: ' ', reset: 'r', skip: 's' }; }
+}
+let _keys = _loadKeybindings();
+
+function _keyLabel(k) { return k === ' ' ? 'Espacio' : k.toUpperCase(); }
+
+function _renderShortcutKeys() {
+  ['timer','reset','skip'].forEach(a => {
+    const el = document.getElementById('key-' + a);
+    if (el) el.textContent = _keyLabel(_keys[a]);
+  });
+}
+
+window.startKeyCapture = (action) => {
+  const kbd = document.getElementById('key-' + action);
+  if (!kbd) return;
+  kbd.textContent = '…';
+  kbd.classList.add('capturing');
+  const handler = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (e.key !== 'Escape' && e.key !== 'Control' && e.key !== 'Meta' && e.key !== 'Alt' && e.key !== 'Shift') {
+      _keys[action] = e.key === ' ' ? ' ' : e.key.toLowerCase();
+      try { localStorage.setItem('fn_keybindings', JSON.stringify(_keys)); } catch (_) {}
+    }
+    kbd.textContent = _keyLabel(_keys[action]);
+    kbd.classList.remove('capturing');
+    document.removeEventListener('keydown', handler, true);
+  };
+  document.addEventListener('keydown', handler, true);
+};
 
 // ── Globals para onclick inline ────────────────────────────────────────
 window.spawnCreatures = spawnCreatures;
@@ -42,6 +80,12 @@ window.toggleTimer = () => {
   toggleTimer();
   const s = getState();
   if (!s.running) updateFavicon(s.secondsLeft, s.totalSeconds, s.mode, false);
+};
+
+window.logDistraction = () => {
+  state.distractionCount++;
+  const el = document.getElementById('distract-count');
+  if (el) el.textContent = `(${state.distractionCount})`;
 };
 window.resetTimer       = resetTimer;
 window.skipSession      = skipSession;
@@ -63,6 +107,8 @@ initTimer({
     } else {
       updateFavicon(s.secondsLeft, s.totalSeconds, s.mode, false);
     }
+    const dr = document.getElementById('distract-row');
+    if (dr) dr.style.display = s.mode === 'focus' ? 'block' : 'none';
     // Subtítulo de modo (sesión X de Y · Z🍅 hoy / próxima tarea durante pausa)
     const subEl = document.getElementById('mode-subtitle');
     if (subEl) {
@@ -97,10 +143,24 @@ initTimer({
       } else {
         ui.setSyncState('ok');
         invalidateStatsCache();
+        // Los logros se chequean completos al abrir la pestaña Stats (con datos reales)
+        // Aquí solo chequeamos los de hora del día que no requieren datos históricos
+        if (finishedMode === 'focus') {
+          try {
+            const h        = new Date().getHours();
+            const unlocked = loadAchievements(state.user.id);
+            const stats    = { total: 0, today: 0, bestStreak: 0, bestDay: 0, dailyGoal: 0, hasEarlySession: h < 8, hasLateSession: h >= 22 };
+            const newly    = checkNewAchievements(stats, state.user.id, unlocked);
+            newly.forEach(a => ui.showToast(`${a.icon} Logro desbloqueado: ${a.name}`));
+          } catch (_) {}
+        }
       }
     }
 
     if (finishedMode === 'focus') {
+      state.distractionCount = 0;
+      const dc = document.getElementById('distract-count');
+      if (dc) dc.textContent = '';
       state.todayCount++;
       ui.renderDailyGoalRing(state.todayCount, cfg.dailyGoal);
       const el = document.getElementById('stat-today');
@@ -191,10 +251,11 @@ document.addEventListener('keydown', e => {
   if (['INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (!state.user) return;
-  if (e.key === ' ')               { e.preventDefault(); window.toggleTimer(); }
-  if (e.key.toLowerCase() === 'r') { e.preventDefault(); resetTimer(); }
-  if (e.key.toLowerCase() === 's') { e.preventDefault(); skipSession(); }
-  if (e.key === 'Escape')          { closePalette(); }
+  const k = e.key === ' ' ? ' ' : e.key.toLowerCase();
+  if (k === _keys.timer) { e.preventDefault(); window.toggleTimer(); }
+  if (k === _keys.reset) { e.preventDefault(); resetTimer(); }
+  if (k === _keys.skip)  { e.preventDefault(); skipSession(); }
+  if (e.key === 'Escape') { closePalette(); }
 });
 
 // ── Command palette ────────────────────────────────────────────────────
@@ -279,6 +340,7 @@ function _registerCommands() {
     }
 
     _registerCommands();
+    _renderShortcutKeys();
     ui.renderTimer(getState());
     ui.renderDailyGoalRing(0, cfg.dailyGoal);
 

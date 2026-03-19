@@ -9,6 +9,7 @@ import { state }        from './state.js';
 import * as db          from './db.js';
 import * as ui          from './ui.js';
 import { debounceSave } from './settings-handler.js';
+import { ACHIEVEMENTS, loadAchievements, checkNewAchievements } from './achievements.js';
 
 let _allHistoryItems  = [];
 let _filteredTaskName = '';
@@ -104,6 +105,14 @@ function _buildStats(fd, recent) {
   const chk = new Date();
   while (daySet.has(chk.toDateString())) { streak++; chk.setDate(chk.getDate() - 1); }
 
+  // Best streak (all-time)
+  const sortedDays = [...daySet].map(d => new Date(d)).sort((a, b) => a - b);
+  let bestStreak = 0, tempStreak = 0;
+  for (let i = 0; i < sortedDays.length; i++) {
+    tempStreak = (i > 0 && (sortedDays[i] - sortedDays[i-1]) / 86400000 === 1) ? tempStreak + 1 : 1;
+    if (tempStreak > bestStreak) bestStreak = tempStreak;
+  }
+
   const weekCounts = [];
   for (let i = 6; i >= 0; i--) {
     const d  = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0);
@@ -131,6 +140,10 @@ function _buildStats(fd, recent) {
     if (task?.label) labelData[task.label] = (labelData[task.label] || 0) + 1;
   });
 
+  const bestDay         = Object.keys(heatmap).length ? Math.max(...Object.values(heatmap)) : 0;
+  const hasEarlySession = focusData.some(s => new Date(s.completed_at).getHours() < 8);
+  const hasLateSession  = focusData.some(s => new Date(s.completed_at).getHours() >= 22);
+
   _allHistoryItems  = recent || [];
   _filteredTaskName = '';
 
@@ -138,6 +151,11 @@ function _buildStats(fd, recent) {
     total:       focusData.length,
     today:       todayCount,
     streak,
+    bestStreak,
+    bestDay,
+    hasEarlySession,
+    hasLateSession,
+    dailyGoal:   cfg.dailyGoal,
     hours:       (totalMins / 60).toFixed(1) + 'h',
     weekData:    weekCounts,
     heatmapData: heatmap,
@@ -153,6 +171,8 @@ function _renderStats(built) {
     total:        built.total,
     today:        built.today,
     streak:       built.streak,
+    bestStreak:   built.bestStreak,
+    bestDay:      built.bestDay,
     hours:        built.hours,
     weekData:     built.weekData,
     heatmapData:  built.heatmapData,
@@ -177,6 +197,13 @@ function _renderStats(built) {
   if (_filteredTaskName || _dateRange !== 'all') _applyHistoryFilters();
   _renderWeeklyChallenge(built.focusData);
   _checkStreakRisk(built.focusData);
+
+  if (state.user) {
+    const unlocked = loadAchievements(state.user.id);
+    const newly    = checkNewAchievements(built, state.user.id, unlocked);
+    newly.forEach(a => ui.showToast(`${a.icon} Logro desbloqueado: ${a.name}`));
+    ui.renderAchievements(ACHIEVEMENTS, unlocked, newly);
+  }
 }
 
 // ── Privados ──────────────────────────────────────────────────────────
