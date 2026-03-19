@@ -136,8 +136,12 @@ window.onTaskDrop = async (e, targetId) => {
   renderTasks();
   if (state.user) {
     ui.setSyncState('syncing');
-    await Promise.all(state.tasks.map((t, i) => db.tasks.update(t.id, { position: i })));
-    ui.setSyncState('ok');
+    try {
+      await Promise.all(state.tasks.map((t, i) => db.tasks.update(t.id, { position: i })));
+      ui.setSyncState('ok');
+    } catch (_) {
+      ui.setSyncState('error');
+    }
   }
 };
 
@@ -183,6 +187,20 @@ window.clearDoneTasks = async () => {
   }
   ui.showToast(`${done.length} tarea${done.length > 1 ? 's' : ''} completada${done.length > 1 ? 's' : ''} eliminada${done.length > 1 ? 's' : ''}`);
 };
+
+export async function createTask(name, est = 0, label = '') {
+  if (!name || !state.user) return null;
+  ui.setSyncState('syncing');
+  const { data, error } = await db.tasks.create(state.user.id, name, est, label);
+  if (!error && data) {
+    state.tasks.unshift({ id: data.id, name: data.name, done: false, pomodoros: 0, notes: '', estimate: est, label });
+    renderTasks();
+    ui.setSyncState('ok');
+    return data;
+  }
+  ui.setSyncState('error');
+  return null;
+}
 
 window.addTask = async () => {
   const name = ui.getTaskInputValue();

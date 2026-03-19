@@ -24,10 +24,15 @@ import { registerCommand, openPalette,
 import { handleLogin, handleLogout }      from './auth.js';
 import { applyTheme, THEME_META,
          saveSettingsNow }               from './settings-handler.js';
-import { renderTasks, updateTaskBadge }   from './tasks-handler.js';
+import { renderTasks, updateTaskBadge, createTask } from './tasks-handler.js';
 import { loadTodayCount, loadStats,
          invalidateStatsCache }            from './stats-handler.js';
 import { updateFavicon, resetFavicon }  from './favicon.js';
+
+// ── Stuck-task tracking ────────────────────────────────────────────────
+let _stuckTaskId = null;
+let _stuckCount  = 0;
+const _STUCK_THRESHOLD = 3;
 
 // ── Globals para onclick inline ────────────────────────────────────────
 window.spawnCreatures = spawnCreatures;
@@ -110,6 +115,24 @@ initTimer({
           if (t.id === state.activeTaskId) updateTaskBadge(t);
           if (state.user) await db.tasks.update(taskId, { pomodoros: t.pomodoros });
         }
+
+        // Stuck-task detection
+        if (taskId === _stuckTaskId) {
+          _stuckCount++;
+          if (_stuckCount >= _STUCK_THRESHOLD) {
+            _stuckCount = 0;
+            const stuckName = taskName || state.tasks.find(t => t.id === taskId)?.name || '';
+            ui.showStuckPrompt(stuckName, _STUCK_THRESHOLD, async (stepName) => {
+              await createTask(stepName);
+            });
+          }
+        } else {
+          _stuckTaskId = taskId;
+          _stuckCount  = 1;
+        }
+      } else {
+        _stuckTaskId = null;
+        _stuckCount  = 0;
       }
     }
 

@@ -1076,4 +1076,46 @@ body.theme-mars {
   opacity: 0.5;
 }
 
+/* ── Stuck-task modal ────────────────────────── */
+.stuck-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.28s ease;
+}
+.stuck-card {
+  background: var(--card); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px; padding: 28px 28px 22px;
+  max-width: 360px; width: calc(100% - 40px);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.stuck-icon   { font-size: 32px; line-height: 1; }
+.stuck-title  { font-size: 17px; font-weight: 700; color: var(--text); }
+.stuck-msg    { font-size: 13px; color: var(--text); opacity: 0.85; line-height: 1.5; }
+.stuck-hint   { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.stuck-input  {
+  width: 100%; box-sizing: border-box;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px; padding: 9px 13px; font-size: 13px;
+  color: var(--text); font-family: var(--font-body); outline: none;
+  transition: border-color 0.2s;
+}
+.stuck-input:focus { border-color: var(--accent); }
+.stuck-input.stuck-input-err { border-color: #ff6b9d; }
+.stuck-actions { display: flex; gap: 10px; width: 100%; margin-top: 4px; }
+.stuck-btn-split {
+  flex: 1; padding: 9px 0; border-radius: 10px; font-size: 13px; font-weight: 600;
+  background: var(--accent); color: #fff; border: none; cursor: pointer;
+  font-family: var(--font-body); transition: opacity 0.2s;
+}
+.stuck-btn-split:hover { opacity: 0.85; }
+.stuck-btn-skip {
+  flex: 1; padding: 9px 0; border-radius: 10px; font-size: 13px;
+  background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer; font-family: var(--font-body); transition: background 0.2s;
+}
+.stuck-btn-skip:hover { background: rgba(255,255,255,0.12); }
+
 /* ── Favicon timer (no visual styles needed) ─── */

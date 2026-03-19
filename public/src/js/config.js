@@ -17,4 +17,5 @@ export const cfg = {
   autoPause:   false,   // pausar al ocultar la pestaña
   presetName:   '',      // nombre del preset activo (vacío = custom)
   ambientMix:  {},       // mix de escenas { theme: relativeVol } — vacío = escena del tema activo
+  autoAmbient: false,   // cambio automático de escena ambiental según hora del día
 };

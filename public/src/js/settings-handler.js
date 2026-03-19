@@ -75,10 +75,11 @@ export async function loadSettings() {
     cfg.soundStyle  = data.sound_style  ?? 'bells';
     cfg.autoTheme   = data.auto_theme   ?? false;
     cfg.presetName  = data.preset_name  ?? '';
-    // autoPause no tiene columna en DB — se recupera del backup local
+    // autoPause y autoAmbient no tienen columna en DB — se recuperan del backup local
     try {
       const bak = JSON.parse(localStorage.getItem('fn_backup_settings_' + state.user.id) || '{}');
-      if (bak.autoPause !== undefined) cfg.autoPause = bak.autoPause;
+      if (bak.autoPause  !== undefined) cfg.autoPause  = bak.autoPause;
+      if (bak.autoAmbient !== undefined) cfg.autoAmbient = bak.autoAmbient;
     } catch (_) {}
 
     if (data.lang) setLang(data.lang);
@@ -86,6 +87,7 @@ export async function loadSettings() {
     if (cfg.ambient) {
       const mixKeys = Object.keys(cfg.ambientMix || {});
       if (mixKeys.length > 0) startMix(cfg.ambientMix);
+      else if (cfg.autoAmbient) applyAutoAmbient();
       else startAmbient(state.theme);
     }
     setVolume(cfg.ambientVol);
@@ -112,6 +114,7 @@ export async function loadSettings() {
         if (bak.autoPause    != null) cfg.autoPause    = bak.autoPause;
         if (bak.presetName)           cfg.presetName   = bak.presetName;
         if (bak.ambientMix   != null) cfg.ambientMix   = bak.ambientMix;
+        if (bak.autoAmbient  != null) cfg.autoAmbient  = bak.autoAmbient;
         console.info('[settings] Restaurado desde backup local');
         if (cfg.ambient) {
           const mixKeys = Object.keys(cfg.ambientMix || {});
@@ -204,6 +207,30 @@ function _applyAutoTheme() {
   applyTheme(theme, false);
 }
 
+// Escenas ambientales por franja horaria (independiente del tema visual)
+const _AMBIENT_SCENES_BY_HOUR = [
+  [6,  9,  'meadow'],    // mañana — pájaros, brisa
+  [9,  14, 'mountain'],  // mañana-tarde — viento sereno
+  [14, 17, 'ocean'],     // tarde — olas
+  [17, 20, 'rain'],      // atardecer — lluvia suave
+  [20, 23, 'forest'],    // noche — bosque nocturno
+];
+
+export function applyAutoAmbient() {
+  if (!cfg.autoAmbient || !cfg.ambient) return;
+  if (Object.keys(cfg.ambientMix || {}).length > 0) return; // mix manual activo
+  const h = new Date().getHours();
+  const entry = _AMBIENT_SCENES_BY_HOUR.find(([s, e]) => h >= s && h < e);
+  const scene = entry ? entry[2] : 'space';
+  switchAmbient(scene);
+}
+
+// Comprobación cada minuto: actualizar tema y/o escena si cambia la hora
+setInterval(() => {
+  if (cfg.autoTheme)   _applyAutoTheme();
+  if (cfg.autoAmbient) applyAutoAmbient();
+}, 60_000);
+
 function _updateSoundBtns(style) {
   document.querySelectorAll('.sound-style-btn').forEach(b => b.classList.remove('active'));
   const active = document.getElementById('ss-' + style);
@@ -281,6 +308,13 @@ window.toggleAutoTheme = () => {
   if (cfg.autoTheme) _applyAutoTheme();
   ui.renderSettings();
   debounceSave();
+  saveToLocalStorage();
+};
+
+window.toggleAutoAmbient = () => {
+  cfg.autoAmbient = !cfg.autoAmbient;
+  if (cfg.autoAmbient) applyAutoAmbient();
+  ui.renderSettings();
   saveToLocalStorage();
 };
 
@@ -386,7 +420,7 @@ export async function saveSettingsNow() {
 // ── Mix ambiental ──────────────────────────────────────────────────────
 
 window.addSceneToMix = (theme) => {
-  if (!theme || cfg.ambientMix[theme] !== undefined) return;
+  if (!theme || !cfg.ambientMix || cfg.ambientMix[theme] !== undefined) return;
   if (Object.keys(cfg.ambientMix).length >= 3) {
     ui.showToast('Máximo 3 escenas en el mix');
     return;

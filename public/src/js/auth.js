@@ -122,7 +122,7 @@ window.doLogin = async () => {
 
   if (error) {
     ui.showAuthError(
-      error.message.includes('Invalid') ? 'Correo o contraseña incorrectos.' : error.message
+      error?.message?.includes('Invalid') ? 'Correo o contraseña incorrectos.' : (error?.message || 'Error desconocido')
     );
   }
 };

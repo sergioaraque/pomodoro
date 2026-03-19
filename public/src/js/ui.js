@@ -570,6 +570,52 @@ export function hideDeepFocusOverlay() {
   setTimeout(() => overlay.style.display = 'none', 400);
 }
 
+export function showStuckPrompt(taskName, count, onSplit) {
+  const existing = $('stuck-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'stuck-modal';
+  modal.className = 'stuck-overlay';
+  const safe = taskName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  modal.innerHTML = `
+    <div class="stuck-card">
+      <div class="stuck-icon">🤔</div>
+      <div class="stuck-title">¿Estás atascado?</div>
+      <div class="stuck-msg">Llevas <b>${count} 🍅</b> seguidos en <b>"${safe}"</b> sin terminarla.</div>
+      <div class="stuck-hint">Fragmenta en un paso concreto para desbloquear el avance.</div>
+      <input type="text" class="stuck-input" placeholder="Siguiente paso concreto…" maxlength="120">
+      <div class="stuck-actions">
+        <button class="stuck-btn-split">Añadir subtarea</button>
+        <button class="stuck-btn-skip">Continuar así</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const input     = modal.querySelector('.stuck-input');
+  const splitBtn  = modal.querySelector('.stuck-btn-split');
+  const skipBtn   = modal.querySelector('.stuck-btn-skip');
+
+  function close() {
+    modal.style.opacity = '0';
+    setTimeout(() => modal.remove(), 280);
+  }
+
+  splitBtn.onclick = () => {
+    const step = input.value.trim();
+    if (!step) { input.focus(); input.classList.add('stuck-input-err'); return; }
+    onSplit(step);
+    close();
+  };
+  skipBtn.onclick = close;
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  input.addEventListener('input', () => input.classList.remove('stuck-input-err'));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') splitBtn.click(); if (e.key === 'Escape') close(); });
+
+  requestAnimationFrame(() => { modal.style.opacity = '1'; });
+  setTimeout(() => input.focus(), 80);
+}
+
 // ══════════════════════════════════════════════
 //  SETTINGS
 // ══════════════════════════════════════════════
@@ -636,6 +682,9 @@ export function renderSettings() {
 
   const atEl = $('sw-autotheme');
   if (atEl) atEl.className = 'sw' + (cfg.autoTheme ? ' on' : '');
+
+  const aaEl = $('sw-autoambient');
+  if (aaEl) aaEl.className = 'sw' + (cfg.autoAmbient ? ' on' : '');
 
   const apEl = $('sw-autopause');
   if (apEl) apEl.className = 'sw' + (cfg.autoPause ? ' on' : '');

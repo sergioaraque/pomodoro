@@ -155,7 +155,10 @@ export const cache = {
       const databases = await indexedDB.databases?.() || [];
       for (const db of databases) {
         if (db.name?.includes('supabase') || db.name?.includes('focusnature')) {
-          indexedDB.deleteDatabase(db.name);
+          await new Promise(resolve => {
+            const req = indexedDB.deleteDatabase(db.name);
+            req.onsuccess = req.onerror = resolve;
+          });
         }
       }
     }

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="#071020"/>
+  <!-- Ring track -->
+  <circle cx="16" cy="16" r="11.5" fill="none" stroke="rgba(78,205,196,0.18)" stroke-width="2.5"/>
+  <!-- Timer ring ~78% -->
+  <circle cx="16" cy="16" r="11.5" fill="none" stroke="#4ecdc4" stroke-width="2.5"
+    stroke-dasharray="56.3 72.26" stroke-linecap="round"
+    transform="rotate(-90 16 16)"/>
+  <!-- Leaf stem -->
+  <line x1="16" y1="6.5" x2="16" y2="9" stroke="#6bcf8a" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- Small leaf -->
+  <path d="M16 9 Q19 6.5 18.5 4 Q15.5 5.5 16 9Z" fill="#6bcf8a"/>
+  <!-- FN text -->
+  <text x="16" y="21.5" text-anchor="middle"
+    font-family="'DM Sans','Arial',sans-serif" font-weight="700"
+    font-size="9.5" fill="#ffffff" letter-spacing="0.8">FN</text>
+</svg>

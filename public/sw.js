@@ -1,6 +1,6 @@
 /**
  * sw.js — Service Worker
- * Versión: v11
+ * Versión: v12
  *
  * Estrategia:
  *  - /app, /index.html, rutas dinámicas → siempre red (no cachear)
@@ -9,7 +9,7 @@
  *  - Navegación → network-first
  */
 
-const CACHE_NAME = 'focusnature-v12';
+const CACHE_NAME = 'focusnature-v13';
 
 // Solo assets locales ligeros que sabemos que existen
 const STATIC_ASSETS = [

@@ -84,7 +84,7 @@ async function _fetchAndRender() {
   } catch (err) {
     console.error('[stats] loadStats error:', err);
     ui.setSyncState('error');
-    _showStatsError(err.message);
+    _showStatsError(err?.message || 'Error al cargar estadísticas');
   } finally {
     _setStatsLoading(false);
   }
