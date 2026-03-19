@@ -1,7 +1,7 @@
 {
   "name": "focusnature",
   "version": "5.0.0",
-  "description": "Pomodoro app with nature themes and Supabase backend",
+  "description": "Pomodoro app with nature themes and Appwrite backend",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",

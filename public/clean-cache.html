@@ -70,7 +70,7 @@
         if ('indexedDB' in window) {
           const databases = await indexedDB.databases?.() || [];
           for (const db of databases) {
-            if (db.name?.includes('supabase') || db.name?.includes('focusnature')) {
+            if (db.name?.includes('focusnature')) {
               indexedDB.deleteDatabase(db.name);
             }
           }

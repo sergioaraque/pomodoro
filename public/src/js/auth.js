@@ -65,11 +65,10 @@ export function handleLogout() {
 // ── Window functions ───────────────────────────────────────────────────
 
 window.doLogout = async () => {
-  // Resumen diario antes de cerrar sesión
   if (state.todayCount > 0) {
-    const mins     = state.todayCount * cfg.focus;
-    const hrs      = (mins / 60).toFixed(1);
-    const goal     = state.todayCount >= cfg.dailyGoal
+    const mins = state.todayCount * cfg.focus;
+    const hrs  = (mins / 60).toFixed(1);
+    const goal = state.todayCount >= cfg.dailyGoal
       ? `🎯 ¡Objetivo del día conseguido! (${state.todayCount}/${cfg.dailyGoal})`
       : `🎯 ${state.todayCount} de ${cfg.dailyGoal} del objetivo diario`;
     const msg = `📊 Resumen del día\n\n🍅 Pomodoros: ${state.todayCount}\n⏱ Tiempo enfocado: ~${hrs}h\n${goal}\n\n¿Confirmas que quieres salir?`;
@@ -78,31 +77,17 @@ window.doLogout = async () => {
   try {
     stopAmbient();
     await db.auth.signOut();
+    db.auth.broadcast('SIGNED_OUT');
 
-    state.user        = null;
-    state.tasks       = [];
+    state.user         = null;
+    state.tasks        = [];
     state.activeTaskId = null;
-    state.todayCount  = 0;
+    state.todayCount   = 0;
 
     const guestCfg = localStorage.getItem('fn_guest_cfg');
     localStorage.clear();
     if (guestCfg) localStorage.setItem('fn_guest_cfg', guestCfg);
     sessionStorage.clear();
-
-    try {
-      if (indexedDB.databases) {
-        const databases = await indexedDB.databases();
-        await Promise.all(
-          databases
-            .filter(d => d.name?.includes('supabase') || d.name?.includes('focusnature'))
-            .map(d => new Promise(resolve => {
-              const req = indexedDB.deleteDatabase(d.name);
-              req.onsuccess = resolve;
-              req.onerror   = resolve;
-            }))
-        );
-      }
-    } catch (_) {}
 
     window.location.replace('/');
   } catch (e) {
@@ -117,13 +102,17 @@ window.doLogin = async () => {
   if (!email || !pass) return ui.showAuthError('Rellena todos los campos.');
 
   ui.setAuthButtonLoading('li-btn', true, 'Entrar');
-  const { error } = await db.auth.signIn(email, pass);
+  const { data, error } = await db.auth.signIn(email, pass);
   ui.setAuthButtonLoading('li-btn', false, 'Entrar');
 
   if (error) {
     ui.showAuthError(
-      error?.message?.includes('Invalid') ? 'Correo o contraseña incorrectos.' : (error?.message || 'Error desconocido')
+      error?.message?.includes('Invalid') || error?.message?.includes('credentials')
+        ? 'Correo o contraseña incorrectos.'
+        : (error?.message || 'Error desconocido')
     );
+  } else {
+    await handleLogin(data.user);
   }
 };
 
@@ -135,10 +124,19 @@ window.doRegister = async () => {
 
   ui.setAuthButtonLoading('reg-btn', true, 'Crear cuenta');
   const { error } = await db.auth.signUp(email, pass);
+  if (error) {
+    ui.setAuthButtonLoading('reg-btn', false, 'Crear cuenta');
+    ui.showAuthError(error.message);
+    return;
+  }
+  // Auto-login after registration
+  const { data, error: loginErr } = await db.auth.signIn(email, pass);
   ui.setAuthButtonLoading('reg-btn', false, 'Crear cuenta');
-
-  if (error) ui.showAuthError(error.message);
-  else       ui.showAuthSuccess('¡Cuenta creada! Revisa tu correo y luego inicia sesión.');
+  if (loginErr) {
+    ui.showAuthSuccess('¡Cuenta creada! Inicia sesión para continuar.');
+  } else {
+    await handleLogin(data.user);
+  }
 };
 
 window.doResetPassword = async () => {
@@ -154,21 +152,23 @@ window.doResetPassword = async () => {
 };
 
 window.doChangePassword = async () => {
+  const oldPass  = (document.getElementById('cp-old')?.value  || '');
   const newPass  = (document.getElementById('cp-new')?.value  || '').trim();
   const confPass = (document.getElementById('cp-conf')?.value || '').trim();
-  if (!newPass || !confPass) return _cpMsg('Rellena los dos campos.', 'err');
-  if (newPass.length < 6)    return _cpMsg('Mínimo 6 caracteres.', 'err');
-  if (newPass !== confPass)  return _cpMsg('Las contraseñas no coinciden.', 'err');
+  if (!oldPass)                  return _cpMsg('Introduce tu contraseña actual.', 'err');
+  if (!newPass || !confPass)     return _cpMsg('Rellena los dos campos.', 'err');
+  if (newPass.length < 6)        return _cpMsg('Mínimo 6 caracteres.', 'err');
+  if (newPass !== confPass)      return _cpMsg('Las contraseñas no coinciden.', 'err');
 
   const btn = document.getElementById('cp-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
-  const { error } = await db.auth.updatePassword(newPass);
+  const { error } = await db.auth.updatePassword(newPass, oldPass);
   if (btn) { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
 
   if (error) _cpMsg(error.message, 'err');
   else {
     _cpMsg('¡Contraseña actualizada!', 'ok');
-    ['cp-new','cp-conf'].forEach(id => {
+    ['cp-old','cp-new','cp-conf'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -210,9 +210,13 @@ window.doSetNewPassword = async () => {
   if (newPass.length < 6)    return showMsg('Mínimo 6 caracteres.', 'err');
   if (newPass !== confPass)  return showMsg('Las contraseñas no coinciden.', 'err');
 
+  const userId = window.__RECOVERY_USER_ID__;
+  const secret = window.__RECOVERY_SECRET__;
+  if (!userId || !secret) return showMsg('Enlace de recuperación inválido o expirado.', 'err');
+
   const btn = document.getElementById('np-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
-  const { error } = await db.auth.updatePassword(newPass);
+  const { error } = await db.auth.updateRecovery(userId, secret, newPass);
   if (btn) { btn.disabled = false; btn.textContent = 'Guardar contraseña'; }
 
   if (error) {

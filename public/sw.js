@@ -1,15 +1,15 @@
 /**
  * sw.js — Service Worker
- * Versión: v12
+ * Versión: v13
  *
  * Estrategia:
  *  - /app, /index.html, rutas dinámicas → siempre red (no cachear)
- *  - Supabase API y CDN externos → siempre red (no interferir con auth)
+ *  - Appwrite API y CDN externos → siempre red (no interferir con auth)
  *  - Assets locales (.js, .css, imágenes) → network-first con fallback a caché
  *  - Navegación → network-first
  */
 
-const CACHE_NAME = 'focusnature-v13';
+const CACHE_NAME = 'focusnature-v14';
 
 // Solo assets locales ligeros que sabemos que existen
 const STATIC_ASSETS = [
@@ -72,11 +72,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // 1. Nunca interceptar solicitudes a Supabase (auth, DB, storage)
-  if (url.hostname.includes('supabase') || url.hostname.includes('supabase.co')) {
-    return; // dejar que el navegador lo gestione directamente
-  }
-
+  // 1. Nunca interceptar solicitudes a Appwrite ni externos (CDN, fuentes, etc.)
   // 2. Nunca interceptar recursos externos (CDN, fuentes, etc.)
   if (url.origin !== self.location.origin) {
     return;

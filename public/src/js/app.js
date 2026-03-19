@@ -227,15 +227,23 @@ function _registerCommands() {
 // ── Boot ───────────────────────────────────────────────────────────────
 (async () => {
   try {
-    if (!window.supabase) {
-      throw new Error('Supabase no cargó. Comprueba tu conexión a internet.');
+    if (!window.Appwrite) {
+      throw new Error('Appwrite SDK no cargó. Comprueba tu conexión a internet.');
     }
-    if (!window.__SUPABASE_URL__ || window.__SUPABASE_URL__.includes('TU-PROYECTO')) {
-      throw new Error('Faltan las credenciales de Supabase. Configura el archivo .env del servidor.');
+    if (!window.__APPWRITE_ENDPOINT__ || window.__APPWRITE_ENDPOINT__.includes('TU-APPWRITE')) {
+      throw new Error('Faltan las credenciales de Appwrite. Configura el archivo .env del servidor.');
     }
 
-    const { createClient } = window.supabase;
-    db.initDb(createClient(window.__SUPABASE_URL__, window.__SUPABASE_ANON__));
+    const { Client, Account, Databases, ID, Query, Permission, Role } = window.Appwrite;
+    const _client = new Client()
+      .setEndpoint(window.__APPWRITE_ENDPOINT__)
+      .setProject(window.__APPWRITE_PROJECT_ID__);
+    db.initDb({
+      account:    new Account(_client),
+      databases:  new Databases(_client),
+      ID, Query, Permission, Role,
+      databaseId: window.__APPWRITE_DATABASE_ID__,
+    });
     initAmbient();
     // Migración: limpiar cola offline de versiones anteriores
     try { localStorage.removeItem('fn_session_queue'); } catch (_) {}
@@ -277,29 +285,27 @@ function _registerCommands() {
     if (window.location.hash === '#register') window.showAuthTab('register');
 
     // ── PASO 1: Leer la sesión guardada primero ────────────────────────
-    // Usamos getSession() antes de registrar el listener para no depender
-    // de qué evento inicial dispara Supabase (INITIAL_SESSION vs SIGNED_IN).
-    // Esto garantiza que un F5 con sesión válida siempre funcione.
     const { data: { session } } = await db.auth.getSession();
     if (session?.user) {
       await handleLogin(session.user);
     }
 
-    // ── PASO 2: Escuchar cambios futuros de auth ───────────────────────
+    // ── PASO 2: Escuchar cambios futuros de auth (cross-tab) ───────────
     db.auth.onStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // Solo actuar si cambia el usuario (p. ej., login en otra pestaña)
-        if (session?.user && state.user?.id !== session.user.id) {
-          await handleLogin(session.user);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        // Solo desloguear si realmente estábamos autenticados
-        if (state.user) handleLogout();
-      } else if (event === 'PASSWORD_RECOVERY') {
-        window.showAuthTab('newpass');
+      if (event === 'SIGNED_IN' && session?.user && state.user?.id !== session.user.id) {
+        await handleLogin(session.user);
+      } else if (event === 'SIGNED_OUT' && state.user) {
+        handleLogout();
       }
-      // INITIAL_SESSION no se maneja aquí; se gestiona con getSession() arriba.
     });
+
+    // ── PASO 3: Password recovery via URL params (Appwrite envía userId+secret)
+    const _urlParams = new URLSearchParams(window.location.search);
+    if (_urlParams.has('userId') && _urlParams.has('secret')) {
+      window.__RECOVERY_USER_ID__ = _urlParams.get('userId');
+      window.__RECOVERY_SECRET__  = _urlParams.get('secret');
+      window.showAuthTab('newpass');
+    }
 
   } catch (err) {
     console.error('[app] Boot error:', err);

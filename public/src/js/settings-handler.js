@@ -124,6 +124,8 @@ export async function loadSettings() {
         setVolume(cfg.ambientVol);
       }
     } catch (_) {}
+    // Crear el documento de settings en DB con los valores actuales (primer login)
+    saveSettings().catch(() => {});
   }
   setMode('focus');
   ui.renderSettings();

@@ -1,6 +1,6 @@
 # FocusNature 🌿 — Pomodoro App
 
-Temporizador Pomodoro con temas naturales animados, login y sincronización en la nube con Supabase.
+Temporizador Pomodoro con temas naturales animados, login y sincronización en la nube con Appwrite.
 
 ## Estructura del proyecto
 
@@ -16,7 +16,7 @@ focusnature/
 │       ├── app.js          ← Punto de entrada, conecta todos los módulos
 │       ├── config.js       ← Configuración compartida (tiempos, etc.)
 │       ├── timer.js        ← Lógica del cronómetro (bug de transición corregido)
-│       ├── db.js           ← Capa de datos Supabase (auth, tasks, sessions)
+│       ├── db.js           ← Capa de datos Appwrite (auth, tasks, sessions)
 │       ├── ui.js           ← Renderizado DOM y eventos
 │       ├── sound.js        ← Notificaciones de audio
 │       └── creatures.js    ← Animaciones de criaturas por tema

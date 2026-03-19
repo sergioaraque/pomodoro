@@ -35,12 +35,13 @@
 .text-link:hover { color:#4ecdc4; }
 </style>
 
-<!-- Supabase UMD — exposes window.supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- Appwrite IIFE — exposes window.Appwrite -->
+<script src="https://cdn.jsdelivr.net/npm/appwrite@23/dist/iife/sdk.js"></script>
 <!-- Credentials injected by server.js -->
 <script>
-  window.__SUPABASE_URL__  = '%%SUPABASE_URL%%';
-  window.__SUPABASE_ANON__ = '%%SUPABASE_ANON%%';
+  window.__APPWRITE_ENDPOINT__    = '%%APPWRITE_ENDPOINT%%';
+  window.__APPWRITE_PROJECT_ID__  = '%%APPWRITE_PROJECT_ID%%';
+  window.__APPWRITE_DATABASE_ID__ = '%%APPWRITE_DATABASE_ID%%';
 </script>
 </head>
 <body>
@@ -503,6 +504,10 @@
 
       <div class="settings-section-title" data-i18n="settings_security">Seguridad</div>
       <div id="cp-msg" class="cp-msg" style="display:none"></div>
+      <div class="auth-field">
+        <label>Contraseña actual</label>
+        <input class="auth-inp" id="cp-old" type="password" placeholder="tu contraseña actual" autocomplete="current-password">
+      </div>
       <div class="auth-field">
         <label>Nueva contraseña</label>
         <input class="auth-inp" id="cp-new" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password">

@@ -4,13 +4,14 @@
  * Rutas:
  *   /          → Landing page (landing.html)
  *   /guest     → Pomodoro sin registro (guest.html)
- *   /app       → App completa con login (index.html, con inyección de Supabase)
+ *   /app       → App completa con login (index.html, con inyección de Appwrite)
  *   /assets    → CSS, JS, etc. (express.static)
  *   /clean-cache → Página para limpiar caché manualmente
  *
  * Configuración — crea un .env en la raíz (copia de .env.example):
- *   SUPABASE_URL=https://TU-PROYECTO.supabase.co
- *   SUPABASE_ANON=TU-ANON-KEY
+ *   APPWRITE_ENDPOINT=https://TU-APPWRITE.ejemplo.com/v1
+ *   APPWRITE_PROJECT_ID=TU-PROJECT-ID
+ *   APPWRITE_DATABASE_ID=TU-DATABASE-ID
  *   PORT=3000
  */
 
@@ -36,21 +37,23 @@ if (fs.existsSync(envPath)) {
 }
 
 // ── 2. Credenciales ───────────────────────────────────────────────────
-const SUPABASE_URL  = (process.env.SUPABASE_URL  || '').trim();
-const SUPABASE_ANON = (process.env.SUPABASE_ANON || '').trim();
-const PORT          = parseInt(process.env.PORT || '3000', 10);
+const APPWRITE_ENDPOINT    = (process.env.APPWRITE_ENDPOINT    || '').trim();
+const APPWRITE_PROJECT_ID  = (process.env.APPWRITE_PROJECT_ID  || '').trim();
+const APPWRITE_DATABASE_ID = (process.env.APPWRITE_DATABASE_ID || '').trim();
+const PORT                 = parseInt(process.env.PORT || '3000', 10);
 
-if (!SUPABASE_URL || !SUPABASE_ANON) {
-  console.error('\n❌  Faltan las credenciales de Supabase.');
+if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID || !APPWRITE_DATABASE_ID) {
+  console.error('\n❌  Faltan las credenciales de Appwrite.');
   console.error('   Crea el archivo .env en la raíz del proyecto:');
-  console.error('   SUPABASE_URL=https://TU-PROYECTO.supabase.co');
-  console.error('   SUPABASE_ANON=TU-ANON-KEY');
+  console.error('   APPWRITE_ENDPOINT=https://TU-APPWRITE.ejemplo.com/v1');
+  console.error('   APPWRITE_PROJECT_ID=TU-PROJECT-ID');
+  console.error('   APPWRITE_DATABASE_ID=TU-DATABASE-ID');
   console.error('   (cópialo de .env.example)\n');
   process.exit(1);
 }
-if (!SUPABASE_URL.startsWith('https://')) {
-  console.error('\n❌  SUPABASE_URL no válida:', SUPABASE_URL);
-  console.error('   Debe empezar por https://\n');
+if (!APPWRITE_ENDPOINT.startsWith('http://') && !APPWRITE_ENDPOINT.startsWith('https://')) {
+  console.error('\n❌  APPWRITE_ENDPOINT no válido:', APPWRITE_ENDPOINT);
+  console.error('   Debe empezar por http:// o https://\n');
   process.exit(1);
 }
 
@@ -62,15 +65,16 @@ function readHtml(filename) {
 }
 
 /**
- * Inyecta las credenciales de Supabase en index.html.
+ * Inyecta las credenciales de Appwrite en index.html.
  * Usa delimitadores %%PLACEHOLDER%% para no colisionar con
- * los nombres de las propiedades JS (window.__SUPABASE_URL__).
+ * los nombres de las propiedades JS (window.__APPWRITE_ENDPOINT__).
  */
 function buildAppHtml() {
   const raw = readHtml('index.html');
   return raw
-    .replace(/%%SUPABASE_URL%%/g,  SUPABASE_URL)
-    .replace(/%%SUPABASE_ANON%%/g, SUPABASE_ANON);
+    .replace(/%%APPWRITE_ENDPOINT%%/g,    APPWRITE_ENDPOINT)
+    .replace(/%%APPWRITE_PROJECT_ID%%/g,  APPWRITE_PROJECT_ID)
+    .replace(/%%APPWRITE_DATABASE_ID%%/g, APPWRITE_DATABASE_ID);
 }
 
 function send(res, html) {
@@ -159,6 +163,6 @@ app.listen(PORT, () => {
   console.log(`   Invitado: http://localhost:${PORT}/guest`);
   console.log(`   App:      http://localhost:${PORT}/app`);
   console.log(`   Clean cache: http://localhost:${PORT}/clean-cache`);
-  console.log(`   Supabase: ${SUPABASE_URL}`);
+  console.log(`   Appwrite: ${APPWRITE_ENDPOINT} (project: ${APPWRITE_PROJECT_ID})`);
   console.log(`   Config:   ${fs.existsSync(envPath) ? '.env' : 'variables de entorno'}\n`);
 });

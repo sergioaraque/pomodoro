@@ -1,7 +1,7 @@
 /**
  * ui.js — Capa de presentación
  * Renderiza el DOM y maneja eventos del usuario.
- * No contiene lógica de negocio ni llamadas a Supabase directamente.
+ * No contiene lógica de negocio ni llamadas a la base de datos directamente.
  */
 
 import { cfg } from './config.js';
