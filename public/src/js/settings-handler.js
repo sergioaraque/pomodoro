@@ -79,7 +79,8 @@ export async function loadSettings() {
     try {
       const bak = JSON.parse(localStorage.getItem('fn_backup_settings_' + state.user.id) || '{}');
       if (bak.autoPause  !== undefined) cfg.autoPause  = bak.autoPause;
-      if (bak.autoAmbient !== undefined) cfg.autoAmbient = bak.autoAmbient;
+      if (bak.autoAmbient  !== undefined) cfg.autoAmbient  = bak.autoAmbient;
+      if (bak.typingSounds !== undefined) cfg.typingSounds = bak.typingSounds;
     } catch (_) {}
 
     if (data.lang) setLang(data.lang);
@@ -94,6 +95,13 @@ export async function loadSettings() {
 
     const el = document.getElementById('quick-notes-area');
     if (el && data.quick_notes) el.value = data.quick_notes;
+
+    // Restaurar URL de YouTube guardada
+    try {
+      const ytUrl = localStorage.getItem('fn_yt_url_' + state.user.id);
+      const ytInp = document.getElementById('yt-url-inp');
+      if (ytInp && ytUrl) ytInp.value = ytUrl;
+    } catch (_) {}
   } else {
     // Sin datos de DB — restaurar desde backup local para no quedarse con defaults
     try {
@@ -115,6 +123,7 @@ export async function loadSettings() {
         if (bak.presetName)           cfg.presetName   = bak.presetName;
         if (bak.ambientMix   != null) cfg.ambientMix   = bak.ambientMix;
         if (bak.autoAmbient  != null) cfg.autoAmbient  = bak.autoAmbient;
+        if (bak.typingSounds != null) cfg.typingSounds = bak.typingSounds;
         console.info('[settings] Restaurado desde backup local');
         if (cfg.ambient) {
           const mixKeys = Object.keys(cfg.ambientMix || {});
@@ -447,6 +456,12 @@ window.removeSceneFromMix = (theme) => {
 window.setMixSceneVol = (theme, vol) => {
   cfg.ambientMix[theme] = parseFloat(vol);
   setSceneVolume(theme, parseFloat(vol));
+  saveToLocalStorage();
+};
+
+window.toggleTypingSounds = () => {
+  cfg.typingSounds = !cfg.typingSounds;
+  ui.renderSettings();
   saveToLocalStorage();
 };
 

@@ -16,7 +16,8 @@ let _filteredTaskName = '';
 let _dateRange        = 'all';
 
 // Caché de stats: se muestra inmediatamente en cada visita al tab
-let _cachedStats = null;
+let _cachedStats  = null;
+let _cachedStreak = 0;
 
 /** Fuerza recarga completa en la próxima visita al tab de stats. */
 export function invalidateStatsCache() { _cachedStats = null; }
@@ -29,6 +30,14 @@ export async function loadTodayCount() {
   if (!data) return;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   state.todayCount = data.filter(s => new Date(s.completed_at) >= today).length;
+
+  // Calcular racha para el badge del timer (sin esperar a abrir Stats)
+  const daySet = new Set(data.map(s => new Date(s.completed_at).toDateString()));
+  let streak = 0;
+  const chk  = new Date();
+  while (daySet.has(chk.toDateString())) { streak++; chk.setDate(chk.getDate() - 1); }
+  ui.updateStreakBadge(streak);
+
   _checkStreakRisk(data);
   return state.todayCount;
 }
@@ -197,6 +206,24 @@ function _renderStats(built) {
   if (_filteredTaskName || _dateRange !== 'all') _applyHistoryFilters();
   _renderWeeklyChallenge(built.focusData);
   _checkStreakRisk(built.focusData);
+  // Actualizar el streak en la función de weekly review
+  _cachedStreak = built.streak;
+
+  // Actualizar badge de racha en el timer
+  ui.updateStreakBadge(built.streak);
+
+  // Toasts de hitos de racha
+  if (state.user && built.streak > 0) {
+    try {
+      const prevKey    = 'fn_streak_prev_' + state.user.id;
+      const prevStreak = parseInt(localStorage.getItem(prevKey) || '0', 10);
+      if (built.streak > prevStreak) {
+        localStorage.setItem(prevKey, built.streak);
+        const MILESTONES = { 3:'🌱 ¡3 días de racha! El hábito comienza.', 7:'💪 ¡Una semana de racha!', 14:'🔥🔥 ¡2 semanas sin parar!', 21:'🏅 ¡21 días — ya es un hábito real!', 30:'🌟 ¡Un mes de racha! Impresionante.', 60:'🤖 ¡60 días! Eres una máquina.', 100:'👑 ¡100 días de racha! Leyenda.' };
+        if (MILESTONES[built.streak]) ui.showToast(MILESTONES[built.streak]);
+      }
+    } catch (_) {}
+  }
 
   if (state.user) {
     const unlocked = loadAchievements(state.user.id);
@@ -377,6 +404,76 @@ window.setHistoryRange = (range) => {
   );
   _applyHistoryFilters();
 };
+
+// ── Weekly Review ──────────────────────────────────────────────────────
+
+export function openWeeklyReview() {
+  if (_cachedStats) {
+    _showWeeklyReview(_cachedStats.focusData, _cachedStreak);
+  } else if (state.user) {
+    db.sessions.loadFocus(state.user.id).then(({ data }) => {
+      if (data) _showWeeklyReview(data, _cachedStreak);
+    });
+  }
+}
+window.openWeeklyReview = openWeeklyReview;
+
+function _showWeeklyReview(focusData, currentStreak) {
+  const now  = new Date();
+
+  // Esta semana: lunes a hoy
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  // Semana pasada
+  const startOfLastWeek = new Date(startOfWeek);
+  startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+
+  const thisWeekData = focusData.filter(s => new Date(s.completed_at) >= startOfWeek);
+  const lastWeekData = focusData.filter(s => {
+    const d = new Date(s.completed_at);
+    return d >= startOfLastWeek && d < startOfWeek;
+  });
+
+  const thisTotal = thisWeekData.length;
+  const lastTotal = lastWeekData.length;
+  const pctChange = lastTotal > 0 ? Math.round((thisTotal - lastTotal) / lastTotal * 100) : null;
+
+  const totalMins = thisWeekData.reduce((a, s) => a + s.duration, 0);
+  const hours     = (totalMins / 60).toFixed(1) + 'h';
+
+  // Distribución por día (0=Lun…6=Dom)
+  const dayCounts = new Array(7).fill(0);
+  thisWeekData.forEach(s => {
+    dayCounts[(new Date(s.completed_at).getDay() + 6) % 7]++;
+  });
+
+  const dayFullNames = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+  const dayNames     = ['L','M','X','J','V','S','D'];
+  const maxDayIdx    = dayCounts.indexOf(Math.max(...dayCounts));
+  const bestDayName  = dayCounts[maxDayIdx] > 0 ? dayFullNames[maxDayIdx] : null;
+
+  // Top tareas por nombre
+  const taskCounts = {};
+  thisWeekData.forEach(s => {
+    if (!s.task_name) return;
+    taskCounts[s.task_name] = (taskCounts[s.task_name] || 0) + 1;
+  });
+  const topTasks = Object.entries(taskCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  // Rango de fechas
+  const endDate = new Date(startOfWeek); endDate.setDate(endDate.getDate() + 6);
+  const fmt     = d => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  const dateRange = `${fmt(startOfWeek)} – ${fmt(endDate)}`;
+
+  ui.showWeeklyReview({
+    dateRange, thisTotal, lastTotal, pctChange, hours,
+    streak: currentStreak, dayCounts, dayNames, bestDayName, topTasks,
+  });
+}
+
+// ── Notes ──────────────────────────────────────────────────────────────
 
 let _notesTimer = null;
 window.onQuickNotesChange = () => {

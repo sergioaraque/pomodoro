@@ -261,9 +261,19 @@
         <span id="cur-task-txt">Sin tarea seleccionada</span>
       </div>
       <div class="break-banner" id="break-banner"></div>
-      <div class="goal-ring-wrap">
-        <div id="goal-ring"></div>
-        <div class="goal-ring-label">Objetivo diario</div>
+      <div class="timer-hud">
+        <div class="thud-cell">
+          <div class="thud-lbl">Objetivo</div>
+          <div id="goal-ring"></div>
+        </div>
+        <div class="thud-sep" id="thud-sep" style="display:none"></div>
+        <div class="thud-cell" id="streak-mini" style="display:none" title="Días consecutivos con al menos 1 pomodoro">
+          <div class="thud-lbl">Racha</div>
+          <div class="thud-streak-num">
+            <span id="streak-mini-val">0</span><span class="thud-fire">🔥</span>
+          </div>
+          <div class="thud-streak-sub">días</div>
+        </div>
       </div>
       <div class="mode-lbl" id="mode-lbl">Sesión de enfoque</div>
       <div class="mode-subtitle" id="mode-subtitle"></div>
@@ -365,6 +375,14 @@
       <div class="chart-bars" id="hour-chart" style="gap:2px"></div>
     </div>
 
+    <div class="wr-trigger-card">
+      <div>
+        <div style="font-size:14px;font-weight:500">📊 Resumen semanal</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Análisis detallado de tu semana</div>
+      </div>
+      <button onclick="openWeeklyReview()" class="btn-weekly-review">Ver resumen →</button>
+    </div>
+
     <div class="card" style="padding:16px" id="weekly-challenge">
       <!-- filled by JS -->
     </div>
@@ -451,6 +469,11 @@
         <select id="sound-style-sel" style="display:none"></select>
       </div>
 
+      <div class="stoggle-row" onclick="toggleTypingSounds()" style="margin-bottom:12px">
+        <div><div style="font-size:14px">Sonido de teclado</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Clicks suaves al escribir durante el foco</div></div>
+        <div class="sw" id="sw-typing"></div>
+      </div>
+
       <div class="settings-section-title">Objetivo diario</div>
       <div class="sblock" style="margin-bottom:13px">
         <div class="slabel">Pomodoros por día</div>
@@ -468,6 +491,17 @@
         <span class="ambient-icon">🔊</span>
       </div>
       <div id="ambient-mix-container"></div>
+
+      <div class="settings-section-title">Video de fondo (YouTube)</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:9px;line-height:1.5">Reproduce un video o lista de reproducción mientras trabajas.</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input id="yt-url-inp" class="task-inp" type="url" placeholder="youtube.com/watch?v=…"
+          style="flex:1;font-size:12px;padding:7px 10px"
+          onkeydown="if(event.key==='Enter') openYt()">
+        <button onclick="openYt()"
+          style="flex-shrink:0;background:var(--accent);color:#071020;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity .2s"
+          onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">▶ Abrir</button>
+      </div>
 
       <div class="settings-section-title">Concentración</div>
       <div class="stoggle-row" onclick="toggleAutoBreak()" style="margin-bottom:10px">
@@ -566,6 +600,11 @@
   <!-- CHANGE PASSWORD TAB (inside settings, shown via scroll) -->
 
 </div><!-- /app -->
+
+<!-- WEEKLY REVIEW MODAL -->
+<div id="weekly-review-modal" class="wr-modal" style="display:none">
+  <div class="wr-card"><!-- filled by JS --></div>
+</div>
 
 <script type="module" src="/src/js/app.js"></script>
 <!-- Command palette CSS is in styles.css -->

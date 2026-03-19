@@ -26,10 +26,13 @@ import { applyTheme, THEME_META,
          saveSettingsNow }               from './settings-handler.js';
 import { renderTasks, updateTaskBadge, createTask } from './tasks-handler.js';
 import { loadTodayCount, loadStats,
-         invalidateStatsCache }            from './stats-handler.js';
+         invalidateStatsCache,
+         openWeeklyReview }               from './stats-handler.js';
 import { ACHIEVEMENTS, loadAchievements,
          checkNewAchievements }            from './achievements.js';
 import { updateFavicon, resetFavicon }  from './favicon.js';
+import { startTypingSounds, stopTypingSounds } from './typing-sounds.js';
+import { loadYt, hideYt }               from './youtube-player.js';
 
 // ── Stuck-task tracking ────────────────────────────────────────────────
 let _stuckTaskId = null;
@@ -82,6 +85,20 @@ window.toggleTimer = () => {
   if (!s.running) updateFavicon(s.secondsLeft, s.totalSeconds, s.mode, false);
 };
 
+window.openWeeklyReview = openWeeklyReview;
+
+// YouTube mini-player
+window.openYt = () => {
+  const inp = document.getElementById('yt-url-inp');
+  const url = inp?.value?.trim();
+  if (!url) return;
+  if (!loadYt(url)) { ui.showToast('URL de YouTube no válida'); return; }
+  if (state.user) {
+    try { localStorage.setItem('fn_yt_url_' + state.user.id, url); } catch (_) {}
+  }
+};
+window.closeYt = hideYt;
+
 window.logDistraction = () => {
   state.distractionCount++;
   const el = document.getElementById('distract-count');
@@ -109,6 +126,10 @@ initTimer({
     }
     const dr = document.getElementById('distract-row');
     if (dr) dr.style.display = s.mode === 'focus' ? 'block' : 'none';
+
+    // Typing sounds: solo en focus+running
+    if (cfg.typingSounds && s.mode === 'focus' && s.running) startTypingSounds();
+    else stopTypingSounds();
     // Subtítulo de modo (sesión X de Y · Z🍅 hoy / próxima tarea durante pausa)
     const subEl = document.getElementById('mode-subtitle');
     if (subEl) {

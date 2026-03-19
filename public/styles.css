@@ -417,14 +417,6 @@ body.theme-forest   .stars-layer { opacity: 1; }
    ═══════════════════════════════════════════════ */
 
 /* ─── DAILY GOAL RING ──────────────────────── */
-.goal-ring-wrap {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 4px; margin-bottom: 10px;
-}
-.goal-ring-label {
-  font-size: 10px; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.8px;
-}
 #goal-ring svg { overflow: visible; }
 
 /* Celebración cuando se llega al objetivo */
@@ -1151,3 +1143,283 @@ body.theme-mars {
 @keyframes pulse-border { 0%,100% { box-shadow: 0 0 0 0 rgba(78,205,196,.4); } 50% { box-shadow: 0 0 0 4px rgba(78,205,196,0); } }
 
 /* ── Favicon timer (no visual styles needed) ─── */
+
+/* ══════════════════════════════════════════════
+   TIMER HUD (objetivo + racha)
+   ══════════════════════════════════════════════ */
+.timer-hud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  padding: 10px 28px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 20px;
+  max-width: 290px;
+}
+.thud-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+.thud-lbl {
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  opacity: 0.7;
+  margin-bottom: 2px;
+}
+.thud-sep {
+  width: 1px;
+  height: 54px;
+  background: rgba(255,255,255,0.10);
+  margin: 0 20px;
+  flex-shrink: 0;
+}
+.thud-streak-num {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+}
+.thud-streak-num > span:first-child {
+  font-size: 30px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: #ffa552;
+  line-height: 1;
+}
+.thud-fire { font-size: 16px; line-height: 1; }
+.thud-streak-sub {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+  opacity: 0.7;
+}
+
+/* ══════════════════════════════════════════════
+   WEEKLY REVIEW TRIGGER CARD
+   ══════════════════════════════════════════════ */
+.wr-trigger-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  background: var(--glass);
+  border: 1px solid var(--glass-b);
+  border-radius: 16px;
+}
+.btn-weekly-review {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-weekly-review:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ══════════════════════════════════════════════
+   WEEKLY REVIEW MODAL
+   ══════════════════════════════════════════════ */
+.wr-modal {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.72);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.25s;
+  padding: 16px;
+}
+.wr-modal.open { opacity: 1; }
+.wr-card {
+  background: #0d2038;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 460px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.wr-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.wr-title  { font-size: 18px; font-weight: 600; font-family: var(--font-display); }
+.wr-dates  { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.wr-close  { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; transition: color 0.2s; }
+.wr-close:hover { color: var(--text); }
+.wr-hero   { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px; }
+.wr-stat   {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 12px; text-align: center;
+}
+.wr-stat-val   { font-size: 22px; font-weight: 600; font-family: var(--font-display); color: var(--accent); line-height: 1.1; }
+.wr-stat-lbl   { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.wr-stat-delta { font-size: 11px; margin-top: 5px; }
+.wr-stat-delta.up   { color: #6bff9e; }
+.wr-stat-delta.down { color: #ff6b9d; }
+.wr-stat-delta.same { color: var(--muted); }
+.wr-section       { margin-bottom: 16px; }
+.wr-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 8px; }
+.wr-day-chart     { display: flex; gap: 5px; align-items: flex-end; height: 54px; margin-bottom: 4px; }
+.wr-day-col       { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.wr-day-bar       { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; opacity: 0.65; transition: height 0.5s ease; }
+.wr-day-lbl       { font-size: 9px; color: var(--muted); }
+.wr-task-row      { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+.wr-task-row:last-child { border-bottom: none; }
+.wr-task-rank     { color: var(--muted); min-width: 20px; font-size: 12px; }
+.wr-task-name     { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wr-task-poms     { color: var(--accent); font-size: 12px; white-space: nowrap; }
+.wr-motivation    {
+  background: rgba(78,205,196,0.06);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  font-size: 13px; color: var(--muted); line-height: 1.5;
+  margin-top: 16px;
+}
+.wr-btn {
+  width: 100%; margin-top: 16px;
+  background: var(--accent); color: #071020;
+  border: none; border-radius: 10px; padding: 12px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-body); transition: opacity 0.2s;
+}
+.wr-btn:hover { opacity: 0.85; }
+
+/* ══════════════════════════════════════════════
+   YOUTUBE MINI-PLAYER
+   ══════════════════════════════════════════════ */
+.yt-player {
+  position: fixed;
+  bottom: 24px; right: 20px;
+  z-index: 150;
+  width: 280px;
+  flex-direction: column;
+  background: rgba(6,14,26,0.94);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  transition: opacity 0.3s, width 0.3s ease;
+}
+.yt-player.yt-player-lg { width: 480px; }
+.yt-player-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  cursor: grab; user-select: none;
+}
+.yt-player-hdr:active { cursor: grabbing; }
+.yt-ctrl {
+  background: none; border: none; color: var(--muted);
+  font-size: 13px; cursor: pointer; padding: 2px 6px;
+  border-radius: 4px; transition: color 0.2s; line-height: 1;
+}
+.yt-ctrl:hover { color: var(--text); }
+.yt-frame-wrap { position: relative; padding-bottom: 56.25%; height: 0; }
+.yt-frame-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ══════════════════════════════════════════════
+   UI REFRESH — Mejoras visuales
+   ══════════════════════════════════════════════ */
+
+/* ── Mode label → pill con color ─────────────── */
+.mode-lbl {
+  width: fit-content;
+  margin: 0 auto 8px;
+  padding: 5px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: background 0.5s, color 0.5s, border-color 0.5s;
+}
+.mode-focus {
+  background: rgba(78,205,196,0.13);
+  color: var(--accent);
+  border-color: rgba(78,205,196,0.28);
+}
+.mode-short {
+  background: rgba(107,207,138,0.13);
+  color: #6bcf8a;
+  border-color: rgba(107,207,138,0.28);
+}
+.mode-long {
+  background: rgba(255,165,82,0.13);
+  color: #ffa552;
+  border-color: rgba(255,165,82,0.28);
+}
+
+/* ── Mode subtitle — más legible ─────────────── */
+.mode-subtitle { opacity: .75; font-size: 12px; }
+
+/* ── Session dot "actual" — pulsa suavemente ─── */
+.sdot.cur {
+  background: rgba(255,255,255,0.5);
+  animation: sdotCur 2s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(255,255,255,0.3);
+}
+@keyframes sdotCur {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%     { opacity: 0.45; transform: scale(0.8); }
+}
+
+/* ── Stat cards — 3 columnas + acento superior ─ */
+.stats-grid { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 520px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 12%; right: 12%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 0 0 2px 2px;
+  opacity: 0.45;
+}
+.stat-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.18); }
+
+/* Icono de stat más grande */
+.stat-card .stat-icon { font-size: 22px; margin-bottom: 6px; display: block; }
+
+/* ── Break banner — animación slide-down ─────── */
+@keyframes breakSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.break-banner.visible { animation: breakSlideDown 0.35s ease; }
+
+/* ── Weekly review trigger card — con accent ─── */
+.wr-trigger-card {
+  background: linear-gradient(135deg, var(--glass) 0%, rgba(78,205,196,0.05) 100%);
+  border: 1px solid rgba(78,205,196,0.22);
+}
+
+/* ── Timer card — fondo menos transparente para mejor legibilidad ─── */
+#tab-timer .card {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.14);
+}

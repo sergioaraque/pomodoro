@@ -275,7 +275,9 @@ export function renderTimer(timerState) {
   disp.className = 'timer-display';
   pbar.className = 'pbar';
 
-  $('mode-lbl').textContent = MODE_LABELS[mode];
+  const modeLblEl = $('mode-lbl');
+  modeLblEl.textContent = MODE_LABELS[mode];
+  modeLblEl.className   = 'mode-lbl mode-' + mode;
 
   if (mode === 'short') {
     disp.classList.add('break');
@@ -313,7 +315,8 @@ export function renderSessionDots(sessionsDone) {
   for (let i = 0; i < cfg.sessions; i++) {
     const d = document.createElement('div');
     d.className = 'sdot';
-    if (i < doneInCycle) d.classList.add('done');
+    if (i < doneInCycle)          d.classList.add('done');
+    else if (i === doneInCycle)   d.classList.add('cur');
     container.appendChild(d);
   }
 }
@@ -570,26 +573,26 @@ export function renderDailyGoalRing(done, goal) {
   const el = $('goal-ring');
   if (!el) return;
   const pct     = Math.min(done / goal, 1);
-  const r       = 36;
+  const r       = 29;
   const circum  = 2 * Math.PI * r;
   const offset  = circum * (1 - pct);
   const color   = pct >= 1 ? '#ffa552' : 'var(--accent)';
 
   el.innerHTML = `
-    <svg width="90" height="90" viewBox="0 0 90 90">
-      <circle cx="45" cy="45" r="${r}" fill="none"
-        stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
-      <circle cx="45" cy="45" r="${r}" fill="none"
-        stroke="${color}" stroke-width="6"
+    <svg width="76" height="76" viewBox="0 0 76 76">
+      <circle cx="38" cy="38" r="${r}" fill="none"
+        stroke="rgba(255,255,255,0.08)" stroke-width="5"/>
+      <circle cx="38" cy="38" r="${r}" fill="none"
+        stroke="${color}" stroke-width="5"
         stroke-linecap="round"
         stroke-dasharray="${circum}"
         stroke-dashoffset="${offset}"
-        transform="rotate(-90 45 45)"
+        transform="rotate(-90 38 38)"
         style="transition: stroke-dashoffset 0.6s ease, stroke 0.4s"/>
-      <text x="45" y="41" text-anchor="middle"
-        fill="var(--text)" font-size="15" font-weight="600"
+      <text x="38" y="34" text-anchor="middle"
+        fill="var(--text)" font-size="14" font-weight="600"
         font-family="var(--font-display)">${done}</text>
-      <text x="45" y="56" text-anchor="middle"
+      <text x="38" y="48" text-anchor="middle"
         fill="var(--muted)" font-size="10">${goal > 0 ? `/ ${goal}` : ''}</text>
     </svg>`;
 }
@@ -743,6 +746,9 @@ export function renderSettings() {
   const aaEl = $('sw-autoambient');
   if (aaEl) aaEl.className = 'sw' + (cfg.autoAmbient ? ' on' : '');
 
+  const typingEl = $('sw-typing');
+  if (typingEl) typingEl.className = 'sw' + (cfg.typingSounds ? ' on' : '');
+
   const apEl = $('sw-autopause');
   if (apEl) apEl.className = 'sw' + (cfg.autoPause ? ' on' : '');
 
@@ -791,6 +797,123 @@ export function renderHourChart(hourData) {
       `<div class="cbar-lbl">${lbl}</div>`;
     wrap.appendChild(col);
   });
+}
+
+// ══════════════════════════════════════════════
+//  STREAK BADGE (timer tab)
+// ══════════════════════════════════════════════
+export function updateStreakBadge(streak) {
+  const badge = $('streak-mini');
+  const val   = $('streak-mini-val');
+  const sep   = $('thud-sep');
+  if (!badge || !val) return;
+  if (streak > 0) {
+    val.textContent     = streak;
+    badge.style.display = 'flex';
+    if (sep) sep.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+    if (sep) sep.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  WEEKLY REVIEW MODAL
+// ══════════════════════════════════════════════
+export function showWeeklyReview({ dateRange, thisTotal, lastTotal, pctChange, hours, streak, dayCounts, dayNames, bestDayName, topTasks }) {
+  const modal = $('weekly-review-modal');
+  if (!modal) return;
+
+  // Hero delta
+  let deltaHtml = '';
+  if (pctChange !== null) {
+    const dir  = pctChange > 0 ? 'up' : pctChange < 0 ? 'down' : 'same';
+    const sign = pctChange > 0 ? '+' : '';
+    deltaHtml  = `<div class="wr-stat-delta ${dir}">${sign}${pctChange}% vs semana anterior</div>`;
+  } else if (thisTotal > 0) {
+    deltaHtml = `<div class="wr-stat-delta up">Primera semana 🌱</div>`;
+  }
+
+  // Day bar chart
+  const maxDay  = Math.max(...dayCounts, 1);
+  const todayDI = (new Date().getDay() + 6) % 7; // 0=Lun
+  const dayChart = dayNames.map((lbl, i) => {
+    const h   = Math.max(2, Math.round((dayCounts[i] / maxDay) * 44));
+    const hi  = i === todayDI;
+    return `<div class="wr-day-col">
+      <div class="wr-day-bar" style="height:${h}px${hi ? ';opacity:1' : ''}"></div>
+      <div class="wr-day-lbl" style="${hi ? 'color:var(--accent)' : ''}">${lbl}</div>
+    </div>`;
+  }).join('');
+
+  // Top tasks
+  const medals   = ['🥇','🥈','🥉','4.','5.'];
+  const taskHtml = topTasks.length
+    ? topTasks.map(([name, count], i) =>
+        `<div class="wr-task-row">
+          <span class="wr-task-rank">${medals[i]}</span>
+          <span class="wr-task-name">${name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>
+          <span class="wr-task-poms">${count} 🍅</span>
+        </div>`).join('')
+    : '<div style="font-size:12px;color:var(--muted)">Sin tareas registradas esta semana</div>';
+
+  // Motivational message
+  const msgs = [
+    ['🌱', 'Cada inicio es valioso. ¡El hábito se construye así!'],
+    ['💪', '¡Buena semana! La constancia es la clave del éxito.'],
+    ['🔥', '¡Gran semana! Estás en modo fuego — sigue así.'],
+    ['🏆', '¡Semana excepcional! Eres una máquina de enfoque.'],
+  ];
+  const tier = thisTotal === 0 ? 0 : thisTotal < 10 ? 1 : thisTotal < 20 ? 2 : 3;
+  const [mIcon, mText] = msgs[tier];
+
+  const card = modal.querySelector('.wr-card');
+  card.innerHTML = `
+    <div class="wr-header">
+      <div>
+        <div class="wr-title">📊 Resumen semanal</div>
+        <div class="wr-dates">${dateRange}</div>
+      </div>
+      <button class="wr-close" onclick="document.getElementById('weekly-review-modal').classList.remove('open')">✕</button>
+    </div>
+
+    <div class="wr-hero">
+      <div class="wr-stat">
+        <div class="wr-stat-val">${thisTotal}</div>
+        <div class="wr-stat-lbl">Pomodoros</div>
+        ${deltaHtml}
+      </div>
+      <div class="wr-stat">
+        <div class="wr-stat-val">${hours}</div>
+        <div class="wr-stat-lbl">Horas enfocado</div>
+      </div>
+      <div class="wr-stat">
+        <div class="wr-stat-val">${streak > 0 ? '🔥' + streak : '—'}</div>
+        <div class="wr-stat-lbl">Días de racha</div>
+      </div>
+    </div>
+
+    <div class="wr-section">
+      <div class="wr-section-title">Distribución de la semana</div>
+      <div class="wr-day-chart">${dayChart}</div>
+    </div>
+
+    <div class="wr-section">
+      <div class="wr-section-title">Tareas más trabajadas</div>
+      ${taskHtml}
+    </div>
+
+    ${bestDayName ? `<div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+      📅 Mejor día: <b style="color:var(--text)">${bestDayName}</b>
+      con <b style="color:var(--accent)">${Math.max(...dayCounts)} 🍅</b>
+    </div>` : ''}
+
+    <div class="wr-motivation">${mIcon} ${mText}</div>
+    <button class="wr-btn" onclick="document.getElementById('weekly-review-modal').classList.remove('open')">¡A seguir! 💪</button>`;
+
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => modal.classList.add('open'));
+  modal.onclick = e => { if (e.target === modal) modal.classList.remove('open'); };
 }
 
 export function renderLabelStats(data) {

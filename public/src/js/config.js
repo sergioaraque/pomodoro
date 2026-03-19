@@ -18,4 +18,5 @@ export const cfg = {
   presetName:   '',      // nombre del preset activo (vacío = custom)
   ambientMix:  {},       // mix de escenas { theme: relativeVol } — vacío = escena del tema activo
   autoAmbient: false,   // cambio automático de escena ambiental según hora del día
+  typingSounds: false,  // clicks suaves al escribir durante la sesión de foco
 };
