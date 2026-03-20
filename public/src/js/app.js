@@ -245,7 +245,7 @@ window.manualSync = async () => {
     await loadTodayCount();
     await loadStats();
     ui.setSyncState('ok');
-    ui.showToast('Actualizado ✓');
+    ui.showToast('Stats y contador actualizados ✓');
   } catch {
     ui.setSyncState('error');
     ui.showToast('Error al cargar datos');

@@ -510,6 +510,10 @@ body.deep-focus #tab-timer .card         { box-shadow: 0 0 60px rgba(0,0,0,0.5);
 
 .task-hist-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; border-radius: 4px; padding: 3px 5px; transition: color .2s; }
 .task-hist-btn:hover { color: var(--accent); }
+.trecur { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; border-radius: 4px; padding: 3px 5px; transition: all .2s; opacity: .35; }
+.trecur:hover { opacity: 1; }
+.trecur.active { color: var(--accent); opacity: 1; }
+#btn-save-settings.settings-dirty { border-color: var(--accent) !important; color: var(--accent) !important; }
 .task-hist-list { display: none; background: rgba(0,0,0,.18); border-radius: 6px; margin-top: 5px; padding: 2px 0; grid-column: 1/-1; }
 .task-hist-list.open { display: block; }
 

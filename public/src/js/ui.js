@@ -336,7 +336,7 @@ function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-export function renderTasks(tasks, activeTaskId, handlers) {
+export function renderTasks(tasks, activeTaskId, handlers, recurringSet = new Set()) {
   const list = $('tasks-list');
 
   if (!tasks.length) {
@@ -345,14 +345,15 @@ export function renderTasks(tasks, activeTaskId, handlers) {
   }
 
   list.innerHTML = tasks.map(t => {
-    const hasNotes = t.notes && t.notes.trim().length > 0;
-    const est      = t.estimate || 0;
-    const poms     = t.pomodoros || 0;
-    const labelDef = t.label ? cfg.labels.find(l => l.key === t.label) : null;
-    const labelC   = labelDef ? labelDef.color : null;
-    const timeMin  = poms * cfg.focus;
-    const timeStr  = timeMin >= 60 ? `${(timeMin / 60).toFixed(1)}h` : `${timeMin}min`;
-    const pomStr   = est > 0
+    const hasNotes   = t.notes && t.notes.trim().length > 0;
+    const est        = t.estimate || 0;
+    const poms       = t.pomodoros || 0;
+    const labelDef   = t.label ? cfg.labels.find(l => l.key === t.label) : null;
+    const labelC     = labelDef ? labelDef.color : null;
+    const timeMin    = poms * cfg.focus;
+    const timeStr    = timeMin >= 60 ? `${(timeMin / 60).toFixed(1)}h` : `${timeMin}min`;
+    const isRecurring = recurringSet.has(t.id);
+    const pomStr     = est > 0
       ? `<div class="tpoms ${poms >= est ? 'done-est' : ''}" title="${timeStr} dedicados">🍅 ${poms}/${est}</div>`
       : poms > 0 ? `<div class="tpoms">🍅 ×${poms} <span class="tpoms-time">${timeStr}</span></div>` : '';
     return `
@@ -372,6 +373,9 @@ export function renderTasks(tasks, activeTaskId, handlers) {
         ${labelC ? `<div class="task-label-dot" style="background:${labelC}" data-label="${t.label}" title="${labelDef.name}"></div>` : ''}
         <div class="tname ${t.done ? 'done' : ''}">${esc(t.name)}</div>
         ${pomStr}
+        <button class="trecur ${isRecurring ? 'active' : ''}"
+                data-action="toggle-recurring" data-id="${t.id}"
+                title="${isRecurring ? 'Tarea recurrente — se reinicia cada día (clic para desactivar)' : 'Marcar como recurrente diaria'}">🔄</button>
         <button class="task-notes-toggle ${hasNotes ? 'has-notes' : ''}"
                 data-action="toggle-notes" data-id="${t.id}"
                 title="${hasNotes ? 'Ver/editar notas' : 'Añadir notas'}">📝</button>
@@ -397,9 +401,10 @@ export function renderTasks(tasks, activeTaskId, handlers) {
     if (!el) return;
     const action = el.dataset.action;
     const id     = el.dataset.id;
-    if (action === 'focus')        handlers.onFocus(id);
-    if (action === 'toggle')       handlers.onToggle(id);
-    if (action === 'delete')       handlers.onDelete(id);
+    if (action === 'focus')            handlers.onFocus(id);
+    if (action === 'toggle')           handlers.onToggle(id);
+    if (action === 'delete')           handlers.onDelete(id);
+    if (action === 'toggle-recurring') handlers.onToggleRecurring?.(id);
     if (action === 'toggle-notes') {
       const area = $(`notes-area-${id}`);
       if (area) {

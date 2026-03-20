@@ -146,6 +146,11 @@ export async function loadSettings() {
 
 // ── saveSettings ──────────────────────────────────────────────────────
 
+function _clearDirty() {
+  const btn = document.getElementById('btn-save-settings');
+  if (btn) btn.classList.remove('settings-dirty');
+}
+
 export async function saveSettings() {
   if (!state.user) return { error: null };
   ui.setSyncState('syncing');
@@ -168,10 +173,13 @@ export async function saveSettings() {
     quick_notes:  document.getElementById('quick-notes-area')?.value || '',
   });
   ui.setSyncState(error ? 'error' : 'ok');
+  if (!error) _clearDirty();
   return { error };
 }
 
 export function debounceSave() {
+  const btn = document.getElementById('btn-save-settings');
+  if (btn) btn.classList.add('settings-dirty');
   clearTimeout(state.saveTimer);
   state.saveTimer = setTimeout(saveSettings, 700);
 }

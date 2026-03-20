@@ -7,11 +7,12 @@
 
 import { buildScene } from './ambient-scenes.js';
 
-let _ctx    = null;
-let _master = null;
-let _scenes = [];   // array de { theme, scene, gain }
-let _volume = 0.4;
-let _active = false;
+let _ctx          = null;
+let _master       = null;
+let _scenes       = [];   // array de { theme, scene, gain }
+let _volume       = 0.4;
+let _active       = false;
+let _switchTimer  = null; // timeout pendiente en switchMix
 
 // ─── API pública ──────────────────────────────────────────────────────
 
@@ -67,13 +68,16 @@ export function switchAmbient(newTheme) {
 
 /** Cambia el mix completo con fade-out del anterior y fade-in del nuevo. */
 export function switchMix(newMixObj) {
+  // Cancelar cualquier switchMix pendiente para evitar que se apilen osciladores
+  if (_switchTimer) { clearTimeout(_switchTimer); _switchTimer = null; }
   if (!_active) { startMix(newMixObj); return; }
   _active = false;
   if (_master && _ctx) _master.gain.setTargetAtTime(0, _ctx.currentTime, 0.3);
   const oldScenes = _scenes;
   const oldMaster = _master;
   _scenes = []; _master = null;
-  setTimeout(() => {
+  _switchTimer = setTimeout(() => {
+    _switchTimer = null;
     oldScenes.forEach(s => {
       try { s.scene.stop(); }    catch(e) {}
       try { s.gain.disconnect(); } catch(e) {}

@@ -38,6 +38,7 @@ function _task(doc) {
     notes:     doc.notes || '',
     estimate:  doc.estimate || 0,
     label:     doc.label || '',
+    recurring: doc.recurring ?? false,
   };
 }
 
@@ -231,7 +232,7 @@ export const tasks = {
   create: async (userId, name, estimate = 0, label = '') => {
     try {
       const doc = await _databases.createDocument(_dbId, _C_TASKS, _ID.unique(),
-        { user_id: userId, name, done: false, pomodoros: 0, position: 0, notes: '', estimate, label },
+        { user_id: userId, name, done: false, pomodoros: 0, position: 0, notes: '', estimate, label, recurring: false },
         _userPerms(userId));
       return { data: _task(doc), error: null };
     } catch (e) {

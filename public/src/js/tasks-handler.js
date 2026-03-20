@@ -14,9 +14,25 @@ import { setTask, clearTask }        from './timer.js';
 
 let _sortMode = 'manual';
 
+function _checkDailyReset() {
+  if (!state.user) return;
+  const today    = new Date().toDateString();
+  const resetKey = 'fn_recurring_reset_' + state.user.id;
+  if (localStorage.getItem(resetKey) === today) return;
+  localStorage.setItem(resetKey, today);
+  state.tasks.forEach(t => {
+    if (t.recurring && (t.done || t.pomodoros > 0)) {
+      t.done = false;
+      t.pomodoros = 0;
+      db.tasks.update(t.id, { done: false, pomodoros: 0 });
+    }
+  });
+}
+
 export async function loadTasks() {
   const { data } = await db.tasks.loadAll(state.user.id);
   if (data) state.tasks = data;
+  _checkDailyReset();
   renderTasks();
 }
 
@@ -26,7 +42,8 @@ export function renderTasks() {
   else if (_sortMode === 'label')     tasks.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
   else if (_sortMode === 'estimate')  tasks.sort((a, b) => (b.estimate || 0) - (a.estimate || 0));
   else if (_sortMode === 'pomodoros') tasks.sort((a, b) => (b.pomodoros || 0) - (a.pomodoros || 0));
-  ui.renderTasks(tasks, state.activeTaskId, taskHandlers);
+  const recurringSet = new Set(state.tasks.filter(t => t.recurring).map(t => t.id));
+  ui.renderTasks(tasks, state.activeTaskId, taskHandlers, recurringSet);
   const clearRow = document.getElementById('clear-done-row');
   if (clearRow) clearRow.style.display = state.tasks.some(t => t.done) ? '' : 'none';
   const sortSel = document.getElementById('task-sort-sel');
@@ -110,6 +127,18 @@ export const taskHandlers = {
       ui.setSyncState(error ? 'error' : 'ok');
     }
   },
+
+  onToggleRecurring: async (id) => {
+    const t = state.tasks.find(t => t.id === id);
+    if (!t) return;
+    t.recurring = !t.recurring;
+    renderTasks();
+    if (state.user) {
+      ui.setSyncState('syncing');
+      const { error } = await db.tasks.update(id, { recurring: t.recurring });
+      ui.setSyncState(error ? 'error' : 'ok');
+    }
+  },
 };
 
 // ── Drag and drop ─────────────────────────────────────────────────────
@@ -139,6 +168,7 @@ window.onTaskDrop = async (e, targetId) => {
     try {
       await Promise.all(state.tasks.map((t, i) => db.tasks.update(t.id, { position: i })));
       ui.setSyncState('ok');
+      ui.showToast('Orden guardado');
     } catch (_) {
       ui.setSyncState('error');
     }
