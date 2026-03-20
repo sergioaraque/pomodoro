@@ -657,6 +657,43 @@ body.theme-arctic .stars-layer { opacity: 1; }
 .stat-card { transition: transform 0.2s; }
 .stat-card:hover { transform: translateY(-2px); }
 
+/* ── Label manager ─────────────────────────────── */
+.lm-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--glass-b); }
+.lm-swatch {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: block; position: relative; overflow: hidden; cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.15);
+}
+.lm-swatch input[type=color],
+.lm-add-swatch input[type=color] {
+  position: absolute; inset: -4px;
+  width: calc(100% + 8px); height: calc(100% + 8px);
+  opacity: 0; cursor: pointer;
+}
+.lm-name { flex: 1; font-size: 13px; color: var(--text); }
+.lm-del { background: none; border: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; transition: color 0.2s; }
+.lm-del:hover { color: #ff6b9d; }
+.lm-add-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.lm-add-inp {
+  flex: 1; background: var(--glass); border: 1px solid var(--glass-b);
+  border-radius: 8px; padding: 7px 10px; color: var(--text);
+  font-size: 13px; outline: none; font-family: var(--font-body);
+}
+.lm-add-inp:focus { border-color: var(--accent); }
+.lm-add-inp::placeholder { color: var(--muted); }
+.lm-add-swatch {
+  width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+  display: block; position: relative; overflow: hidden; cursor: pointer;
+  border: 1px solid var(--glass-b);
+}
+.lm-add-btn {
+  background: var(--accent); color: #071020; border: none; border-radius: 8px;
+  width: 32px; height: 32px; font-size: 20px; font-weight: 700; cursor: pointer;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  transition: filter 0.2s;
+}
+.lm-add-btn:hover { filter: brightness(1.1); }
+
 /* ── Heatmap legend ────────────────────────────── */
 .heatmap-legend {
   display: flex; align-items: center; gap: 4px;
@@ -707,7 +744,7 @@ body.theme-deep {
 .task-meta-sel {
   background:var(--glass); border:1px solid var(--glass-b); color:var(--text);
   border-radius:8px; padding:6px 10px; font-size:12px; outline:none;
-  font-family:var(--font-body); cursor:pointer;
+  font-family:var(--font-body); cursor:pointer; min-width:130px; flex:1;
 }
 .task-est-wrap {
   display:flex; align-items:center; gap:6px;

@@ -344,13 +344,12 @@ export function renderTasks(tasks, activeTaskId, handlers) {
     return;
   }
 
-  const LABEL_COLORS = { trabajo:'#60a8f0', personal:'#f093fb', estudio:'#7ecf3e', salud:'#ff6b9d', otro:'#ffa552' };
-
   list.innerHTML = tasks.map(t => {
     const hasNotes = t.notes && t.notes.trim().length > 0;
     const est      = t.estimate || 0;
     const poms     = t.pomodoros || 0;
-    const labelC   = t.label && LABEL_COLORS[t.label] ? LABEL_COLORS[t.label] : null;
+    const labelDef = t.label ? cfg.labels.find(l => l.key === t.label) : null;
+    const labelC   = labelDef ? labelDef.color : null;
     const timeMin  = poms * cfg.focus;
     const timeStr  = timeMin >= 60 ? `${(timeMin / 60).toFixed(1)}h` : `${timeMin}min`;
     const pomStr   = est > 0
@@ -370,7 +369,7 @@ export function renderTasks(tasks, activeTaskId, handlers) {
              data-action="toggle" data-id="${t.id}">
           ${t.done ? '✓' : ''}
         </div>
-        ${labelC ? `<div class="task-label-dot" style="background:${labelC}" title="${t.label}"></div>` : ''}
+        ${labelC ? `<div class="task-label-dot" style="background:${labelC}" data-label="${t.label}" title="${labelDef.name}"></div>` : ''}
         <div class="tname ${t.done ? 'done' : ''}">${esc(t.name)}</div>
         ${pomStr}
         <button class="task-notes-toggle ${hasNotes ? 'has-notes' : ''}"
@@ -755,6 +754,9 @@ export function renderSettings() {
   const ssEl = $('sound-style-sel');
   if (ssEl) ssEl.value = cfg.soundStyle || 'bells';
 
+  renderLabelManager();
+  renderTaskLabelSelect();
+
   // Renderizar mixer ambiental
   const mixWrap = $('ambient-mix-container');
   if (!mixWrap) return;
@@ -926,15 +928,15 @@ export function renderLabelStats(data) {
     el.innerHTML = '<div class="empty-msg" style="font-size:12px">Sin datos de etiquetas por tarea activa aún.</div>';
     return;
   }
-  const COLORS = { trabajo:'#60a8f0', personal:'#f093fb', estudio:'#7ecf3e', salud:'#ff6b9d', otro:'#ffa552' };
-  const NAMES  = { trabajo:'Trabajo', personal:'Personal', estudio:'Estudio', salud:'Salud', otro:'Otro' };
-  const total  = Object.values(data).reduce((a, b) => a + b, 0);
+  const total = Object.values(data).reduce((a, b) => a + b, 0);
   el.innerHTML = Object.entries(data).sort((a, b) => b[1] - a[1]).map(([k, v]) => {
+    const def   = cfg.labels.find(l => l.key === k);
+    const color = def ? def.color : 'var(--accent)';
+    const name  = def ? def.name : k;
     const pct   = Math.round(v / total * 100);
-    const color = COLORS[k] || 'var(--accent)';
     return `<div style="margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
-        <span style="color:${color}">${NAMES[k] || k}</span>
+        <span style="color:${color}">${name}</span>
         <span style="color:var(--muted)">${v} 🍅 · ${pct}%</span>
       </div>
       <div style="height:4px;border-radius:2px;background:rgba(255,255,255,.08)">
@@ -942,4 +944,38 @@ export function renderLabelStats(data) {
       </div>
     </div>`;
   }).join('');
+}
+
+export function renderTaskLabelSelect() {
+  const sel = $('task-label-sel');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Sin etiqueta</option>' +
+    cfg.labels.map(l => `<option value="${l.key}">${l.name}</option>`).join('');
+  if (current) sel.value = current;
+}
+
+export function renderLabelManager() {
+  const el = $('label-manager');
+  if (!el) return;
+  const rows = cfg.labels.map(l => `
+    <div class="lm-row">
+      <label class="lm-swatch" style="background:${l.color}" title="Cambiar color">
+        <input type="color" value="${l.color}"
+          oninput="this.parentElement.style.background=this.value; updateLabelColor('${l.key}',this.value)">
+      </label>
+      <span class="lm-name">${l.name}</span>
+      <button class="lm-del" onclick="deleteLabel('${l.key}')" title="Eliminar">×</button>
+    </div>`).join('');
+
+  el.innerHTML = rows + `
+    <div class="lm-add-row">
+      <input class="lm-add-inp" id="lm-add-name" placeholder="Nueva etiqueta…" maxlength="24"
+             onkeydown="if(event.key==='Enter')addLabel()">
+      <label class="lm-add-swatch" id="lm-add-swatch" style="background:#a0a0f0" title="Color">
+        <input type="color" value="#a0a0f0"
+          oninput="this.parentElement.style.background=this.value">
+      </label>
+      <button class="lm-add-btn" onclick="addLabel()">+</button>
+    </div>`;
 }

@@ -320,12 +320,7 @@
       </div>
       <div class="task-meta-row">
         <select class="task-meta-sel" id="task-label-sel">
-          <option value="" data-i18n="label_none">Sin etiqueta</option>
-          <option value="trabajo" data-i18n="label_work">💼 Trabajo</option>
-          <option value="personal" data-i18n="label_personal">🏠 Personal</option>
-          <option value="estudio" data-i18n="label_study">📚 Estudio</option>
-          <option value="salud" data-i18n="label_health">💪 Salud</option>
-          <option value="otro" data-i18n="label_other">📌 Otro</option>
+          <option value="">Sin etiqueta</option>
         </select>
         <div class="task-est-wrap">
           <input class="task-est-inp" id="task-est-inp" type="number" min="0" max="20" placeholder="0" title="Pomodoros estimados">
@@ -336,7 +331,7 @@
         <div class="empty-msg">Cargando…</div>
       </div>
       <div id="clear-done-row" style="display:none;text-align:right;margin-top:6px">
-        <button class="btn-clear-done" onclick="clearDoneTasks()" data-i18n="tasks_clear_done">Limpiar completadas ✓</button>
+        <button class="btn-clear-done" onclick="clearDoneTasks()">Limpiar completadas ✓</button>
       </div>
     </div>
   </div>
@@ -473,6 +468,10 @@
         <div><div style="font-size:14px">Sonido de teclado</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Clicks suaves al escribir durante el foco</div></div>
         <div class="sw" id="sw-typing"></div>
       </div>
+
+      <div class="settings-section-title">Etiquetas</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Personaliza el color de cada etiqueta o añade las tuyas.</div>
+      <div id="label-manager"></div>
 
       <div class="settings-section-title">Objetivo diario</div>
       <div class="sblock" style="margin-bottom:13px">

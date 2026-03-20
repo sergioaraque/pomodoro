@@ -82,6 +82,7 @@ export async function loadSettings() {
       if (bak.autoAmbient  !== undefined) cfg.autoAmbient  = bak.autoAmbient;
       if (bak.typingSounds !== undefined) cfg.typingSounds = bak.typingSounds;
     } catch (_) {}
+    _loadLabels(state.user.id);
 
     if (data.lang) setLang(data.lang);
     applyTheme(data.theme || 'ocean', false);
@@ -133,6 +134,7 @@ export async function loadSettings() {
         setVolume(cfg.ambientVol);
       }
     } catch (_) {}
+    _loadLabels(state.user.id);
     // Crear el documento de settings en DB con los valores actuales (primer login)
     saveSettings().catch(() => {});
   }
@@ -463,6 +465,57 @@ window.toggleTypingSounds = () => {
   cfg.typingSounds = !cfg.typingSounds;
   ui.renderSettings();
   saveToLocalStorage();
+};
+
+// ── Etiquetas ──────────────────────────────────────────────────────────
+
+const _LABELS_KEY = () => state.user ? 'fn_labels_' + state.user.id : 'fn_labels_guest';
+
+function _loadLabels(userId) {
+  try {
+    const stored = JSON.parse(localStorage.getItem('fn_labels_' + userId) || 'null');
+    if (Array.isArray(stored) && stored.length) cfg.labels = stored;
+  } catch (_) {}
+}
+
+function _saveLabels() {
+  try { localStorage.setItem(_LABELS_KEY(), JSON.stringify(cfg.labels)); } catch (_) {}
+}
+
+window.updateLabelColor = (key, color) => {
+  const label = cfg.labels.find(l => l.key === key);
+  if (label) label.color = color;
+  _saveLabels();
+  ui.renderTaskLabelSelect();
+  // Refrescar el dot de la tarea activa si tiene esta etiqueta
+  const list = document.getElementById('tasks-list');
+  if (list) list.querySelectorAll(`[data-label="${key}"]`).forEach(el => { el.style.background = color; });
+};
+
+window.addLabel = () => {
+  const inp   = document.getElementById('lm-add-name');
+  const swatch = document.getElementById('lm-add-swatch');
+  if (!inp) return;
+  const name = inp.value.trim();
+  if (!name) return;
+  const color = swatch ? getComputedStyle(swatch).backgroundColor : '#a0a0f0';
+  const colorHex = document.querySelector('#lm-add-swatch input[type=color]')?.value || '#a0a0f0';
+  const key   = name.toLowerCase().replace(/[^\w\u00C0-\u024F]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 20) || ('label_' + Date.now());
+  if (cfg.labels.some(l => l.key === key)) { ui.showToast('Ya existe una etiqueta con ese nombre'); return; }
+  cfg.labels.push({ key, name, color: colorHex });
+  _saveLabels();
+  inp.value = '';
+  ui.renderLabelManager();
+  ui.renderTaskLabelSelect();
+};
+
+window.deleteLabel = (key) => {
+  const idx = cfg.labels.findIndex(l => l.key === key);
+  if (idx === -1) return;
+  cfg.labels.splice(idx, 1);
+  _saveLabels();
+  ui.renderLabelManager();
+  ui.renderTaskLabelSelect();
 };
 
 window.addEventListener('beforeunload', () => {

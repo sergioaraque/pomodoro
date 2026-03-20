@@ -37,6 +37,7 @@ export async function handleLogin(user) {
     ui.renderSessionDots(getState().sessionsDone);
     ui.renderDailyGoalRing(state.todayCount, cfg.dailyGoal);
     ui.setStartButtonText('Iniciar');
+    ui.renderTaskLabelSelect();
     applyToDOM();
 
     const curLang = getLang();
