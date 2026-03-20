@@ -589,11 +589,11 @@ export function renderDailyGoalRing(done, goal) {
         stroke-dashoffset="${offset}"
         transform="rotate(-90 38 38)"
         style="transition: stroke-dashoffset 0.6s ease, stroke 0.4s"/>
-      <text x="38" y="34" text-anchor="middle"
-        fill="var(--text)" font-size="14" font-weight="600"
+      <text x="38" y="40" text-anchor="middle"
+        fill="var(--text)" font-size="20" font-weight="700"
         font-family="var(--font-display)">${done}</text>
-      <text x="38" y="48" text-anchor="middle"
-        fill="var(--muted)" font-size="10">${goal > 0 ? `/ ${goal}` : ''}</text>
+      <text x="38" y="52" text-anchor="middle"
+        fill="var(--muted)" font-size="9">${goal > 0 ? `de ${goal}` : ''}</text>
     </svg>`;
 }
 
@@ -806,14 +806,17 @@ export function updateStreakBadge(streak) {
   const badge = $('streak-mini');
   const val   = $('streak-mini-val');
   const sep   = $('thud-sep');
+  const hud   = document.querySelector('.timer-hud');
   if (!badge || !val) return;
   if (streak > 0) {
     val.textContent     = streak;
     badge.style.display = 'flex';
     if (sep) sep.style.display = 'block';
+    if (hud) hud.classList.add('timer-hud--wide');
   } else {
     badge.style.display = 'none';
     if (sep) sep.style.display = 'none';
+    if (hud) hud.classList.remove('timer-hud--wide');
   }
 }
 

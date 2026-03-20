@@ -25,9 +25,9 @@ body {
 
 body.theme-meadow {
   --accent:  #7ecf3e;  --accent2: #a8e063;
-  --text:    #f0f8e8;  --muted:   #96b870;
-  --glass:   rgba(255,255,255,0.07);
-  --glass-b: rgba(255,255,255,0.15);
+  --text:    #f0f8e8;  --muted:   #c8e8a0;
+  --glass:   rgba(0,0,0,0.28);
+  --glass-b: rgba(255,255,255,0.14);
   --font-display: 'Nunito', sans-serif;
   --font-body:    'Nunito', sans-serif;
   --timer-color:  #f0f8e8;
@@ -360,8 +360,9 @@ body.theme-forest   .stars-layer { opacity: 1; }
 .hmap-weeks { display: flex; gap: 3px; }
 .hmap-week-col { display: flex; flex-direction: column; gap: 3px; }
 .hmap-month { font-size: 9px; color: var(--muted); height: 16px; line-height: 16px; white-space: nowrap; overflow: hidden; }
-.hday { width: 14px; height: 14px; border-radius: 2px; background: rgba(255,255,255,0.07); transition: background 0.3s; position: relative; cursor: default; flex-shrink: 0; }
+.hday { width: 14px; height: 14px; border-radius: 2px; background: rgba(255,255,255,0.07); transition: background 0.3s, filter 0.2s, outline 0.2s; position: relative; cursor: default; flex-shrink: 0; }
 .hday.hday-out { background: transparent; }
+.hday:not(.hday-out):hover { filter: brightness(1.6); outline: 1px solid rgba(255,255,255,0.35); }
 .hday:hover::after { content: attr(data-tip); position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 5px; white-space: nowrap; pointer-events: none; z-index: 10; }
 .hday.l1 { background: rgba(78,205,196,0.25); }
 .hday.l2 { background: rgba(78,205,196,0.50); }
@@ -548,8 +549,8 @@ body.deep-focus #tab-timer .card         { box-shadow: 0 0 60px rgba(0,0,0,0.5);
 /* ── Token overrides ── */
 body.theme-desert {
   --accent: #f5a623; --accent2: #ffcc66;
-  --text: #f5ead0; --muted: #b89060;
-  --glass: rgba(255,255,255,0.06); --glass-b: rgba(255,255,255,0.13);
+  --text: #f5ead0; --muted: #d4a870;
+  --glass: rgba(0,0,0,0.28); --glass-b: rgba(255,255,255,0.12);
   --font-display: 'Lora', serif; --font-body: 'DM Sans', sans-serif;
   --timer-color: #f5ead0;
 }
@@ -876,8 +877,8 @@ body.theme-underarctic {
 }
 body.theme-savanna {
   --accent:#ffaa44; --accent2:#ffcc66;
-  --text:#f8e8cc; --muted:#aa7830;
-  --glass:rgba(255,255,255,.06); --glass-b:rgba(255,255,255,.12);
+  --text:#f8e8cc; --muted:#d4a860;
+  --glass:rgba(0,0,0,0.28); --glass-b:rgba(255,255,255,.12);
   --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
   --timer-color:#f8e8cc;
 }
@@ -1152,18 +1153,17 @@ body.theme-mars {
   align-items: center;
   justify-content: center;
   margin: 0 auto 14px;
-  padding: 10px 28px;
   background: rgba(255,255,255,0.055);
   border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 20px;
-  max-width: 290px;
+  border-radius: 16px;
+  width: 180px;
+  height: 180px;
 }
 .thud-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  flex: 1;
 }
 .thud-lbl {
   font-size: 9px;
@@ -1174,11 +1174,14 @@ body.theme-mars {
   opacity: 0.7;
   margin-bottom: 2px;
 }
+.timer-hud--wide {
+  width: 240px;
+}
 .thud-sep {
   width: 1px;
   height: 54px;
   background: rgba(255,255,255,0.10);
-  margin: 0 20px;
+  margin: 0 14px;
   flex-shrink: 0;
 }
 .thud-streak-num {
@@ -1238,9 +1241,10 @@ body.theme-mars {
   background: rgba(0,0,0,0.72);
   display: flex; align-items: center; justify-content: center;
   opacity: 0; transition: opacity 0.25s;
+  pointer-events: none;
   padding: 16px;
 }
-.wr-modal.open { opacity: 1; }
+.wr-modal.open { opacity: 1; pointer-events: auto; }
 .wr-card {
   background: #0d2038;
   border: 1px solid rgba(255,255,255,0.12);
