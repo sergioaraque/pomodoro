@@ -242,7 +242,7 @@ export function applyTheme(name) {
   $('app-subtitle').textContent = t.subtitle;
   $('scene-info').innerHTML     = t.info;
 
-  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tpick').forEach(b => b.classList.remove('active'));
   const tBtn = $('tbtn-' + name);
   if (tBtn) tBtn.classList.add('active');
 }
