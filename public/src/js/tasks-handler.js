@@ -223,7 +223,7 @@ export async function createTask(name, est = 0, label = '') {
   ui.setSyncState('syncing');
   const { data, error } = await db.tasks.create(state.user.id, name, est, label);
   if (!error && data) {
-    state.tasks.unshift({ id: data.id, name: data.name, done: false, pomodoros: 0, notes: '', estimate: est, label });
+    state.tasks.unshift({ id: data.id, name: data.name, done: false, pomodoros: 0, notes: '', estimate: est, label, recurring: false });
     renderTasks();
     ui.setSyncState('ok');
     return data;
@@ -243,7 +243,7 @@ window.addTask = async () => {
   ui.setSyncState('syncing');
   const { data, error } = await db.tasks.create(state.user.id, name, est, label);
   if (!error && data) {
-    state.tasks.unshift({ id: data.id, name: data.name, done: false, pomodoros: 0, notes: '', estimate: est, label });
+    state.tasks.unshift({ id: data.id, name: data.name, done: false, pomodoros: 0, notes: '', estimate: est, label, recurring: false });
     renderTasks();
     ui.setSyncState('ok');
   } else {

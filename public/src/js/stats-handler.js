@@ -369,7 +369,7 @@ window.exportCSV = () => {
     const a    = document.createElement('a');
     a.href = url; a.download = 'focusnature-sesiones.csv'; a.click();
     URL.revokeObjectURL(url);
-  });
+  }).catch(err => { console.error('[exportCSV]', err); alert('Error al exportar sesiones.'); });
 };
 
 function _applyHistoryFilters() {
@@ -393,7 +393,7 @@ function _applyHistoryFilters() {
 }
 
 window.filterHistory = (val) => {
-  _filteredTaskName = val.toLowerCase().trim();
+  _filteredTaskName = (val || '').toLowerCase().trim();
   _applyHistoryFilters();
 };
 
@@ -413,7 +413,7 @@ export function openWeeklyReview() {
   } else if (state.user) {
     db.sessions.loadFocus(state.user.id).then(({ data }) => {
       if (data) _showWeeklyReview(data, _cachedStreak);
-    });
+    }).catch(err => { console.error('[weeklyReview]', err); });
   }
 }
 window.openWeeklyReview = openWeeklyReview;
