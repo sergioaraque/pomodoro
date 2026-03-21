@@ -370,7 +370,7 @@ export function renderTasks(tasks, activeTaskId, handlers, recurringSet = new Se
              data-action="toggle" data-id="${t.id}">
           ${t.done ? '✓' : ''}
         </div>
-        ${labelC ? `<div class="task-label-dot" style="background:${labelC}" data-label="${t.label}" title="${labelDef.name}"></div>` : ''}
+        ${labelC ? `<div class="task-label-dot" style="background:${labelC}" data-label="${t.label}" title="${esc(labelDef.name)}"></div>` : ''}
         <div class="tname ${t.done ? 'done' : ''}">${esc(t.name)}</div>
         ${pomStr}
         <button class="trecur ${isRecurring ? 'active' : ''}"
@@ -941,7 +941,7 @@ export function renderLabelStats(data) {
     const pct   = Math.round(v / total * 100);
     return `<div style="margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
-        <span style="color:${color}">${name}</span>
+        <span style="color:${color}">${esc(name)}</span>
         <span style="color:var(--muted)">${v} 🍅 · ${pct}%</span>
       </div>
       <div style="height:4px;border-radius:2px;background:rgba(255,255,255,.08)">
@@ -956,7 +956,7 @@ export function renderTaskLabelSelect() {
   if (!sel) return;
   const current = sel.value;
   sel.innerHTML = '<option value="">Sin etiqueta</option>' +
-    cfg.labels.map(l => `<option value="${l.key}">${l.name}</option>`).join('');
+    cfg.labels.map(l => `<option value="${l.key}">${esc(l.name)}</option>`).join('');
   if (current) sel.value = current;
 }
 
@@ -969,7 +969,7 @@ export function renderLabelManager() {
         <input type="color" value="${l.color}"
           oninput="this.parentElement.style.background=this.value; updateLabelColor('${l.key}',this.value)">
       </label>
-      <span class="lm-name">${l.name}</span>
+      <span class="lm-name">${esc(l.name)}</span>
       <button class="lm-del" onclick="deleteLabel('${l.key}')" title="Eliminar">×</button>
     </div>`).join('');
 

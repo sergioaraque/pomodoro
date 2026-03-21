@@ -90,8 +90,10 @@ function send(res, html) {
 const express = require('express');
 const app     = express();
 
-// Middleware: las páginas dinámicas nunca se cachean
+// Middleware: security headers + no-cache en páginas dinámicas
 app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   if (req.path === '/app' || req.path === '/guest' || req.path === '/') {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
     res.setHeader('Pragma', 'no-cache');
