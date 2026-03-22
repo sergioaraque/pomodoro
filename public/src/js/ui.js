@@ -862,7 +862,7 @@ export function showWeeklyReview({ dateRange, thisTotal, lastTotal, pctChange, h
     ? topTasks.map(([name, count], i) =>
         `<div class="wr-task-row">
           <span class="wr-task-rank">${medals[i]}</span>
-          <span class="wr-task-name">${name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>
+          <span class="wr-task-name">${esc(name)}</span>
           <span class="wr-task-poms">${count} 🍅</span>
         </div>`).join('')
     : '<div style="font-size:12px;color:var(--muted)">Sin tareas registradas esta semana</div>';
