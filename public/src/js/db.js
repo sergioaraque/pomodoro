@@ -288,6 +288,19 @@ export const sessions = {
     }
   },
 
+  loadAll: async (userId) => {
+    try {
+      const res = await _databases.listDocuments(_dbId, _C_SESSIONS, [
+        _Query.equal('user_id', userId),
+        _Query.orderDesc('completed_at'),
+        _Query.limit(2000),
+      ]);
+      return { data: res.documents.map(_session), error: null };
+    } catch (e) {
+      return { data: [], error: _err(e) };
+    }
+  },
+
   loadFocus: async (userId) => {
     try {
       const res = await _databases.listDocuments(_dbId, _C_SESSIONS, [

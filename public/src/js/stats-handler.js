@@ -398,12 +398,15 @@ function _renderWeeklyChallenge(focusData) {
 
 window.exportCSV = () => {
   if (!state.user) return;
-  db.sessions.loadRecent(state.user.id).then(({ data }) => {
+  ui.showToast('Preparando CSV…');
+  db.sessions.loadAll(state.user.id).then(({ data }) => {
     if (!data || !data.length) return ui.showToast('Sin datos para exportar.');
-    const rows = [['Fecha', 'Modo', 'Duracion (min)', 'Tarea']];
+    const rows = [['Fecha', 'Modo', 'Duracion (min)', 'Tarea', 'task_id']];
     data.forEach(s => {
-      const d = new Date(s.completed_at).toLocaleString('es-ES');
-      rows.push([d, s.mode, s.duration, s.task_name || '']);
+      rows.push([
+        new Date(s.completed_at).toLocaleString('es-ES'),
+        s.mode, s.duration, s.task_name || '', s.task_id || '',
+      ]);
     });
     const CRLF = String.fromCharCode(13, 10);
     const csv  = rows
@@ -412,9 +415,34 @@ window.exportCSV = () => {
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href = url; a.download = 'focusnature-sesiones.csv'; a.click();
+    a.href = url;
+    a.download = `focusnature-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
     URL.revokeObjectURL(url);
-  }).catch(err => { console.error('[exportCSV]', err); ui.showToast('Error al exportar sesiones.'); });
+    ui.showToast(`${data.length} sesiones exportadas.`);
+  }).catch(err => { console.error('[exportCSV]', err); ui.showToast('Error al exportar.'); });
+};
+
+window.exportJSON = () => {
+  if (!state.user) return;
+  ui.showToast('Preparando backup…');
+  db.sessions.loadAll(state.user.id).then(({ data: sessions }) => {
+    const payload = {
+      exported_at: new Date().toISOString(),
+      app: 'FocusNature',
+      sessions: sessions || [],
+      tasks: state.tasks.map(({ id, name, done, pomodoros, notes, estimate, label, recurring }) =>
+        ({ id, name, done, pomodoros, notes, estimate, label, recurring })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `focusnature-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    ui.showToast(`Backup listo: ${(sessions||[]).length} sesiones, ${state.tasks.length} tareas.`);
+  }).catch(() => ui.showToast('Error al generar el backup.'));
 };
 
 function _applyHistoryFilters() {

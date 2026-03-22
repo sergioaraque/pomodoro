@@ -223,13 +223,17 @@ const THEMES = {
   festival: { title:'FocusFest',     subtitle:'Celebra mientras te concentras', cls:'theme-festival',  info:'<b>🎆 Festival</b> — Farolillos, fuegos y multitud.' },
   jungle:   { title:'FocusJungle',   subtitle:'Energía salvaje de la selva',    cls:'theme-jungle',    info:'<b>🌺 Selva</b> — Tucanes, morpho azul y cascada.' },
   mars:     { title:'FocusMars',     subtitle:'El silencio rojo de Marte',      cls:'theme-mars',      info:'<b>🔭 Marte</b> — Rover, dunas y dos lunas.' },
+  sakura:   { title:'FocusSakura',  subtitle:'Florece con cada pomodoro',       cls:'theme-sakura',    info:'<b>🌸 Sakura</b> — Pétalos cayendo al amanecer.' },
+  sunset:   { title:'FocusSunset',  subtitle:'La hora dorada del enfoque',      cls:'theme-sunset',    info:'<b>🌇 Atardecer</b> — El cielo arde en naranja y púrpura.' },
+  lofi:     { title:'FocusLofi',    subtitle:'Beats suaves, mente clara',       cls:'theme-lofi',      info:'<b>📻 Lofi</b> — Lluvia en la ventana, vinilo girando.' },
+  highway:  { title:'FocusHighway', subtitle:'La carretera no tiene fin',       cls:'theme-highway',   info:'<b>🛣️ Autopista</b> — Faros en la noche, asfalto infinito.' },
 };
 
 export function applyTheme(name) {
   const t = THEMES[name];
   document.body.className = t.cls;
 
-  ['ocean','meadow','mountain','forest','desert','city','arctic','space','deep','volcano','rain','japan','swamp','cave','underarctic','savanna','alps','festival','jungle','mars'].forEach(k => {
+  ['ocean','meadow','mountain','forest','desert','city','arctic','space','deep','volcano','rain','japan','swamp','cave','underarctic','savanna','alps','festival','jungle','mars','sakura','sunset','lofi','highway'].forEach(k => {
     const el = $('bg-' + k);
     if (el) el.style.opacity = (k === name) ? '1' : '0';
   });

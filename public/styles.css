@@ -952,6 +952,35 @@ body.theme-mars {
   --timer-color:#f8d8cc;
 }
 
+body.theme-sakura {
+  --accent:#e91e8c; --accent2:#f48fb1;
+  --text:#fce4ec; --muted:#ce93d8;
+  --glass:rgba(233,30,140,.06); --glass-b:rgba(233,30,140,.13);
+  --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#fce4ec;
+}
+body.theme-sunset {
+  --accent:#ff7043; --accent2:#ffab40;
+  --text:#fff3e0; --muted:#ff8a65;
+  --glass:rgba(255,112,67,.06); --glass-b:rgba(255,112,67,.13);
+  --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#fff3e0;
+}
+body.theme-lofi {
+  --accent:#b39ddb; --accent2:#ce93d8;
+  --text:#ede7f6; --muted:#9575cd;
+  --glass:rgba(179,157,219,.07); --glass-b:rgba(179,157,219,.14);
+  --font-display:'Lora',serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#ede7f6;
+}
+body.theme-highway {
+  --accent:#f9a825; --accent2:#ffca28;
+  --text:#f0f0f0; --muted:#9e9e9e;
+  --glass:rgba(249,168,37,.05); --glass-b:rgba(249,168,37,.12);
+  --font-display:'DM Sans',sans-serif; --font-body:'DM Sans',sans-serif;
+  --timer-color:#f0f0f0;
+}
+
 @keyframes statPulse { 0%,100%{opacity:.4} 50%{opacity:.7} }
 
 /* ════════════════════════════════════════════════
@@ -1545,3 +1574,86 @@ body.theme-mars {
 .insight-val  { font-size: 17px; font-weight: 700; color: var(--text); line-height: 1.1; }
 .insight-lbl  { font-size: 10px; color: var(--muted); text-transform: uppercase;
                 letter-spacing: 0.6px; margin-top: 2px; }
+
+/* ─── DAILY PLAN MODAL ──────────────────────── */
+.dp-overlay {
+  position: fixed; inset: 0; z-index: 9100;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.dp-overlay.open { opacity: 1; pointer-events: all; }
+.dp-card {
+  background: rgba(10,22,42,0.97); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px; padding: 20px 20px 16px;
+  width: min(460px, calc(100vw - 32px)); max-height: 80vh;
+  display: flex; flex-direction: column; gap: 0;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+}
+.dp-header    { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.dp-title     { font-size: 16px; font-weight: 700; color: var(--accent); }
+.dp-date      { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.dp-total     { color: var(--accent); margin-left: 6px; }
+.dp-close     { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px;
+                padding: 2px 6px; border-radius: 6px; transition: color .2s; }
+.dp-close:hover { color: var(--text); }
+.dp-list      { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+                padding-right: 2px; }
+.dp-list::-webkit-scrollbar { width: 3px; }
+.dp-list::-webkit-scrollbar-thumb { background: var(--glass-b); border-radius: 2px; }
+.dp-row       { display: flex; align-items: center; gap: 8px;
+                background: var(--glass); border: 1px solid var(--glass-b);
+                border-radius: 10px; padding: 8px 10px; transition: border-color .2s; }
+.dp-row:hover { border-color: rgba(78,205,196,0.22); }
+.dp-order     { font-size: 11px; color: var(--muted); width: 18px; text-align: center; flex-shrink: 0; }
+.dp-info      { flex: 1; min-width: 0; }
+.dp-name      { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dp-rem       { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.dp-btns      { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+.dp-arrow     { background: none; border: 1px solid var(--glass-b); color: var(--muted);
+                border-radius: 6px; padding: 3px 7px; font-size: 12px; cursor: pointer;
+                transition: all .15s; line-height: 1; }
+.dp-arrow:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.dp-arrow:disabled { opacity: 0.25; cursor: default; }
+.dp-act       { background: none; border: 1px solid rgba(78,205,196,0.3); color: var(--accent);
+                border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer;
+                white-space: nowrap; transition: all .15s; }
+.dp-act:hover       { background: rgba(78,205,196,0.1); }
+.dp-act.dp-act-on   { background: rgba(78,205,196,0.15); font-weight: 600; }
+.dp-empty     { font-size: 13px; color: var(--muted); text-align: center; padding: 20px 0; }
+.dp-footer    { margin-top: 12px; }
+.dp-start     { width: 100%; background: var(--accent); color: #071020; border: none;
+                border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 700;
+                cursor: pointer; transition: opacity .2s; font-family: var(--font-body); }
+.dp-start:hover { opacity: 0.88; }
+
+/* ─── THEME-SPECIFIC CREATURE ANIMATIONS ────── */
+
+/* Sakura — pétalos con caída espiral */
+body.theme-sakura .snow-el { animation-name: petalFall; }
+@keyframes petalFall {
+  0%   { transform: translateY(-20px) translateX(0)    rotate(0deg);   opacity: 0; }
+  10%  { opacity: 0.9; }
+  33%  { transform: translateY(30vh)  translateX(22px)  rotate(120deg); }
+  66%  { transform: translateY(65vh)  translateX(-14px) rotate(260deg); }
+  90%  { opacity: 0.45; }
+  100% { transform: translateY(105vh) translateX(8px)   rotate(380deg); opacity: 0; }
+}
+
+/* Lofi — lluvia fina ligeramente inclinada */
+body.theme-lofi .snow-el { animation-name: lofiRain; }
+@keyframes lofiRain {
+  0%   { transform: translateY(-20px) rotate(6deg); opacity: 0; }
+  5%   { opacity: 0.5; }
+  90%  { opacity: 0.28; }
+  100% { transform: translateY(105vh) rotate(6deg); opacity: 0; }
+}
+
+/* Highway — lluvia oblicua rápida sobre el asfalto */
+body.theme-highway .snow-el { animation-name: hwRain; }
+@keyframes hwRain {
+  0%   { transform: translateY(-20px) rotate(15deg); opacity: 0; }
+  4%   { opacity: 0.28; }
+  90%  { opacity: 0.12; }
+  100% { transform: translateY(105vh) rotate(15deg); opacity: 0; }
+}

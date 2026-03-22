@@ -356,6 +356,162 @@ export function drawStars() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  SAKURA — pétalos de cerezo, mariposas rosas, ramas en flor
+// ══════════════════════════════════════════════════════════════════════
+function sakuraPetalSVG(c) {
+  return `<svg width="11" height="15" viewBox="0 0 11 15" fill="none">
+    <ellipse cx="5.5" cy="7.5" rx="4.5" ry="6.5" fill="${c}" opacity=".88" transform="rotate(-25 5.5 7.5)"/>
+    <line x1="5.5" y1="2" x2="5.5" y2="13" stroke="rgba(255,255,255,.2)" stroke-width=".7"/>
+  </svg>`;
+}
+function sakuraBranchSVG() {
+  const dots = [[5,22,7,'#f48fb1'],[58,50,6,'#fce4ec'],[72,78,6,'#f48fb1'],
+    [38,35,5,'#fce4ec'],[22,78,5,'#fce4ec'],[14,60,4,'#f48fb1'],
+    [44,42,4,'#f8bbd0'],[65,68,4,'#f48fb1']]
+    .map(([cx,cy,r,c]) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}" opacity=".9"/>`).join('');
+  return `<svg width="90" height="130" viewBox="0 0 90 130" fill="none">
+    <path d="M45 130 Q38 100 22 78 Q8 55 5 22" stroke="#6d4c41" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    <path d="M22 78 Q38 56 58 50" stroke="#6d4c41" stroke-width="3"   stroke-linecap="round" fill="none"/>
+    <path d="M33 100 Q55 82 72 78" stroke="#6d4c41" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M15 50 Q28 38 38 35" stroke="#6d4c41" stroke-width="2"   stroke-linecap="round" fill="none"/>
+    ${dots}
+  </svg>`;
+}
+function spawnSakura(L) {
+  const pC = ['#f48fb1','#fce4ec','#f8bbd0','#f06292','#fce4ec','#e91e8c'];
+  for (let i = 0; i < 32; i++) {
+    const c = pC[i % pC.length];
+    L.appendChild(el('snow-el', `left:${Math.random()*100}%;animation-duration:${5+Math.random()*9}s;animation-delay:-${Math.random()*14}s`, sakuraPetalSVG(c)));
+  }
+  const pp = [['#f48fb1','#e91e8c'],['#fce4ec','#f06292'],['#f8bbd0','#e91e8c'],
+              ['#f48fb1','#ad1457'],['#fce4ec','#f06292'],['#e91e8c','#880e4f']];
+  pp.concat(pp.slice(0, 3)).forEach((c, i) => {
+    L.appendChild(el('butterfly-el', `left:${4+i*12}%;top:${18+Math.sin(i)*22}%;animation-duration:${6+i*1.1}s;animation-delay:-${i*1.4}s`, butterflySVG(c[0], c[1])));
+  });
+  L.appendChild(el('seaweed-el', 'left:0%;animation-duration:5s;animation-delay:-1s', sakuraBranchSVG()));
+  L.appendChild(el('seaweed-el', 'right:1%;animation-duration:6s;animation-delay:-2.5s', sakuraBranchSVG()));
+  for (let i = 0; i < 6; i++) {
+    const sz = 28 + Math.random() * 42;
+    L.appendChild(el('bubble-el', `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;background:rgba(252,228,236,.05);border-color:rgba(248,187,208,.07);animation-duration:${11+Math.random()*13}s;animation-delay:-${Math.random()*14}s`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  SUNSET — siluetas de pájaros, nubes cálidas, polvo dorado
+// ══════════════════════════════════════════════════════════════════════
+function sunsetBirdSVG(sc) {
+  const s = sc || 1;
+  return `<svg width="${40*s}" height="${18*s}" viewBox="0 0 40 18" fill="none">
+    <path d="M2 12 Q10 4 20 9 Q30 4 38 12" stroke="rgba(15,8,4,.78)" stroke-width="${2.2*s}" stroke-linecap="round" fill="none"/>
+  </svg>`;
+}
+function warmCloudSVG(w) {
+  return `<svg width="${w}" height="${Math.round(w*.45)}" viewBox="0 0 200 90" fill="none">
+    <ellipse cx="100" cy="60" rx="90" ry="28" fill="rgba(255,150,70,.09)"/>
+    <ellipse cx="70"  cy="48" rx="55" ry="28" fill="rgba(255,120,50,.07)"/>
+    <ellipse cx="130" cy="44" rx="44" ry="24" fill="rgba(255,140,60,.07)"/>
+  </svg>`;
+}
+function spawnSunset(L) {
+  [{y:7,s:22,r:false,sc:1},{y:12,s:28,r:false,sc:.9},{y:16,s:18,r:true,sc:1.1},
+   {y:5,s:35,r:false,sc:.8},{y:20,s:24,r:true,sc:1},{y:9,s:30,r:false,sc:.85},
+   {y:14,s:26,r:true,sc:.95},{y:3,s:40,r:false,sc:.7},{y:18,s:20,r:false,sc:1.05}]
+    .forEach((b, i) => L.appendChild(el('fish-el'+(b.r?' rev':''), `top:${b.y}%;animation-duration:${b.s}s;animation-delay:-${i*3}s`, sunsetBirdSVG(b.sc))));
+  for (let i = 0; i < 5; i++) {
+    const w = 160 + Math.random() * 140;
+    L.appendChild(el('fish-el', `top:${5+i*8}%;animation-duration:${55+Math.random()*40}s;animation-delay:-${i*12}s`, warmCloudSVG(w)));
+  }
+  const dustC = ['rgba(255,100,40,.3)','rgba(255,140,60,.28)','rgba(255,80,30,.26)','rgba(230,90,40,.3)','rgba(255,160,60,.22)'];
+  for (let i = 0; i < 26; i++) {
+    const sz = 3 + Math.random() * 9, c = dustC[i % dustC.length];
+    L.appendChild(el('bubble-el', `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;background:${c};border-color:${c};animation-duration:${5+Math.random()*12}s;animation-delay:-${Math.random()*14}s`));
+  }
+  const hor = document.createElement('div');
+  hor.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:40%;background:linear-gradient(0deg,rgba(180,40,5,.13),rgba(255,90,20,.05),transparent);pointer-events:none';
+  L.appendChild(hor);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  LOFI — lluvia fina, notas musicales, vapor de té
+// ══════════════════════════════════════════════════════════════════════
+function musicNoteSVG(i) {
+  const n = ['♩','♪','♫','♬'][i % 4];
+  return `<svg width="18" height="20" viewBox="0 0 18 20"><text y="17" font-size="17" fill="rgba(179,157,219,.58)" font-family="serif">${n}</text></svg>`;
+}
+function lofiSteamSVG() {
+  return `<svg width="12" height="44" viewBox="0 0 12 44" fill="none">
+    <path d="M6 42 Q10 34 6 26 Q2 18 6 10 Q9 4 10 0" stroke="rgba(179,157,219,.32)" stroke-width="2" stroke-linecap="round" fill="none"/>
+  </svg>`;
+}
+function spawnLofi(L) {
+  for (let i = 0; i < 75; i++) {
+    const h = 9 + Math.random() * 7;
+    L.appendChild(el('snow-el', `left:${Math.random()*100}%;animation-duration:${1.1+Math.random()*0.7}s;animation-delay:-${Math.random()*2}s`,
+      `<svg width="2" height="${h}" viewBox="0 0 2 ${h}" fill="none"><line x1="1" y1="0" x2="1" y2="${h}" stroke="rgba(179,157,219,.36)" stroke-width="1.4" stroke-linecap="round"/></svg>`));
+  }
+  for (let i = 0; i < 12; i++) {
+    L.appendChild(el('firefly-el', `left:${5+Math.random()*88}%;top:${10+Math.random()*75}%;animation-duration:${3.5+Math.random()*4}s;animation-delay:-${Math.random()*6}s`, musicNoteSVG(i)));
+  }
+  for (let i = 0; i < 7; i++) {
+    L.appendChild(el('bubble-el', `left:${28+i*6}%;width:12px;height:44px;border-radius:0;background:none;border:none;animation-duration:${2.5+Math.random()*2}s;animation-delay:-${Math.random()*3}s`, lofiSteamSVG()));
+  }
+  for (let i = 0; i < 10; i++) {
+    const sz = 18 + Math.random() * 30;
+    L.appendChild(el('bubble-el', `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;background:rgba(156,120,200,.05);border-color:rgba(179,157,219,.06);animation-duration:${12+Math.random()*10}s;animation-delay:-${Math.random()*12}s`));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  HIGHWAY — coches, destellos de luz, lluvia sobre el asfalto
+// ══════════════════════════════════════════════════════════════════════
+function highwayCarSVG(rev) {
+  const hl = rev ? `<ellipse cx="4"  cy="13" rx="3" ry="2" fill="#ffe082" opacity=".9"/>`
+                 : `<ellipse cx="60" cy="13" rx="3" ry="2" fill="#ffe082" opacity=".9"/>`;
+  const tl = rev ? `<ellipse cx="60" cy="13" rx="2" ry="1.5" fill="#ff5252" opacity=".75"/>`
+                 : `<ellipse cx="4"  cy="13" rx="2" ry="1.5" fill="#ff5252" opacity=".75"/>`;
+  return `<svg width="64" height="24" viewBox="0 0 64 24" fill="none">
+    <rect x="3"  y="10" width="58" height="10" rx="3" fill="#1a1a2a" opacity=".88"/>
+    <rect x="11" y="5"  width="36" height="9"  rx="3" fill="#161622" opacity=".8"/>
+    <rect x="14" y="6"  width="13" height="6"  rx="2" fill="rgba(150,190,220,.22)"/>
+    <rect x="30" y="6"  width="13" height="6"  rx="2" fill="rgba(150,190,220,.22)"/>
+    <circle cx="14" cy="20" r="4" fill="#111"/>
+    <circle cx="50" cy="20" r="4" fill="#111"/>
+    ${hl}${tl}
+  </svg>`;
+}
+function lightStreakSVG(c, w) {
+  return `<svg width="${w}" height="3" viewBox="0 0 ${w} 3" fill="none">
+    <line x1="0" y1="1.5" x2="${w}" y2="1.5" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
+  </svg>`;
+}
+function spawnHighway(L) {
+  [52,58,64,70,74].forEach((y, i) => {
+    L.appendChild(el('fish-el',       `top:${y}%;animation-duration:${9+i*2}s;animation-delay:-${Math.random()*12}s`, highwayCarSVG(false)));
+  });
+  [55,61,68].forEach((y, i) => {
+    L.appendChild(el('fish-el rev',   `top:${y}%;animation-duration:${10+i*3}s;animation-delay:-${Math.random()*10}s`, highwayCarSVG(true)));
+  });
+  const wC = ['rgba(255,200,60,.55)','rgba(255,160,40,.5)','rgba(255,220,80,.45)'];
+  const cC = ['rgba(200,220,255,.45)','rgba(150,180,255,.4)','rgba(180,200,255,.4)'];
+  for (let i = 0; i < 10; i++) {
+    const c = wC[i % wC.length], w = 60 + Math.random() * 100;
+    L.appendChild(el('fish-el',     `top:${52+(i%5)*5}%;animation-duration:${1.5+Math.random()*2}s;animation-delay:-${Math.random()*2.5}s`, lightStreakSVG(c, w)));
+  }
+  for (let i = 0; i < 8; i++) {
+    const c = cC[i % cC.length], w = 60 + Math.random() * 80;
+    L.appendChild(el('fish-el rev', `top:${54+(i%5)*5}%;animation-duration:${1.5+Math.random()*2}s;animation-delay:-${Math.random()*2.5}s`, lightStreakSVG(c, w)));
+  }
+  for (let i = 0; i < 45; i++) {
+    const h = 8 + Math.random() * 6;
+    L.appendChild(el('snow-el', `left:${Math.random()*100}%;animation-duration:${0.7+Math.random()*0.5}s;animation-delay:-${Math.random()*1.5}s`,
+      `<svg width="1" height="${h}" viewBox="0 0 1 ${h}"><line x1=".5" y1="0" x2=".5" y2="${h}" stroke="rgba(200,210,230,.2)" stroke-width="1"/></svg>`));
+  }
+  const road = document.createElement('div');
+  road.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:50%;background:linear-gradient(0deg,rgba(5,5,8,.6),rgba(8,8,14,.18),transparent);pointer-events:none';
+  L.appendChild(road);
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  EXPORT
 // ══════════════════════════════════════════════════════════════════════
 export function spawnCreatures(theme) {
@@ -382,6 +538,10 @@ export function spawnCreatures(theme) {
     case 'festival': spawnFestival(L); break;
     case 'jungle':   spawnJungle(L);   break;
     case 'mars':     spawnMars(L);     break;
+    case 'sakura':   spawnSakura(L);   break;
+    case 'sunset':   spawnSunset(L);   break;
+    case 'lofi':     spawnLofi(L);     break;
+    case 'highway':  spawnHighway(L);  break;
   }
 }
 

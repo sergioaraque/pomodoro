@@ -37,7 +37,24 @@ export async function loadTasks() {
   const { data } = await db.tasks.loadAll(state.user.id);
   if (data) state.tasks = data;
   _checkDailyReset();
+  _restoreActiveTask();
   renderTasks();
+}
+
+function _activeKey() { return 'fn_active_task_' + (state.user?.id || ''); }
+
+function _restoreActiveTask() {
+  if (!state.user) return;
+  const saved = localStorage.getItem(_activeKey());
+  if (!saved) return;
+  const t = state.tasks.find(t => t.id === saved && !t.done);
+  if (t) {
+    state.activeTaskId = t.id;
+    setTask(t.id, t.name);
+    updateTaskBadge(t);
+  } else {
+    localStorage.removeItem(_activeKey());
+  }
 }
 
 export function renderTasks() {
@@ -67,6 +84,7 @@ export function updateTaskBadge(task) {
 export const taskHandlers = {
   onFocus: (id) => {
     state.activeTaskId = id;
+    if (state.user) localStorage.setItem(_activeKey(), id);
     const t = state.tasks.find(t => t.id === id);
     setTask(id, t?.name || null);
     updateTaskBadge(t);
@@ -81,6 +99,7 @@ export const taskHandlers = {
       state.activeTaskId = null;
       clearTask();
       ui.setCurrentTaskBadge(null);
+      if (state.user) localStorage.removeItem(_activeKey());
     }
     renderTasks();
     if (state.user) {
@@ -98,6 +117,7 @@ export const taskHandlers = {
       state.activeTaskId = null;
       clearTask();
       ui.setCurrentTaskBadge(null);
+      if (state.user) localStorage.removeItem(_activeKey());
     }
     renderTasks();
 
@@ -239,6 +259,118 @@ export async function createTask(name, est = 0, label = '') {
   }
   ui.setSyncState('error');
   return null;
+}
+
+// ── Plan del día ──────────────────────────────────────────────────────
+
+function _dpRow(t, i, total) {
+  const rem  = Math.max(0, (t.estimate || 0) - (t.pomodoros || 0));
+  const safe = t.name.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const isActive = state.activeTaskId === t.id;
+  const meta = rem > 0
+    ? `${t.pomodoros || 0}/${t.estimate} 🍅 · ~${rem * cfg.focus} min`
+    : t.pomodoros > 0 ? `${t.pomodoros} 🍅` : '';
+  return `<div class="dp-row">
+    <div class="dp-order">${i + 1}</div>
+    <div class="dp-info">
+      <div class="dp-name">${safe}</div>
+      ${meta ? `<div class="dp-rem">${meta}</div>` : ''}
+    </div>
+    <div class="dp-btns">
+      <button class="dp-arrow" data-move="-1" data-id="${t.id}" ${i === 0 ? 'disabled' : ''} aria-label="Subir">↑</button>
+      <button class="dp-arrow" data-move="1"  data-id="${t.id}" ${i === total - 1 ? 'disabled' : ''} aria-label="Bajar">↓</button>
+      <button class="dp-act${isActive ? ' dp-act-on' : ''}" data-focus="${t.id}">
+        ${isActive ? '✓ Activa' : 'Activar'}
+      </button>
+    </div>
+  </div>`;
+}
+
+export function openDailyPlan() {
+  const existing = document.getElementById('daily-plan-modal');
+  if (existing) { existing.classList.add('open'); return; }
+
+  const modal = document.createElement('div');
+  modal.id    = 'daily-plan-modal';
+  modal.className = 'dp-overlay';
+
+  const pending  = state.tasks.filter(t => !t.done);
+  const dateStr  = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  const totalEst = pending.reduce((a, t) => a + Math.max(0, (t.estimate || 0) - (t.pomodoros || 0)), 0);
+  const estHtml  = totalEst > 0
+    ? `<span class="dp-total">${totalEst} 🍅 · ~${Math.round(totalEst * cfg.focus / 60 * 10) / 10}h estimadas</span>`
+    : '';
+
+  modal.innerHTML = `
+    <div class="dp-card">
+      <div class="dp-header">
+        <div>
+          <div class="dp-title">📋 Plan del día</div>
+          <div class="dp-date">${dateStr} ${estHtml}</div>
+        </div>
+        <button class="dp-close" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="dp-list" id="dp-list">
+        ${pending.length === 0
+          ? '<div class="dp-empty">Sin tareas pendientes — añade tareas primero.</div>'
+          : pending.map((t, i) => _dpRow(t, i, pending.length)).join('')}
+      </div>
+      ${pending.length > 0 ? `<div class="dp-footer">
+        <button class="dp-start" id="dp-start-btn">▶ Empezar con la primera</button>
+      </div>` : ''}
+    </div>`;
+
+  document.body.appendChild(modal);
+
+  const list = document.getElementById('dp-list');
+
+  function rerender() {
+    list.innerHTML = pending.map((t, i) => _dpRow(t, i, pending.length)).join('');
+  }
+
+  modal.addEventListener('click', async e => {
+    // Close
+    if (e.target === modal || e.target.classList.contains('dp-close')) {
+      modal.classList.remove('open');
+      return;
+    }
+    // Reorder
+    const arrow = e.target.closest('[data-move]');
+    if (arrow) {
+      const id  = arrow.dataset.id;
+      const dir = parseInt(arrow.dataset.move);
+      const idx = pending.findIndex(t => t.id === id);
+      const nx  = idx + dir;
+      if (nx >= 0 && nx < pending.length) {
+        [pending[idx], pending[nx]] = [pending[nx], pending[idx]];
+        rerender();
+        if (state.user) {
+          pending.forEach((t, i) => { t.position = i; });
+          state.tasks.sort((a, b) => {
+            const ai = pending.findIndex(p => p.id === a.id);
+            const bi = pending.findIndex(p => p.id === b.id);
+            return (ai < 0 ? 9999 : ai) - (bi < 0 ? 9999 : bi);
+          });
+          renderTasks();
+          Promise.all(pending.map((t, i) => db.tasks.update(t.id, { position: i })));
+        }
+      }
+      return;
+    }
+    // Activate task
+    const act = e.target.closest('[data-focus]');
+    if (act) {
+      taskHandlers.onFocus(act.dataset.focus);
+      modal.classList.remove('open');
+    }
+  });
+
+  const startBtn = document.getElementById('dp-start-btn');
+  if (startBtn && pending.length) {
+    startBtn.onclick = () => { taskHandlers.onFocus(pending[0].id); modal.classList.remove('open'); };
+  }
+
+  requestAnimationFrame(() => modal.classList.add('open'));
 }
 
 window.addTask = async () => {

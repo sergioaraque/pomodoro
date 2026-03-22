@@ -24,7 +24,8 @@ import { registerCommand, openPalette,
 import { handleLogin, handleLogout }      from './auth.js';
 import { applyTheme, THEME_META,
          saveSettingsNow }               from './settings-handler.js';
-import { renderTasks, updateTaskBadge, createTask } from './tasks-handler.js';
+import { renderTasks, updateTaskBadge, createTask,
+         openDailyPlan }                           from './tasks-handler.js';
 import { loadTodayCount, loadStats,
          invalidateStatsCache,
          openWeeklyReview }               from './stats-handler.js';
@@ -89,6 +90,7 @@ window.toggleTimer = () => {
 
 window.openWeeklyReview  = openWeeklyReview;
 window.exportForestImage = exportForestImage;
+window.openDailyPlan     = openDailyPlan;
 
 // YouTube mini-player
 window.openYt = () => {

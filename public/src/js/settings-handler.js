@@ -55,6 +55,10 @@ export const THEME_META = {
   festival:   { emoji: '🎆', name: 'Festival'    },
   jungle:     { emoji: '🌺', name: 'Selva'       },
   mars:       { emoji: '🔭', name: 'Marte'       },
+  sakura:     { emoji: '🌸', name: 'Sakura'      },
+  sunset:     { emoji: '🌇', name: 'Atardecer'   },
+  lofi:       { emoji: '📻', name: 'Lofi'        },
+  highway:    { emoji: '🛣️', name: 'Autopista'   },
 };
 
 // ── loadSettings ──────────────────────────────────────────────────────
