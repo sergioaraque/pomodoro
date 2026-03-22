@@ -10,6 +10,7 @@ import * as db          from './db.js';
 import * as ui          from './ui.js';
 import { debounceSave } from './settings-handler.js';
 import { ACHIEVEMENTS, loadAchievements, checkNewAchievements } from './achievements.js';
+import { renderForest } from './forest.js';
 
 let _allHistoryItems  = [];
 let _filteredTaskName = '';
@@ -204,6 +205,7 @@ function _renderStats(built) {
   ui.renderLabelStats(built.labelData);
   // Re-aplicar filtros de historial si hay activos
   if (_filteredTaskName || _dateRange !== 'all') _applyHistoryFilters();
+  renderForest(built.focusData);
   _renderWeeklyChallenge(built.focusData);
   _checkStreakRisk(built.focusData);
   // Actualizar el streak en la función de weekly review
