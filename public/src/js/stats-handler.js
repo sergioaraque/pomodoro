@@ -354,7 +354,7 @@ function _renderWeeklyChallenge(focusData) {
 window.exportCSV = () => {
   if (!state.user) return;
   db.sessions.loadRecent(state.user.id).then(({ data }) => {
-    if (!data || !data.length) return alert('Sin datos para exportar.');
+    if (!data || !data.length) return ui.showToast('Sin datos para exportar.');
     const rows = [['Fecha', 'Modo', 'Duracion (min)', 'Tarea']];
     data.forEach(s => {
       const d = new Date(s.completed_at).toLocaleString('es-ES');
@@ -369,7 +369,7 @@ window.exportCSV = () => {
     const a    = document.createElement('a');
     a.href = url; a.download = 'focusnature-sesiones.csv'; a.click();
     URL.revokeObjectURL(url);
-  }).catch(err => { console.error('[exportCSV]', err); alert('Error al exportar sesiones.'); });
+  }).catch(err => { console.error('[exportCSV]', err); ui.showToast('Error al exportar sesiones.'); });
 };
 
 function _applyHistoryFilters() {

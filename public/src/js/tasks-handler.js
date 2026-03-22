@@ -14,19 +14,20 @@ import { setTask, clearTask }        from './timer.js';
 
 let _sortMode = 'manual';
 
-function _checkDailyReset() {
+async function _checkDailyReset() {
   if (!state.user) return;
   const today    = new Date().toDateString();
   const resetKey = 'fn_recurring_reset_' + state.user.id;
   if (localStorage.getItem(resetKey) === today) return;
   localStorage.setItem(resetKey, today);
-  state.tasks.forEach(t => {
-    if (t.recurring && (t.done || t.pomodoros > 0)) {
+  await Promise.all(state.tasks
+    .filter(t => t.recurring && (t.done || t.pomodoros > 0))
+    .map(t => {
       t.done = false;
       t.pomodoros = 0;
-      db.tasks.update(t.id, { done: false, pomodoros: 0 });
-    }
-  });
+      return db.tasks.update(t.id, { done: false, pomodoros: 0 });
+    })
+  );
 }
 
 export async function loadTasks() {

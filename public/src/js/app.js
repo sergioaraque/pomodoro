@@ -155,6 +155,7 @@ initTimer({
 
     notifySessionEnd(finishedMode, getState().mode, getState().currentTaskName);
 
+    let sessionSaved = false;
     if (state.user) {
       ui.setSyncState('syncing');
       const { error } = await db.sessions.create(state.user.id, finishedMode, durationMin, taskId, taskName);
@@ -162,6 +163,7 @@ initTimer({
         ui.setSyncState('error');
         ui.showToast('⚠ Sesión no guardada — sin conexión');
       } else {
+        sessionSaved = true;
         ui.setSyncState('ok');
         invalidateStatsCache();
         // Los logros se chequean completos al abrir la pestaña Stats (con datos reales)
@@ -182,11 +184,13 @@ initTimer({
       state.distractionCount = 0;
       const dc = document.getElementById('distract-count');
       if (dc) dc.textContent = '';
-      state.todayCount++;
-      ui.renderDailyGoalRing(state.todayCount, cfg.dailyGoal);
-      const el = document.getElementById('stat-today');
-      if (el) el.textContent = state.todayCount;
-      if (state.todayCount === cfg.dailyGoal) ui.showGoalAchieved();
+      if (!state.user || sessionSaved) {
+        state.todayCount++;
+        ui.renderDailyGoalRing(state.todayCount, cfg.dailyGoal);
+        const el = document.getElementById('stat-today');
+        if (el) el.textContent = state.todayCount;
+        if (state.todayCount === cfg.dailyGoal) ui.showGoalAchieved();
+      }
 
       if (taskId) {
         const t = state.tasks.find(t => t.id === taskId);
@@ -194,7 +198,10 @@ initTimer({
           t.pomodoros++;
           renderTasks();
           if (t.id === state.activeTaskId) updateTaskBadge(t);
-          if (state.user) await db.tasks.update(taskId, { pomodoros: t.pomodoros });
+          if (state.user) {
+            const { error: taskErr } = await db.tasks.update(taskId, { pomodoros: t.pomodoros });
+            if (taskErr) ui.setSyncState('error');
+          }
         }
 
         // Stuck-task detection
