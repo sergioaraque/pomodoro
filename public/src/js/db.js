@@ -263,7 +263,7 @@ export const tasks = {
 export const sessions = {
   create: async (userId, mode, durationMin, taskId, taskName) => {
     try {
-      await _databases.createDocument(_dbId, _C_SESSIONS, _ID.unique(),
+      const doc = await _databases.createDocument(_dbId, _C_SESSIONS, _ID.unique(),
         {
           user_id:      userId,
           mode,
@@ -273,7 +273,7 @@ export const sessions = {
           completed_at: new Date().toISOString(),
         },
         _userPerms(userId));
-      return { error: null };
+      return { data: { id: doc.$id }, error: null };
     } catch (e) {
       return { error: _err(e) };
     }

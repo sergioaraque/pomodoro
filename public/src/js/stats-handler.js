@@ -173,7 +173,49 @@ function _buildStats(fd, recent) {
     focusData,
     labelData,
     hourData,
+    insights:    _buildInsights(focusData, cfg.dailyGoal),
   };
+}
+
+function _buildInsights(focusData, dailyGoal) {
+  if (focusData.length < 3) return null;
+
+  // Mejor hora del día
+  const hourCounts = new Array(24).fill(0);
+  focusData.forEach(s => { hourCounts[new Date(s.completed_at).getHours()]++; });
+  const bestHour = hourCounts.indexOf(Math.max(...hourCounts));
+
+  // Mejor día de la semana
+  const dayCounts = new Array(7).fill(0);
+  focusData.forEach(s => { dayCounts[new Date(s.completed_at).getDay()]++; });
+  const bestDow = dayCounts.indexOf(Math.max(...dayCounts));
+
+  // Pomodoros por semana en las últimas 4 semanas
+  const now = new Date();
+  const weekCounts4 = Array.from({ length: 4 }, (_, i) => {
+    const wAgo  = 3 - i;
+    const start = new Date(now); start.setDate(start.getDate() - (wAgo + 1) * 7); start.setHours(0,0,0,0);
+    const end   = new Date(now); end.setDate(end.getDate()   - wAgo * 7);         end.setHours(0,0,0,0);
+    return focusData.filter(s => { const d = new Date(s.completed_at); return d >= start && d < end; }).length;
+  });
+
+  // Consistencia en los últimos 30 días
+  const d30 = new Date(now); d30.setDate(d30.getDate() - 30); d30.setHours(0,0,0,0);
+  const daySet30 = new Set(
+    focusData.filter(s => new Date(s.completed_at) >= d30).map(s => new Date(s.completed_at).toDateString())
+  );
+  const consistency30 = Math.round((daySet30.size / 30) * 100);
+
+  // Meta diaria cumplida en los últimos 30 días
+  const heatmap30 = {};
+  focusData.filter(s => new Date(s.completed_at) >= d30).forEach(s => {
+    const k = new Date(s.completed_at).toDateString();
+    heatmap30[k] = (heatmap30[k] || 0) + 1;
+  });
+  const goalDays = Object.values(heatmap30).filter(c => c >= (dailyGoal || 1)).length;
+  const goalRate = Math.round((goalDays / 30) * 100);
+
+  return { bestHour, bestDow, weekCounts4, consistency30, goalRate };
 }
 
 function _renderStats(built) {
@@ -203,6 +245,7 @@ function _renderStats(built) {
   ui.renderDailyGoalRing(built.today, cfg.dailyGoal);
   ui.renderHourChart(built.hourData);
   ui.renderLabelStats(built.labelData);
+  ui.renderInsights(built.insights);
   // Re-aplicar filtros de historial si hay activos
   if (_filteredTaskName || _dateRange !== 'all') _applyHistoryFilters();
   renderForest(built.focusData);

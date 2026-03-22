@@ -681,6 +681,65 @@ export function showStuckPrompt(taskName, count, onSplit) {
 }
 
 // ══════════════════════════════════════════════
+//  SESSION NOTE PROMPT
+// ══════════════════════════════════════════════
+
+/**
+ * Muestra un prompt deslizable desde abajo pidiendo una nota de sesión.
+ * @param {Function} onSave - Llamada con el texto de la nota si el usuario guarda.
+ */
+export function showSessionNotePrompt(onSave) {
+  const existing = $('session-note-prompt');
+  if (existing) existing.remove();
+
+  const el = document.createElement('div');
+  el.id = 'session-note-prompt';
+  el.className = 'snp';
+  el.innerHTML = `
+    <div class="snp-body">
+      <div class="snp-header">
+        <span class="snp-title">¿Qué avanzaste?</span>
+        <button class="snp-skip" id="snp-skip" aria-label="Omitir">✕</button>
+      </div>
+      <div class="snp-row">
+        <input class="snp-inp" id="snp-inp" type="text"
+          placeholder="Una línea sobre tu progreso…" maxlength="120" autocomplete="off">
+        <button class="snp-save" id="snp-save">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+
+  let dismissed = false;
+  function dismiss() {
+    if (dismissed) return;
+    dismissed = true;
+    el.classList.add('snp-out');
+    setTimeout(() => el.remove(), 380);
+  }
+
+  const inp = $('snp-inp');
+
+  $('snp-save').onclick = () => {
+    const note = inp.value.trim();
+    if (note) onSave(note);
+    dismiss();
+  };
+  $('snp-skip').onclick  = dismiss;
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  $('snp-save').click();
+    if (e.key === 'Escape') dismiss();
+  });
+
+  // Auto-dismiss after 20 s; hover pauses the countdown
+  let autoTimer = setTimeout(dismiss, 20000);
+  el.addEventListener('mouseenter', () => clearTimeout(autoTimer));
+  el.addEventListener('mouseleave', () => { autoTimer = setTimeout(dismiss, 10000); });
+
+  requestAnimationFrame(() => el.classList.add('snp-in'));
+  setTimeout(() => inp.focus(), 120);
+}
+
+// ══════════════════════════════════════════════
 //  SETTINGS
 // ══════════════════════════════════════════════
 // ══════════════════════════════════════════════
@@ -949,6 +1008,78 @@ export function renderLabelStats(data) {
       </div>
     </div>`;
   }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  INSIGHTS
+// ══════════════════════════════════════════════
+
+export function renderInsights(insights) {
+  const el = $('insights-grid');
+  if (!el) return;
+
+  if (!insights) {
+    el.innerHTML = '<div class="empty-msg" style="font-size:12px">Completa más pomodoros para ver insights</div>';
+    return;
+  }
+
+  const h12 = h => `${h}:00`;
+  const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+  // Sparkline 4 semanas
+  const wc   = insights.weekCounts4;
+  const maxW = Math.max(...wc, 1);
+  const spW  = 68, spH = 30;
+  const pts  = wc.map((v, i) => {
+    const x = (i / 3) * (spW - 10) + 5;
+    const y = spH - 5 - ((v / maxW) * (spH - 10));
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const dots = wc.map((v, i) => {
+    const x = (i / 3) * (spW - 10) + 5;
+    const y = spH - 5 - ((v / maxW) * (spH - 10));
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.8" fill="var(--accent)"/>`;
+  }).join('');
+  const sparkline = `<svg width="${spW}" height="${spH}" style="display:block;overflow:visible">
+    <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round" opacity="0.7"/>
+    ${dots}
+  </svg>`;
+
+  const diff = wc[3] - wc[0];
+  const trend      = diff > 0 ? `↑ +${diff} esta semana` : diff < 0 ? `↓ ${diff} esta semana` : '→ Estable';
+  const trendColor = diff > 0 ? 'var(--accent)' : diff < 0 ? '#e57373' : 'var(--muted)';
+
+  el.innerHTML = `
+    <div class="insight-card">
+      <div class="insight-icon">⏰</div>
+      <div class="insight-val">${h12(insights.bestHour)}</div>
+      <div class="insight-lbl">Tu mejor hora</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">📅</div>
+      <div class="insight-val">${DAY_NAMES[insights.bestDow]}</div>
+      <div class="insight-lbl">Mejor día</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">🏃</div>
+      <div class="insight-val">${insights.consistency30}%</div>
+      <div class="insight-lbl">Consistencia 30 d.</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">🎯</div>
+      <div class="insight-val">${insights.goalRate}%</div>
+      <div class="insight-lbl">Meta diaria cumplida</div>
+    </div>
+    <div class="insight-card insight-sparkline">
+      <div style="display:flex;align-items:center;gap:10px;width:100%">
+        ${sparkline}
+        <div>
+          <div class="insight-val" style="font-size:12px;color:${trendColor}">${trend}</div>
+          <div class="insight-lbl">Tendencia 4 semanas</div>
+        </div>
+      </div>
+    </div>`;
 }
 
 export function renderTaskLabelSelect() {

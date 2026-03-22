@@ -347,9 +347,22 @@
       <div class="stat-card"><div class="stat-icon">⭐</div><div class="sv" id="stat-best-day">0</div><div class="sl">Récord diario</div></div>
     </div>
     <div class="chart-wrap" id="forest-wrap">
-      <div class="section-title" style="margin-bottom:14px">🌲 Mi Bosque</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">🌲 Mi Bosque <span id="forest-season-badge" style="font-size:11px;font-weight:400;opacity:0.6"></span></div>
+        <button onclick="exportForestImage()" title="Exportar bosque como imagen"
+          style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;transition:all .2s"
+          onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+          onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--muted)'">📷</button>
+      </div>
       <div id="forest-container">
         <div class="empty-msg" style="font-size:12px;padding:16px">Cargando bosque…</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:16px" id="insights-section">
+      <div class="section-title" style="margin-bottom:12px">✨ Insights de productividad</div>
+      <div class="insights-grid" id="insights-grid">
+        <div class="empty-msg" style="font-size:12px">Cargando…</div>
       </div>
     </div>
 

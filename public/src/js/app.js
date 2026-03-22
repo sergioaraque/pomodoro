@@ -28,11 +28,13 @@ import { renderTasks, updateTaskBadge, createTask } from './tasks-handler.js';
 import { loadTodayCount, loadStats,
          invalidateStatsCache,
          openWeeklyReview }               from './stats-handler.js';
+import { exportForestImage }             from './forest.js';
 import { ACHIEVEMENTS, loadAchievements,
          checkNewAchievements }            from './achievements.js';
 import { updateFavicon, resetFavicon }  from './favicon.js';
 import { startTypingSounds, stopTypingSounds } from './typing-sounds.js';
 import { loadYt, hideYt }               from './youtube-player.js';
+import { saveSessionNote }              from './session-notes.js';
 
 // ── Stuck-task tracking ────────────────────────────────────────────────
 let _stuckTaskId = null;
@@ -85,7 +87,8 @@ window.toggleTimer = () => {
   if (!s.running) updateFavicon(s.secondsLeft, s.totalSeconds, s.mode, false);
 };
 
-window.openWeeklyReview = openWeeklyReview;
+window.openWeeklyReview  = openWeeklyReview;
+window.exportForestImage = exportForestImage;
 
 // YouTube mini-player
 window.openYt = () => {
@@ -158,7 +161,7 @@ initTimer({
     let sessionSaved = false;
     if (state.user) {
       ui.setSyncState('syncing');
-      const { error } = await db.sessions.create(state.user.id, finishedMode, durationMin, taskId, taskName);
+      const { data: sessionData, error } = await db.sessions.create(state.user.id, finishedMode, durationMin, taskId, taskName);
       if (error) {
         ui.setSyncState('error');
         ui.showToast('⚠ Sesión no guardada — sin conexión');
@@ -166,6 +169,11 @@ initTimer({
         sessionSaved = true;
         ui.setSyncState('ok');
         invalidateStatsCache();
+        if (finishedMode === 'focus' && sessionData?.id) {
+          const uid = state.user.id;
+          const sid = sessionData.id;
+          ui.showSessionNotePrompt(note => { saveSessionNote(uid, sid, note); });
+        }
         // Los logros se chequean completos al abrir la pestaña Stats (con datos reales)
         // Aquí solo chequeamos los de hora del día que no requieren datos históricos
         if (finishedMode === 'focus') {

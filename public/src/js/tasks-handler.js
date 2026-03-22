@@ -9,6 +9,9 @@ import { state }                     from './state.js';
 import * as db                       from './db.js';
 import * as ui                       from './ui.js';
 import { setTask, clearTask }        from './timer.js';
+import { getNotesMap }               from './session-notes.js';
+
+const _esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 // ── Load / Render ─────────────────────────────────────────────────────
 
@@ -193,11 +196,16 @@ window.loadTaskHistory = async (taskId, btn) => {
     container.innerHTML = '<div style="padding:6px 8px;font-size:11px;color:var(--muted)">Sin sesiones registradas aún.</div>';
     return;
   }
+  const notesMap = state.user ? getNotesMap(state.user.id) : {};
   container.innerHTML = data.map(s => {
-    const dt = new Date(s.completed_at);
-    const ds = dt.toLocaleDateString('es-ES', { day:'numeric', month:'short' })
-             + ' ' + dt.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
-    return `<div style="font-size:11px;color:var(--muted);padding:2px 8px">🍅 ${s.duration}min · ${ds}</div>`;
+    const dt   = new Date(s.completed_at);
+    const ds   = dt.toLocaleDateString('es-ES', { day:'numeric', month:'short' })
+               + ' ' + dt.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+    const note = notesMap[s.id]?.note;
+    const noteHtml = note
+      ? `<span style="font-style:italic;opacity:0.75;margin-left:4px">— ${_esc(note)}</span>`
+      : '';
+    return `<div style="font-size:11px;color:var(--muted);padding:2px 8px">🍅 ${s.duration}min · ${ds}${noteHtml}</div>`;
   }).join('');
 };
 
