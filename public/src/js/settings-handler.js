@@ -252,6 +252,7 @@ export function applyAutoAmbient() {
 
 // Comprobación cada minuto: actualizar tema y/o escena si cambia la hora
 setInterval(() => {
+  if (!state.user) return;
   if (cfg.autoTheme)   _applyAutoTheme();
   if (cfg.autoAmbient) applyAutoAmbient();
 }, 60_000);

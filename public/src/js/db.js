@@ -167,7 +167,7 @@ export const auth = {
 
   broadcast: (event, session = null) => {
     const data = { event, session };
-    try { new BroadcastChannel('fn_auth').postMessage(data); } catch (_) {}
+    try { const ch = new BroadcastChannel('fn_auth'); ch.postMessage(data); ch.close(); } catch (_) {}
     try { localStorage.setItem('__fn_auth__', JSON.stringify(data)); } catch (_) {}
   },
 };

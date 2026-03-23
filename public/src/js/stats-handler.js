@@ -17,8 +17,9 @@ let _filteredTaskName = '';
 let _dateRange        = 'all';
 
 // Caché de stats: se muestra inmediatamente en cada visita al tab
-let _cachedStats  = null;
-let _cachedStreak = 0;
+let _cachedStats      = null;
+let _cachedStreak     = 0;
+let _streakRiskTimer  = null;
 
 /** Fuerza recarga completa en la próxima visita al tab de stats. */
 export function invalidateStatsCache() { _cachedStats = null; }
@@ -291,7 +292,8 @@ function _checkStreakRisk(focusData) {
   });
   if (hadYesterday) {
     // Delay para no solaparse con el banner de bienvenida (4s) al hacer login
-    setTimeout(() => {
+    clearTimeout(_streakRiskTimer);
+    _streakRiskTimer = setTimeout(() => {
       const banner = document.getElementById('break-banner');
       if (banner && !banner.classList.contains('visible')) {
         banner.textContent = '🔥 Tu racha está en riesgo — ¡haz al menos 1 pomodoro hoy!';

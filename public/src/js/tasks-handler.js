@@ -11,7 +11,7 @@ import * as ui                       from './ui.js';
 import { setTask, clearTask }        from './timer.js';
 import { getNotesMap }               from './session-notes.js';
 
-const _esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const _esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 // ── Load / Render ─────────────────────────────────────────────────────
 
@@ -19,18 +19,22 @@ let _sortMode = 'manual';
 
 async function _checkDailyReset() {
   if (!state.user) return;
-  const today    = new Date().toDateString();
-  const resetKey = 'fn_recurring_reset_' + state.user.id;
-  if (localStorage.getItem(resetKey) === today) return;
-  localStorage.setItem(resetKey, today);
-  await Promise.all(state.tasks
-    .filter(t => t.recurring && (t.done || t.pomodoros > 0))
-    .map(t => {
-      t.done = false;
-      t.pomodoros = 0;
-      return db.tasks.update(t.id, { done: false, pomodoros: 0 });
-    })
-  );
+  try {
+    const today    = new Date().toDateString();
+    const resetKey = 'fn_recurring_reset_' + state.user.id;
+    if (localStorage.getItem(resetKey) === today) return;
+    localStorage.setItem(resetKey, today);
+    await Promise.all(state.tasks
+      .filter(t => t.recurring && (t.done || t.pomodoros > 0))
+      .map(t => {
+        t.done = false;
+        t.pomodoros = 0;
+        return db.tasks.update(t.id, { done: false, pomodoros: 0 });
+      })
+    );
+  } catch (err) {
+    console.error('[daily reset]', err);
+  }
 }
 
 export async function loadTasks() {
@@ -352,7 +356,8 @@ export function openDailyPlan() {
             return (ai < 0 ? 9999 : ai) - (bi < 0 ? 9999 : bi);
           });
           renderTasks();
-          Promise.all(pending.map((t, i) => db.tasks.update(t.id, { position: i })));
+          Promise.all(pending.map((t, i) => db.tasks.update(t.id, { position: i })))
+            .catch(err => { console.error('[daily plan reorder]', err); ui.setSyncState('error'); });
         }
       }
       return;
