@@ -19,6 +19,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const RateLimit = require('express-rate-limit');
 
 // ── 1. Cargar .env ────────────────────────────────────────────────────
 const envPath = path.join(__dirname, '.env');
@@ -157,7 +158,12 @@ app.get('/app', (_req, res) => {
 });
 
 // Ruta para limpiar caché manualmente
-app.get('/clean-cache', (_req, res) => {
+const cleanCacheLimiter = RateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100,                 // máximo 100 solicitudes por IP en windowMs
+});
+
+app.get('/clean-cache', cleanCacheLimiter, (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(PUBLIC, 'clean-cache.html'));
 });
