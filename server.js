@@ -162,6 +162,11 @@ app.get('/clean-cache', (_req, res) => {
   res.sendFile(path.join(PUBLIC, 'clean-cache.html'));
 });
 
+// Healthcheck
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
 // Fallback: cualquier ruta desconocida → landing
 app.get('*', (_req, res) => {
   try   { send(res, readHtml('landing.html')); }
