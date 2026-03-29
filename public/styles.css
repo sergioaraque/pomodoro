@@ -1204,6 +1204,12 @@ body.theme-highway {
   cursor: pointer; font-family: var(--font-body); transition: background 0.2s;
 }
 .stuck-btn-skip:hover { background: rgba(255,255,255,0.12); }
+.fn-confirm-del {
+  flex: 1; padding: 9px 0; border-radius: 10px; font-size: 13px; font-weight: 600;
+  background: #c0392b; color: #fff; border: none; cursor: pointer;
+  font-family: var(--font-body); transition: opacity 0.2s;
+}
+.fn-confirm-del:hover { opacity: 0.85; }
 
 /* ── Logros ──────────────────────────────────── */
 .achievements-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }

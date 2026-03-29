@@ -83,6 +83,38 @@ export function updateTaskBadge(task) {
   ui.setCurrentTaskBadge(task.name + suffix);
 }
 
+// ── Helpers privados ──────────────────────────────────────────────────
+
+function _doDelete(id, task) {
+  state.tasks = state.tasks.filter(t => t.id !== id);
+  if (state.activeTaskId === id) {
+    state.activeTaskId = null;
+    clearTask();
+    ui.setCurrentTaskBadge(null);
+    if (state.user) localStorage.removeItem(_activeKey());
+  }
+  renderTasks();
+
+  let undone = false;
+  const label = (task.done ? '✓ ' : '') +
+    (task.name.length > 28 ? task.name.slice(0, 28) + '…' : task.name) + ' eliminada';
+  ui.showToast(label, 'Deshacer', async () => {
+    undone = true;
+    state.tasks.splice(0, 0, task);
+    state.tasks.sort((a, b) => (a.position || 0) - (b.position || 0));
+    renderTasks();
+  });
+
+  setTimeout(async () => {
+    if (undone) return;
+    if (state.user) {
+      ui.setSyncState('syncing');
+      const { error } = await db.tasks.remove(id);
+      ui.setSyncState(error ? 'error' : 'ok');
+    }
+  }, 4200);
+}
+
 // ── Task handlers (callbacks para ui.renderTasks) ─────────────────────
 
 export const taskHandlers = {
@@ -113,36 +145,19 @@ export const taskHandlers = {
     }
   },
 
-  onDelete: async (id) => {
+  onDelete: (id) => {
     const task = state.tasks.find(t => t.id === id);
     if (!task) return;
-    state.tasks = state.tasks.filter(t => t.id !== id);
-    if (state.activeTaskId === id) {
-      state.activeTaskId = null;
-      clearTask();
-      ui.setCurrentTaskBadge(null);
-      if (state.user) localStorage.removeItem(_activeKey());
+    if ((task.pomodoros || 0) > 0) {
+      const name = task.name.length > 32 ? task.name.slice(0, 32) + '…' : task.name;
+      ui.showConfirm(
+        `"${name}" tiene ${task.pomodoros} 🍅 registrados. ¿Eliminar igualmente?`,
+        'Eliminar',
+        () => _doDelete(id, task)
+      );
+    } else {
+      _doDelete(id, task);
     }
-    renderTasks();
-
-    let undone = false;
-    const label = (task.done ? '✓ ' : '') +
-      (task.name.length > 28 ? task.name.slice(0, 28) + '…' : task.name) + ' eliminada';
-    ui.showToast(label, 'Deshacer', async () => {
-      undone = true;
-      state.tasks.splice(0, 0, task);
-      state.tasks.sort((a, b) => (a.position || 0) - (b.position || 0));
-      renderTasks();
-    });
-
-    setTimeout(async () => {
-      if (undone) return;
-      if (state.user) {
-        ui.setSyncState('syncing');
-        const { error } = await db.tasks.remove(id);
-        ui.setSyncState(error ? 'error' : 'ok');
-      }
-    }, 4200);
   },
 
   onSaveNotes: async (id, notes) => {

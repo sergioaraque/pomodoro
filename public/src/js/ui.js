@@ -647,6 +647,57 @@ export function hideDeepFocusOverlay() {
   setTimeout(() => overlay.style.display = 'none', 400);
 }
 
+// ══════════════════════════════════════════════
+//  CONFIRM DIALOG
+// ══════════════════════════════════════════════
+
+/**
+ * Diálogo de confirmación genérico.
+ * @param {string} msg          Texto a mostrar
+ * @param {string} confirmLabel Texto del botón de confirmación (por defecto "Eliminar")
+ * @param {Function} onConfirm  Callback si el usuario confirma
+ */
+export function showConfirm(msg, confirmLabel = 'Eliminar', onConfirm) {
+  const prevFocus = document.activeElement;
+  const overlay = document.createElement('div');
+  overlay.className = 'stuck-overlay';
+  overlay.setAttribute('role', 'alertdialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'fn-confirm-msg');
+  overlay.innerHTML = `
+    <div class="stuck-card">
+      <div class="stuck-msg" id="fn-confirm-msg" style="text-align:center;font-size:14px;line-height:1.6"></div>
+      <div class="stuck-actions" style="margin-top:16px">
+        <button class="fn-confirm-del">${confirmLabel}</button>
+        <button class="stuck-btn-skip fn-confirm-cancel">Cancelar</button>
+      </div>
+    </div>`;
+  overlay.querySelector('#fn-confirm-msg').textContent = msg;
+  document.body.appendChild(overlay);
+
+  const delBtn    = overlay.querySelector('.fn-confirm-del');
+  const cancelBtn = overlay.querySelector('.fn-confirm-cancel');
+
+  function close() {
+    overlay.style.opacity = '0';
+    setTimeout(() => { overlay.remove(); prevFocus?.focus(); }, 280);
+  }
+
+  overlay.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key !== 'Tab') return;
+    e.preventDefault();
+    document.activeElement === delBtn ? cancelBtn.focus() : delBtn.focus();
+  });
+
+  delBtn.onclick    = () => { close(); onConfirm(); };
+  cancelBtn.onclick = close;
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+  setTimeout(() => cancelBtn.focus(), 80); // foco en Cancelar por defecto (más seguro)
+}
+
 export function showStuckPrompt(taskName, count, onSplit) {
   const existing = $('stuck-modal');
   if (existing) existing.remove();
