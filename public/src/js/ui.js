@@ -192,10 +192,16 @@ export function resetUI() {
 // ══════════════════════════════════════════════
 export function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('active');
+    if (b.hasAttribute('aria-selected')) b.setAttribute('aria-selected', 'false');
+  });
   $('tab-' + name).classList.add('active');
   document.querySelectorAll('.tab-btn').forEach(b => {
-    if (b.dataset.tab === name) b.classList.add('active');
+    if (b.dataset.tab === name) {
+      b.classList.add('active');
+      if (b.hasAttribute('aria-selected')) b.setAttribute('aria-selected', 'true');
+    }
   });
 }
 
@@ -623,11 +629,14 @@ export function showDeepFocusOverlay(onExit) {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'deep-focus-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Modo foco profundo activo');
     overlay.innerHTML = `<button class="df-exit-btn" id="df-exit-btn">Salir del foco profundo</button>`;
     document.body.appendChild(overlay);
   }
   overlay.style.display = 'flex';
-  setTimeout(() => overlay.style.opacity = '1', 10);
+  setTimeout(() => { overlay.style.opacity = '1'; $('df-exit-btn')?.focus(); }, 10);
   $('df-exit-btn').onclick = onExit;
 }
 
@@ -642,17 +651,21 @@ export function showStuckPrompt(taskName, count, onSplit) {
   const existing = $('stuck-modal');
   if (existing) existing.remove();
 
+  const prevFocus = document.activeElement;
   const modal = document.createElement('div');
   modal.id = 'stuck-modal';
   modal.className = 'stuck-overlay';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'stuck-modal-title');
   const safe = taskName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   modal.innerHTML = `
     <div class="stuck-card">
       <div class="stuck-icon">🤔</div>
-      <div class="stuck-title">¿Estás atascado?</div>
+      <div class="stuck-title" id="stuck-modal-title">¿Estás atascado?</div>
       <div class="stuck-msg">Llevas <b>${count} 🍅</b> seguidos en <b>"${safe}"</b> sin terminarla.</div>
       <div class="stuck-hint">Fragmenta en un paso concreto para desbloquear el avance.</div>
-      <input type="text" class="stuck-input" placeholder="Siguiente paso concreto…" maxlength="120">
+      <input type="text" class="stuck-input" aria-label="Siguiente paso concreto" placeholder="Siguiente paso concreto…" maxlength="120">
       <div class="stuck-actions">
         <button class="stuck-btn-split">Añadir subtarea</button>
         <button class="stuck-btn-skip">Continuar así</button>
@@ -666,8 +679,23 @@ export function showStuckPrompt(taskName, count, onSplit) {
 
   function close() {
     modal.style.opacity = '0';
-    setTimeout(() => modal.remove(), 280);
+    setTimeout(() => { modal.remove(); prevFocus?.focus(); }, 280);
   }
+
+  // Focus trap
+  const focusables = [input, splitBtn, skipBtn];
+  modal.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      const idx = focusables.indexOf(document.activeElement);
+      if (e.shiftKey) {
+        e.preventDefault();
+        focusables[(idx - 1 + focusables.length) % focusables.length].focus();
+      } else {
+        e.preventDefault();
+        focusables[(idx + 1) % focusables.length].focus();
+      }
+    }
+  });
 
   splitBtn.onclick = () => {
     const step = input.value.trim();
@@ -678,7 +706,7 @@ export function showStuckPrompt(taskName, count, onSplit) {
   skipBtn.onclick = close;
   modal.addEventListener('click', e => { if (e.target === modal) close(); });
   input.addEventListener('input', () => input.classList.remove('stuck-input-err'));
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') splitBtn.click(); if (e.key === 'Escape') close(); });
+  input.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
   requestAnimationFrame(() => { modal.style.opacity = '1'; });
   setTimeout(() => input.focus(), 80);
@@ -699,29 +727,46 @@ export function showSessionNotePrompt(onSave) {
   const el = document.createElement('div');
   el.id = 'session-note-prompt';
   el.className = 'snp';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-labelledby', 'snp-title-lbl');
   el.innerHTML = `
     <div class="snp-body">
       <div class="snp-header">
-        <span class="snp-title">¿Qué avanzaste?</span>
-        <button class="snp-skip" id="snp-skip" aria-label="Omitir">✕</button>
+        <span class="snp-title" id="snp-title-lbl">¿Qué avanzaste?</span>
+        <button class="snp-skip" id="snp-skip" aria-label="Omitir nota de sesión">✕</button>
       </div>
       <div class="snp-row">
         <input class="snp-inp" id="snp-inp" type="text"
-          placeholder="Una línea sobre tu progreso…" maxlength="120" autocomplete="off">
+          placeholder="Una línea sobre tu progreso…" aria-label="Nota de sesión" maxlength="120" autocomplete="off">
         <button class="snp-save" id="snp-save">Guardar</button>
       </div>
     </div>`;
   document.body.appendChild(el);
 
+  const prevFocusSnp = document.activeElement;
   let dismissed = false;
   function dismiss() {
     if (dismissed) return;
     dismissed = true;
     el.classList.add('snp-out');
-    setTimeout(() => el.remove(), 380);
+    setTimeout(() => { el.remove(); prevFocusSnp?.focus(); }, 380);
   }
 
   const inp = $('snp-inp');
+
+  // Focus trap entre los tres controles interactivos
+  const snpFocusables = [inp, $('snp-save'), $('snp-skip')];
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    const idx = snpFocusables.indexOf(document.activeElement);
+    e.preventDefault();
+    if (e.shiftKey) {
+      snpFocusables[(idx - 1 + snpFocusables.length) % snpFocusables.length].focus();
+    } else {
+      snpFocusables[(idx + 1) % snpFocusables.length].focus();
+    }
+  });
 
   $('snp-save').onclick = () => {
     const note = inp.value.trim();
@@ -756,17 +801,24 @@ let _toastTimer = null;
  * @param {string} msg
  * @param {string} [actionLabel]
  * @param {Function} [actionFn]
+ * @param {'info'|'success'|'warning'|'error'} [type='info']
  */
-export function showToast(msg, actionLabel, actionFn) {
+export function showToast(msg, actionLabel, actionFn, type = 'info') {
   let toast = $('fn-toast');
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'fn-toast';
-    toast.className = 'fn-toast';
     document.body.appendChild(toast);
   }
+  toast.className = `fn-toast fn-toast--${type}`;
+  // role="alert" para errores (assertivo) / role="status" para el resto (educado)
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+  toast.setAttribute('aria-atomic', 'true');
+
   clearTimeout(_toastTimer);
-  toast.innerHTML = '<span class="fn-toast-msg"></span>' +
+  toast.innerHTML = '<span class="fn-toast-indicator" aria-hidden="true"></span>' +
+    '<span class="fn-toast-msg"></span>' +
     (actionLabel ? `<button class="fn-toast-btn">${actionLabel}</button>` : '');
   toast.querySelector('.fn-toast-msg').textContent = msg;
   if (actionLabel && actionFn) {
@@ -776,7 +828,8 @@ export function showToast(msg, actionLabel, actionFn) {
     };
   }
   toast.classList.add('fn-toast-show');
-  _toastTimer = setTimeout(() => toast.classList.remove('fn-toast-show'), 4000);
+  const duration = type === 'error' ? 6000 : type === 'warning' ? 5000 : 4000;
+  _toastTimer = setTimeout(() => toast.classList.remove('fn-toast-show'), duration);
 }
 
 export function renderSettings() {
@@ -944,10 +997,10 @@ export function showWeeklyReview({ dateRange, thisTotal, lastTotal, pctChange, h
   card.innerHTML = `
     <div class="wr-header">
       <div>
-        <div class="wr-title">📊 Resumen semanal</div>
+        <div class="wr-title" id="wr-modal-title">📊 Resumen semanal</div>
         <div class="wr-dates">${dateRange}</div>
       </div>
-      <button class="wr-close" onclick="document.getElementById('weekly-review-modal').classList.remove('open')">✕</button>
+      <button class="wr-close" aria-label="Cerrar resumen semanal" onclick="document.getElementById('weekly-review-modal').classList.remove('open')">✕</button>
     </div>
 
     <div class="wr-hero">

@@ -196,9 +196,10 @@ window.onTaskDrop = async (e, targetId) => {
     try {
       await Promise.all(state.tasks.map((t, i) => db.tasks.update(t.id, { position: i })));
       ui.setSyncState('ok');
-      ui.showToast('Orden guardado');
+      ui.showToast('Orden guardado', null, null, 'success');
     } catch (_) {
       ui.setSyncState('error');
+      ui.showToast('No se pudo guardar el orden', null, null, 'error');
     }
   }
 };
@@ -394,5 +395,6 @@ window.addTask = async () => {
     ui.setSyncState('ok');
   } else {
     ui.setSyncState('error');
+    ui.showToast('No se pudo crear la tarea — comprueba tu conexión', null, null, 'error');
   }
 };

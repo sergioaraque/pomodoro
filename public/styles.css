@@ -1103,6 +1103,23 @@ body.theme-highway {
 }
 .fn-toast-btn:hover { background: rgba(255,255,255,.08); }
 
+/* Toast type variants */
+.fn-toast--error   { border-color: rgba(229,115,115,.45); box-shadow: 0 8px 32px rgba(229,115,115,.14), 0 8px 32px rgba(0,0,0,.4); }
+.fn-toast--warning { border-color: rgba(255,167,38,.45);  box-shadow: 0 8px 32px rgba(255,167,38,.12),  0 8px 32px rgba(0,0,0,.4); }
+.fn-toast--success { border-color: rgba(78,205,196,.45); }
+.fn-toast-indicator { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.fn-toast--error   .fn-toast-indicator { background: #e57373; }
+.fn-toast--warning .fn-toast-indicator { background: #ffa726; }
+.fn-toast--success .fn-toast-indicator { background: var(--accent); }
+.fn-toast--info    .fn-toast-indicator { display:none; }
+
+/* Visualmente oculto — visible para lectores de pantalla */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0;
+  margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
+
 /* ── Timer bounce on session complete ─────────── */
 @keyframes timerBounce {
   0%   { transform: scale(1);    }

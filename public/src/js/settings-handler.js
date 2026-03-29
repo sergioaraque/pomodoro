@@ -177,7 +177,11 @@ export async function saveSettings() {
     quick_notes:  document.getElementById('quick-notes-area')?.value || '',
   });
   ui.setSyncState(error ? 'error' : 'ok');
-  if (!error) _clearDirty();
+  if (error) {
+    ui.showToast('No se pudieron guardar los ajustes — comprueba tu conexión', null, null, 'error');
+  } else {
+    _clearDirty();
+  }
   return { error };
 }
 
