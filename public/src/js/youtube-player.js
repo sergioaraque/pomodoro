@@ -73,10 +73,22 @@ export function loadYt(urlOrId) {
   if (!id) return false;
 
   const w = _build();
-  document.getElementById('yt-frame-wrap').innerHTML =
-    `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0" frameborder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowfullscreen></iframe>`;
+  const frameWrap = document.getElementById('yt-frame-wrap');
+  if (!frameWrap) return false;
+
+  // Clear previous iframe, if any
+  frameWrap.textContent = '';
+
+  const iframe = document.createElement('iframe');
+  iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+  iframe.setAttribute('frameborder', '0');
+  iframe.setAttribute(
+    'allow',
+    'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+  );
+  iframe.allowFullscreen = true;
+
+  frameWrap.appendChild(iframe);
 
   w.style.display = 'flex';
   requestAnimationFrame(() => { w.style.opacity = '1'; });
