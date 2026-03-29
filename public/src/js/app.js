@@ -17,8 +17,9 @@ import { playSessionEnd }                 from './sound.js';
 import { burstConfetti }                  from './confetti.js';
 import { spawnCreatures, drawStars }      from './creatures.js';
 import { initAmbient }                    from './ambient.js';
-import { notifySessionEnd }               from './notifications.js';
-import { applyToDOM }                     from './i18n.js';
+import { notifySessionEnd, notifyAchievement,
+         notifyDailyGoal }               from './notifications.js';
+import { applyToDOM, t }                  from './i18n.js';
 import { registerCommand, openPalette,
          closePalette, isPaletteOpen }    from './commands.js';
 import { handleLogin, handleLogout }      from './auth.js';
@@ -109,7 +110,15 @@ window.logDistraction = () => {
   const el = document.getElementById('distract-count');
   if (el) el.textContent = `(${state.distractionCount})`;
 };
-window.resetTimer       = resetTimer;
+function _guardedReset() {
+  const s = getState();
+  if (s.running && s.mode === 'focus' && s.secondsLeft <= 5) {
+    ui.showConfirm(t('confirm_reset_msg'), t('btn_reset'), resetTimer);
+  } else {
+    resetTimer();
+  }
+}
+window.resetTimer = _guardedReset;
 window.skipSession      = skipSession;
 window.saveSettingsNow  = saveSettingsNow;
 
@@ -184,7 +193,10 @@ initTimer({
             const unlocked = loadAchievements(state.user.id);
             const stats    = { total: 0, today: 0, bestStreak: 0, bestDay: 0, dailyGoal: 0, hasEarlySession: h < 8, hasLateSession: h >= 22 };
             const newly    = checkNewAchievements(stats, state.user.id, unlocked);
-            newly.forEach(a => ui.showToast(`${a.icon} Logro desbloqueado: ${a.name}`));
+            newly.forEach(a => {
+              ui.showToast(`${a.icon} ${t('ach_toast_unlocked')}: ${t(a.nameKey) || a.name}`);
+              notifyAchievement(a);
+            });
           } catch (_) {}
         }
       }
@@ -199,7 +211,7 @@ initTimer({
         ui.renderDailyGoalRing(state.todayCount, cfg.dailyGoal);
         const el = document.getElementById('stat-today');
         if (el) el.textContent = state.todayCount;
-        if (state.todayCount === cfg.dailyGoal) ui.showGoalAchieved();
+        if (state.todayCount === cfg.dailyGoal) { ui.showGoalAchieved(); notifyDailyGoal(); }
       }
 
       if (taskId) {
@@ -291,7 +303,7 @@ document.addEventListener('keydown', e => {
   if (!state.user) return;
   const k = e.key === ' ' ? ' ' : e.key.toLowerCase();
   if (k === _keys.timer) { e.preventDefault(); window.toggleTimer(); }
-  if (k === _keys.reset) { e.preventDefault(); resetTimer(); }
+  if (k === _keys.reset) { e.preventDefault(); _guardedReset(); }
   if (k === _keys.skip)  { e.preventDefault(); skipSession(); }
   if (e.key === 'Escape') { closePalette(); }
 });
@@ -308,7 +320,7 @@ function _registerCommands() {
   });
 
   registerCommand({ id: 'start',  label: 'Iniciar / Pausar timer [Espacio]', icon: '▶', section: 'Timer',  action: toggleTimer });
-  registerCommand({ id: 'reset',  label: 'Reiniciar timer [R]',              icon: '↺', section: 'Timer',  action: resetTimer });
+  registerCommand({ id: 'reset',  label: 'Reiniciar timer [R]',              icon: '↺', section: 'Timer',  action: _guardedReset });
   registerCommand({ id: 'skip',   label: 'Saltar sesión [S]',                icon: '⏭', section: 'Timer',  action: skipSession });
 
   Object.entries(THEME_META).forEach(([key, m]) => {

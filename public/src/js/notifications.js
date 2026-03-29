@@ -1,29 +1,12 @@
 /**
  * notifications.js — Notificaciones nativas del navegador
  *
- * Muestra una notificación del sistema cuando termina una sesión,
- * incluso si la pestaña está en segundo plano.
+ * Muestra notificaciones del sistema cuando la pestaña está en segundo plano.
  */
 
-let _permission = 'default';
+import { t } from './i18n.js';
 
-const MESSAGES = {
-  focus_to_short: {
-    title: '🌿 ¡Pomodoro completado!',
-    body:  'Tómate una pausa corta. Te la has ganado.',
-    icon:  null,
-  },
-  focus_to_long: {
-    title: '🌊 ¡Ciclo completado!',
-    body:  'Pausa larga — desconecta un rato.',
-    icon:  null,
-  },
-  break_to_focus: {
-    title: '🍅 Pausa terminada',
-    body:  'Es hora de volver al trabajo. ¡Ánimo!',
-    icon:  null,
-  },
-};
+let _permission = 'default';
 
 /**
  * Solicita permiso de notificaciones al usuario.
@@ -43,38 +26,62 @@ export function getNotificationPermission() {
   return Notification.permission;
 }
 
+function _fire(title, body, tag = 'focusnature-timer') {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(title, {
+      body, icon: '/favicon.ico', badge: '/favicon.ico',
+      silent: false, tag, renotify: true,
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+    setTimeout(() => n.close(), 8000);
+  } catch { /* Notification API no disponible en este contexto */ }
+}
+
 /**
  * Muestra una notificación de fin de sesión.
- * @param {'focus'|'short'|'long'} finishedMode  — modo que acaba de terminar
- * @param {'focus'|'short'|'long'} nextMode       — modo que empieza a continuación
+ * @param {'focus'|'short'|'long'} finishedMode — modo que acaba de terminar
+ * @param {'focus'|'short'|'long'} nextMode     — modo que empieza
  * @param {string|null}            taskName
  */
 export function notifySessionEnd(finishedMode, nextMode, taskName) {
-  if (!('Notification' in window)) return;
-  if (Notification.permission !== 'granted') return;
-  // No notificar si la pestaña está visible
   if (!document.hidden) return;
 
-  let key;
-  if (finishedMode === 'focus' && nextMode === 'long')  key = 'focus_to_long';
-  else if (finishedMode === 'focus')                    key = 'focus_to_short';
-  else                                                  key = 'break_to_focus';
+  let title, body;
+  if (finishedMode === 'focus' && nextMode === 'long') {
+    title = t('notif_cycle_done');
+    body  = t('notif_long_break_body');
+  } else if (finishedMode === 'focus') {
+    title = `🌿 ${t('notif_focus_done')}`;
+    body  = t('notif_take_break');
+  } else {
+    title = `🍅 ${t('notif_break_done')}`;
+    body  = t('notif_back_to_work');
+  }
 
-  const { title, body } = MESSAGES[key];
-  const fullBody = taskName ? `${body}\nTarea: ${taskName}` : body;
+  if (taskName) body += `\n${taskName}`;
+  _fire(title, body);
+}
 
-  try {
-    const n = new Notification(title, {
-      body:    fullBody,
-      icon:    '/favicon.ico',
-      badge:   '/favicon.ico',
-      silent:  false,
-      tag:     'focusnature-timer',   // reemplaza notificaciones anteriores
-      renotify: true,
-    });
-    // Llevar al usuario a la pestaña al hacer clic
-    n.onclick = () => { window.focus(); n.close(); };
-    // Auto-cerrar tras 8s
-    setTimeout(() => n.close(), 8000);
-  } catch { /* Notification API no disponible en este contexto */ }
+/**
+ * Notificación de logro desbloqueado (solo si pestaña oculta).
+ * @param {{ icon: string, nameKey?: string, name: string }} a — objeto logro
+ */
+export function notifyAchievement(a) {
+  if (!document.hidden) return;
+  const name = a.nameKey ? t(a.nameKey) : a.name;
+  _fire(t('notif_achievement_title'), `${a.icon} ${name}`, 'focusnature-achievement');
+}
+
+/** Notificación de objetivo diario cumplido (solo si pestaña oculta). */
+export function notifyDailyGoal() {
+  if (!document.hidden) return;
+  _fire(t('notif_daily_goal_title'), t('notif_daily_goal_body'), 'focusnature-goal');
+}
+
+/** Notificación de racha en riesgo (solo si pestaña oculta). */
+export function notifyStreakRisk() {
+  if (!document.hidden) return;
+  _fire(t('notif_streak_risk_title'), t('notif_streak_risk_body'), 'focusnature-streak');
 }

@@ -458,16 +458,24 @@ export function renderStats({ total, today, streak, hours, bestStreak, bestDay, 
   _buildHistoryList(historyItems, onDeleteHistory);
 }
 
-export function renderAchievements(achievements, unlockedIds, newlyUnlocked = []) {
+export function renderAchievements(achievements, unlockedIds, newlyUnlocked = [], stats = null) {
   const grid = $('achievements-grid');
   if (!grid) return;
   grid.innerHTML = achievements.map(a => {
+    const isUnlocked = unlockedIds.has(a.id);
     const isNew = newlyUnlocked.some(n => n.id === a.id);
-    const cls   = `ach-badge${unlockedIds.has(a.id) ? ' unlocked' : ''}${isNew ? ' ach-new' : ''}`;
+    const cls   = `ach-badge${isUnlocked ? ' unlocked' : ''}${isNew ? ' ach-new' : ''}`;
+    let progressHtml = '';
+    if (!isUnlocked && stats && a.progress) {
+      const p   = a.progress(stats);
+      const pct = Math.min(100, Math.round(p.current / p.total * 100));
+      progressHtml = `<div class="ach-progress"><div class="ach-progress-fill" style="width:${pct}%"></div></div><div class="ach-progress-val">${p.current}/${p.total}</div>`;
+    }
     return `<div class="${cls}" title="${a.desc}">
       <div class="ach-icon">${a.icon}</div>
       <div class="ach-name">${a.name}</div>
       <div class="ach-desc">${a.desc}</div>
+      ${progressHtml}
     </div>`;
   }).join('');
 }

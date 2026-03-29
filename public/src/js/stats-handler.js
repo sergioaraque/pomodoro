@@ -11,6 +11,8 @@ import * as ui          from './ui.js';
 import { debounceSave } from './settings-handler.js';
 import { ACHIEVEMENTS, loadAchievements, checkNewAchievements } from './achievements.js';
 import { renderForest } from './forest.js';
+import { t } from './i18n.js';
+import { notifyStreakRisk } from './notifications.js';
 
 let _allHistoryItems  = [];
 let _filteredTaskName = '';
@@ -155,6 +157,18 @@ function _buildStats(fd, recent) {
   const hasEarlySession = focusData.some(s => new Date(s.completed_at).getHours() < 8);
   const hasLateSession  = focusData.some(s => new Date(s.completed_at).getHours() >= 22);
 
+  // Best week: máximo de días distintos con sesiones en cualquier semana ISO (L–D)
+  const _weekDayMap = {};
+  focusData.forEach(s => {
+    const d   = new Date(s.completed_at);
+    const dow = (d.getDay() + 6) % 7; // 0=Lun, 6=Dom
+    const mon = new Date(d); mon.setDate(d.getDate() - dow); mon.setHours(0, 0, 0, 0);
+    const wk  = mon.toISOString().slice(0, 10);
+    if (!_weekDayMap[wk]) _weekDayMap[wk] = new Set();
+    _weekDayMap[wk].add(d.toDateString());
+  });
+  const bestWeek = Object.values(_weekDayMap).reduce((max, s) => Math.max(max, s.size), 0);
+
   _allHistoryItems  = recent || [];
   _filteredTaskName = '';
 
@@ -164,6 +178,7 @@ function _buildStats(fd, recent) {
     streak,
     bestStreak,
     bestDay,
+    bestWeek,
     hasEarlySession,
     hasLateSession,
     dailyGoal:   cfg.dailyGoal,
@@ -265,8 +280,8 @@ function _renderStats(built) {
       const prevStreak = parseInt(localStorage.getItem(prevKey) || '0', 10);
       if (built.streak > prevStreak) {
         localStorage.setItem(prevKey, built.streak);
-        const MILESTONES = { 3:'🌱 ¡3 días de racha! El hábito comienza.', 7:'💪 ¡Una semana de racha!', 14:'🔥🔥 ¡2 semanas sin parar!', 21:'🏅 ¡21 días — ya es un hábito real!', 30:'🌟 ¡Un mes de racha! Impresionante.', 60:'🤖 ¡60 días! Eres una máquina.', 100:'👑 ¡100 días de racha! Leyenda.' };
-        if (MILESTONES[built.streak]) ui.showToast(MILESTONES[built.streak]);
+        const milestoneMsg = t('milestone_' + built.streak);
+        if (milestoneMsg !== 'milestone_' + built.streak) ui.showToast(milestoneMsg);
       }
     } catch (_) {}
   }
@@ -274,8 +289,13 @@ function _renderStats(built) {
   if (state.user) {
     const unlocked = loadAchievements(state.user.id);
     const newly    = checkNewAchievements(built, state.user.id, unlocked);
-    newly.forEach(a => ui.showToast(`${a.icon} Logro desbloqueado: ${a.name}`));
-    ui.renderAchievements(ACHIEVEMENTS, unlocked, newly);
+    newly.forEach(a => ui.showToast(`${a.icon} ${t('ach_toast_unlocked')}: ${t(a.nameKey) || a.name}`));
+    const displayAchievements = ACHIEVEMENTS.map(a => ({
+      ...a,
+      name: a.nameKey ? t(a.nameKey) : a.name,
+      desc: a.descKey ? t(a.descKey) : a.desc,
+    }));
+    ui.renderAchievements(displayAchievements, unlocked, newly, built);
   }
 }
 
@@ -296,10 +316,11 @@ function _checkStreakRisk(focusData) {
     _streakRiskTimer = setTimeout(() => {
       const banner = document.getElementById('break-banner');
       if (banner && !banner.classList.contains('visible')) {
-        banner.textContent = '🔥 Tu racha está en riesgo — ¡haz al menos 1 pomodoro hoy!';
+        banner.textContent = t('streak_risk_banner');
         banner.className   = 'break-banner lbreak visible';
         setTimeout(() => banner.classList.remove('visible'), 10000);
       }
+      notifyStreakRisk();
     }, 4500);
   }
 }
