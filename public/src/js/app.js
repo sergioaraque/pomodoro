@@ -206,8 +206,14 @@ initTimer({
       state.distractionCount = 0;
       const dc = document.getElementById('distract-count');
       if (dc) dc.textContent = '';
-      if (!state.user || sessionSaved) {
+      if (!state.user) {
         state.todayCount++;
+        ui.renderDailyGoalRing(state.todayCount, cfg.dailyGoal);
+        const el = document.getElementById('stat-today');
+        if (el) el.textContent = state.todayCount;
+        if (state.todayCount === cfg.dailyGoal) { ui.showGoalAchieved(); notifyDailyGoal(); }
+      } else if (sessionSaved) {
+        await loadTodayCount();
         ui.renderDailyGoalRing(state.todayCount, cfg.dailyGoal);
         const el = document.getElementById('stat-today');
         if (el) el.textContent = state.todayCount;

@@ -26,6 +26,55 @@ let _streakRiskTimer  = null;
 /** Fuerza recarga completa en la próxima visita al tab de stats. */
 export function invalidateStatsCache() { _cachedStats = null; }
 
+function _toLocalMidnightMs(dateLike) {
+  const d = new Date(dateLike);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function _computeCurrentStreak(sessions) {
+  const daySet = new Set(sessions.map(s => _toLocalMidnightMs(s.completed_at)));
+  if (!daySet.size) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Si hoy aún no hay sesión pero ayer sí, mantenemos la racha "en riesgo".
+  let anchor = today.getTime();
+  if (!daySet.has(anchor)) {
+    const y = yesterday.getTime();
+    if (!daySet.has(y)) return 0;
+    anchor = y;
+  }
+
+  let streak = 0;
+  const chk = new Date(anchor);
+  while (daySet.has(chk.getTime())) {
+    streak++;
+    chk.setDate(chk.getDate() - 1);
+  }
+  return streak;
+}
+
+function _computeBestStreak(daySet) {
+  if (!daySet.size) return 0;
+  const sortedDays = [...daySet].sort((a, b) => a - b);
+  let bestStreak = 1;
+  let tempStreak = 1;
+
+  for (let i = 1; i < sortedDays.length; i++) {
+    const prev = new Date(sortedDays[i - 1]);
+    prev.setDate(prev.getDate() + 1);
+    if (prev.getTime() === sortedDays[i]) tempStreak++;
+    else tempStreak = 1;
+    if (tempStreak > bestStreak) bestStreak = tempStreak;
+  }
+
+  return bestStreak;
+}
+
 // ── loadTodayCount ────────────────────────────────────────────────────
 
 export async function loadTodayCount() {
@@ -36,10 +85,7 @@ export async function loadTodayCount() {
   state.todayCount = data.filter(s => new Date(s.completed_at) >= today).length;
 
   // Calcular racha para el badge del timer (sin esperar a abrir Stats)
-  const daySet = new Set(data.map(s => new Date(s.completed_at).toDateString()));
-  let streak = 0;
-  const chk  = new Date();
-  while (daySet.has(chk.toDateString())) { streak++; chk.setDate(chk.getDate() - 1); }
+  const streak = _computeCurrentStreak(data);
   ui.updateStreakBadge(streak);
 
   _checkStreakRisk(data);
@@ -113,18 +159,9 @@ function _buildStats(fd, recent) {
 
   const totalMins = focusData.reduce((a, s) => a + s.duration, 0);
 
-  const daySet = new Set(focusData.map(s => new Date(s.completed_at).toDateString()));
-  let streak = 0;
-  const chk = new Date();
-  while (daySet.has(chk.toDateString())) { streak++; chk.setDate(chk.getDate() - 1); }
-
-  // Best streak (all-time)
-  const sortedDays = [...daySet].map(d => new Date(d)).sort((a, b) => a - b);
-  let bestStreak = 0, tempStreak = 0;
-  for (let i = 0; i < sortedDays.length; i++) {
-    tempStreak = (i > 0 && (sortedDays[i] - sortedDays[i-1]) / 86400000 === 1) ? tempStreak + 1 : 1;
-    if (tempStreak > bestStreak) bestStreak = tempStreak;
-  }
+  const daySet = new Set(focusData.map(s => _toLocalMidnightMs(s.completed_at)));
+  const streak = _computeCurrentStreak(focusData);
+  const bestStreak = _computeBestStreak(daySet);
 
   const weekCounts = [];
   for (let i = 6; i >= 0; i--) {
