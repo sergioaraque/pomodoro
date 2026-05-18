@@ -526,20 +526,71 @@ window.addGuestTask = () => {
 
 function renderTasks() {
   const list = document.getElementById('tasks-list');
+  // Limpia la lista actual
+  list.textContent = '';
+
   if (!tasks.length) {
-    list.innerHTML = '<div class="empty-msg">Sin tareas aún — ¡añade una arriba!</div>';
-    return;
+    const emptyMsg = document.createElement('div');
+    emptyMsg.className = 'empty-msg';
+    emptyMsg.textContent = 'Sin tareas aún — ¡añade una arriba!';
+    list.appendChild(emptyMsg);
+  } else {
+    tasks.forEach(t => {
+      const taskItem = document.createElement('div');
+      taskItem.classList.add('task-item');
+      if (t.id === st.currentTaskId) taskItem.classList.add('active-t');
+      if (t.done) taskItem.classList.add('done-t');
+
+      const row = document.createElement('div');
+      row.className = 'task-item-row';
+
+      const tchk = document.createElement('div');
+      tchk.classList.add('tchk');
+      if (t.done) {
+        tchk.classList.add('checked');
+      } else if (t.id === st.currentTaskId) {
+        tchk.classList.add('active-c');
+      }
+      tchk.dataset.action = 'toggle';
+      tchk.dataset.id = t.id;
+      tchk.textContent = t.done ? '✓' : '';
+
+      const tname = document.createElement('div');
+      tname.classList.add('tname');
+      if (t.done) tname.classList.add('done');
+      // Usar textContent para evitar interpretar el nombre como HTML
+      tname.textContent = t.name || '';
+
+      row.appendChild(tchk);
+      row.appendChild(tname);
+
+      if (t.pomodoros > 0) {
+        const tpoms = document.createElement('div');
+        tpoms.className = 'tpoms';
+        tpoms.textContent = '🍅 ×' + t.pomodoros;
+        row.appendChild(tpoms);
+      }
+
+      if (!t.done) {
+        const tfocus = document.createElement('button');
+        tfocus.className = 'tfocus';
+        tfocus.dataset.action = 'focus';
+        tfocus.dataset.id = t.id;
+        tfocus.textContent = (t.id === st.currentTaskId) ? '✓ Activa' : 'Enfocar';
+        row.appendChild(tfocus);
+      }
+
+      const tdel = document.createElement('button');
+      tdel.className = 'tdel';
+      tdel.dataset.action = 'delete';
+      tdel.dataset.id = t.id;
+      tdel.textContent = '✕';
+      row.appendChild(tdel);
+
+      taskItem.appendChild(row);
+      list.appendChild(taskItem);
+    });
   }
-  list.innerHTML = tasks.map(t => `
-    <div class="task-item ${t.id===st.currentTaskId?'active-t':''} ${t.done?'done-t':''}">
-      <div class="task-item-row">
-        <div class="tchk ${t.done?'checked':t.id===st.currentTaskId?'active-c':''}" data-action="toggle" data-id="${t.id}">${t.done?'✓':''}</div>
-        <div class="tname ${t.done?'done':''}">${esc(t.name)}</div>
-        ${t.pomodoros>0?`<div class="tpoms">🍅 ×${t.pomodoros}</div>`:''}
-        ${!t.done?`<button class="tfocus" data-action="focus" data-id="${t.id}">${t.id===st.currentTaskId?'✓ Activa':'Enfocar'}</button>`:''}
-        <button class="tdel" data-action="delete" data-id="${t.id}">✕</button>
-      </div>
-    </div>`).join('');
 
   list.onclick = e => {
     const el = e.target.closest('[data-action]'); if (!el) return;
